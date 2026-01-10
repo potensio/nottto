@@ -1071,7 +1071,11 @@ app.use("*", logger());
 app.use(
   "*",
   cors({
-    origin: ["http://localhost:3000", "https://app.nottto.com"],
+    origin: [
+      "http://localhost:3000",
+      "https://app.nottto.com",
+      "chrome-extension://*"
+    ],
     credentials: true
   })
 );
@@ -1092,7 +1096,7 @@ var PATCH = handler;
 var PUT = handler;
 var DELETE = handler;
 var OPTIONS = handler;
-var index_default = app;
+var src_default = app;
 export {
   DELETE,
   GET,
@@ -1100,5 +1104,5 @@ export {
   PATCH,
   POST,
   PUT,
-  index_default as default
+  src_default as default
 };

@@ -1,11 +1,18 @@
 {
-  "installCommand": "cd ../.. && pnpm install",
   "buildCommand": "pnpm run build",
+  "installCommand": "cd ../.. && pnpm install",
+  "framework": null,
   "rewrites": [
     {
       "source": "/api/(.*)",
       "destination": "/api"
     }
   ],
-  "redirects": [{ "source": "/", "destination": "/api", "permanent": false }]
+  "redirects": [
+    {
+      "source": "/",
+      "destination": "/api",
+      "permanent": false
+    }
+  ]
 }
