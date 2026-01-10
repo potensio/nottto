@@ -1,7 +1,8 @@
 # Dependencies
 node_modules/
 
-# Build outputs (regenerated from src/input.css)
+# Build outputs
+dist/
 overlay.css
 
 # OS files

@@ -1,9 +1,9 @@
+// BugFinder Background Service Worker
+
 /**
  * Validates if a tab is suitable for screen capture
- * @param {chrome.tabs.Tab} tab - The tab to validate
- * @returns {boolean} - True if tab is valid for capture, false otherwise
  */
-function isValidTab(tab) {
+function isValidTab(tab: chrome.tabs.Tab): boolean {
   if (!tab || !tab.id) return false;
   if (tab.url?.startsWith("chrome://")) return false;
   if (tab.url?.startsWith("chrome-extension://")) return false;
@@ -14,11 +14,11 @@ function isValidTab(tab) {
 
 /**
  * Waits for the document in a tab to be fully loaded
- * @param {number} tabId - The tab ID to check
- * @param {number} maxRetries - Maximum number of retry attempts (default: 10)
- * @returns {Promise<boolean>} - True when document is ready
  */
-async function waitForDocumentReady(tabId, maxRetries = 10) {
+async function waitForDocumentReady(
+  tabId: number,
+  maxRetries = 10
+): Promise<boolean> {
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
       const results = await chrome.scripting.executeScript({
@@ -54,7 +54,7 @@ chrome.action.onClicked.addListener(async (tab) => {
 
   try {
     // Wait for document to be fully loaded before capture
-    const isReady = await waitForDocumentReady(tab.id);
+    const isReady = await waitForDocumentReady(tab.id!);
     if (!isReady) {
       console.error(
         "BugFinder: Page did not finish loading. Please try again."
@@ -63,7 +63,7 @@ chrome.action.onClicked.addListener(async (tab) => {
     }
 
     // Capture the visible tab
-    const screenshotDataUrl = await chrome.tabs.captureVisibleTab(null, {
+    const screenshotDataUrl = await chrome.tabs.captureVisibleTab({
       format: "png",
     });
 
@@ -77,23 +77,23 @@ chrome.action.onClicked.addListener(async (tab) => {
 
     // Inject the CSS first
     await chrome.scripting.insertCSS({
-      target: { tabId: tab.id },
-      files: ["overlay.css"],
+      target: { tabId: tab.id! },
+      files: ["dist/overlay.css"],
     });
 
     // Inject Fabric.js and content script sequentially
     await chrome.scripting.executeScript({
-      target: { tabId: tab.id },
+      target: { tabId: tab.id! },
       files: ["lib/fabric.min.js"],
     });
 
     await chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      files: ["content.js"],
+      target: { tabId: tab.id! },
+      files: ["dist/content.js"],
     });
 
     // Send the screenshot to the content script
-    await chrome.tabs.sendMessage(tab.id, {
+    await chrome.tabs.sendMessage(tab.id!, {
       action: "initOverlay",
       screenshot: screenshotDataUrl,
       pageUrl: tab.url,
@@ -105,16 +105,29 @@ chrome.action.onClicked.addListener(async (tab) => {
 });
 
 // Handle download requests from content script
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.action === "download") {
-    chrome.downloads
-      .download({
-        url: message.url,
-        filename: message.filename,
-        saveAs: message.saveAs || false,
-      })
-      .then(() => sendResponse({ success: true }))
-      .catch((err) => sendResponse({ success: false, error: err.message }));
-    return true; // Keep channel open for async response
+chrome.runtime.onMessage.addListener(
+  (
+    message: {
+      action: string;
+      url: string;
+      filename: string;
+      saveAs?: boolean;
+    },
+    _sender: chrome.runtime.MessageSender,
+    sendResponse: (response: { success: boolean; error?: string }) => void
+  ) => {
+    if (message.action === "download") {
+      chrome.downloads
+        .download({
+          url: message.url,
+          filename: message.filename,
+          saveAs: message.saveAs || false,
+        })
+        .then(() => sendResponse({ success: true }))
+        .catch((err: Error) =>
+          sendResponse({ success: false, error: err.message })
+        );
+      return true; // Keep channel open for async response
+    }
   }
-});
+);
