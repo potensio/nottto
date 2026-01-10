@@ -38,10 +38,9 @@ app.notFound((c) =>
   c.json({ error: { code: "NOT_FOUND", message: "Route not found" } }, 404)
 );
 
-export default app;
+// For Vercel serverless
+import { handle } from "hono/vercel";
+export default handle(app);
 
-// Start server when running directly
-const port = process.env.PORT || 3001;
-console.log(`🚀 Nottto API running on http://localhost:${port}`);
-
+// For local development
 export { app };
