@@ -1,0 +1,184 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: "Inter", sans-serif;
+  background-color: #fafafa;
+  color: #171717;
+}
+
+.font-mono {
+  font-family: "JetBrains Mono", monospace;
+}
+
+.font-manrope {
+  font-family: "Manrope", sans-serif;
+}
+
+.font-instrument-serif {
+  font-family: "Instrument Serif", serif;
+}
+
+/* Moving Gradient Background */
+.delay-2000 {
+  animation-delay: 2s;
+}
+
+.delay-4000 {
+  animation-delay: 4s;
+}
+
+/* Technical Grid */
+.tech-grid {
+  background-size: 50px 50px;
+  background-image: linear-gradient(
+      to right,
+      rgba(0, 0, 0, 0.05) 1px,
+      transparent 1px
+    ),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
+  mask-image: radial-gradient(circle at center, black 40%, transparent 80%);
+}
+
+/* Orange Theme Configuration */
+.text-accent {
+  color: #ff5500;
+}
+
+.bg-accent {
+  background-color: #ff5500;
+}
+
+.border-accent {
+  border-color: #ff5500;
+}
+
+.glass-panel {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 20px -5px rgba(0, 0, 0, 0.05),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+}
+
+/* 3D Scene */
+.perspective-container {
+  perspective: 1200px;
+  transform-style: preserve-3d;
+}
+
+.phone-mockup {
+  transform: rotateX(15deg) rotateY(-15deg) rotateZ(5deg);
+  transform-style: preserve-3d;
+  box-shadow: -30px 40px 60px -10px rgba(0, 0, 0, 0.2),
+    -10px 10px 20px rgba(0, 0, 0, 0.1);
+  transition: transform 0.5s ease;
+}
+
+.phone-mockup:hover {
+  transform: rotateX(10deg) rotateY(-5deg) rotateZ(0deg) translateY(-20px);
+}
+
+/* Orbital Animations */
+.orbit-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 85, 0, 0.15);
+  transform-style: preserve-3d;
+  pointer-events: none;
+}
+
+.orbit-1 {
+  width: 140%;
+  height: 140%;
+  margin-left: -70%;
+  margin-top: -70%;
+  animation: orbitSpin 20s linear infinite;
+}
+
+.orbit-2 {
+  width: 180%;
+  height: 180%;
+  margin-left: -90%;
+  margin-top: -90%;
+  border-style: dashed;
+  border-color: rgba(23, 23, 23, 0.1);
+  animation: orbitSpinReverse 30s linear infinite;
+}
+
+.orbit-planet {
+  position: absolute;
+  top: 50%;
+  left: 100%;
+  width: 12px;
+  height: 12px;
+  background: #ff5500;
+  border-radius: 50%;
+  box-shadow: 0 0 10px #ff5500;
+  transform: translate(-50%, -50%);
+}
+
+/* Beam Animation */
+.noodle-beam {
+  stroke: #ff5500;
+  stroke-width: 1.5;
+  fill: none;
+  stroke-linecap: round;
+  stroke-dasharray: 10 200;
+  stroke-dashoffset: 0;
+  animation: beamMove 2s linear infinite;
+  opacity: 0.8;
+}
+
+/* Glitch/Tech Reveal Text */
+.reveal-text {
+  position: relative;
+  overflow: hidden;
+}
+
+.reveal-text::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: #fafafa;
+  animation: reveal 1s cubic-bezier(0.77, 0, 0.175, 1) forwards;
+}
+
+@keyframes orbitSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes orbitSpinReverse {
+  from {
+    transform: rotate(360deg);
+  }
+  to {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes beamMove {
+  to {
+    stroke-dashoffset: -210;
+  }
+}
+
+@keyframes reveal {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(101%);
+  }
+}
