@@ -2,11 +2,11 @@ import { defineConfig } from "tsup";
 
 export default defineConfig({
   entry: ["src/index.ts"],
-  format: ["esm"],
+  format: ["cjs"],
   target: "node18",
-  outDir: ".",
+  outDir: "dist",
   outExtension: () => ({ js: ".js" }),
-  clean: false,
+  clean: true,
   sourcemap: true,
   noExternal: [/@nottto\/.*/],
 });
