@@ -1084,8 +1084,8 @@ app.route("/upload", uploadRoutes);
 app.notFound(
   (c) => c.json({ error: { code: "NOT_FOUND", message: "Route not found" } }, 404)
 );
-var src_default = app;
+var index_default = app;
 export {
-  src_default as default
+  index_default as default
 };
 //# sourceMappingURL=index.js.map

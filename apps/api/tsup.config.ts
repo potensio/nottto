@@ -1,11 +1,12 @@
 import { defineConfig } from "tsup";
 
 export default defineConfig({
-  entry: { index: "src/index.ts" },
+  entry: ["src/index.ts"],
   format: ["esm"],
   target: "node18",
-  outDir: "api",
-  clean: true,
+  outDir: ".",
+  outExtension: () => ({ js: ".js" }),
+  clean: false,
   sourcemap: true,
   noExternal: [/@nottto\/.*/],
 });
