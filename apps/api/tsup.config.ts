@@ -7,6 +7,5 @@ export default defineConfig({
   outDir: "dist",
   clean: true,
   sourcemap: true,
-  // Bundle everything including workspace deps
   noExternal: [/@nottto\/.*/],
 });

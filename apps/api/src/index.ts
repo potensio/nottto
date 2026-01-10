@@ -1,5 +1,4 @@
 import { Hono } from "hono";
-import { handle } from "hono/vercel";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { authRoutes } from "./routes/auth";
@@ -39,8 +38,4 @@ app.notFound((c) =>
   c.json({ error: { code: "NOT_FOUND", message: "Route not found" } }, 404)
 );
 
-// For Vercel
-export default handle(app);
-
-// For local dev
-export { app };
+export default app;
