@@ -2,11 +2,11 @@
 
 ## Introduction
 
-This document defines the requirements for migrating the BugFinder Chrome extension from inline CSS styles to Tailwind CSS utility classes. The project already has Tailwind configured but still uses inline styles in several places. The goal is to maximize Tailwind usage for consistency, maintainability, and smaller bundle size.
+This document defines the requirements for migrating the Nottto Chrome extension from inline CSS styles to Tailwind CSS utility classes. The project already has Tailwind configured but still uses inline styles in several places. The goal is to maximize Tailwind usage for consistency, maintainability, and smaller bundle size.
 
 ## Glossary
 
-- **BugFinder_Extension**: The Chrome extension that provides screenshot annotation functionality
+- **Nottto_Extension**: The Chrome extension that provides screenshot annotation functionality
 - **Tailwind_CSS**: A utility-first CSS framework used for styling
 - **Inline_Style**: CSS applied directly via the `style` attribute on HTML elements
 - **Utility_Class**: A single-purpose CSS class that applies one specific style
@@ -49,8 +49,8 @@ This document defines the requirements for migrating the BugFinder Chrome extens
 
 #### Acceptance Criteria
 
-1. WHEN the overlay is displayed, THE BugFinder_Extension SHALL render with identical visual appearance to the pre-migration version
-2. WHEN annotations are created, THE BugFinder_Extension SHALL display them with identical styling to the pre-migration version
+1. WHEN the overlay is displayed, THE Nottto_Extension SHALL render with identical visual appearance to the pre-migration version
+2. WHEN annotations are created, THE Nottto_Extension SHALL display them with identical styling to the pre-migration version
 
 ### Requirement 5: Maintain Build Process
 

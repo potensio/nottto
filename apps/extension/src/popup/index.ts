@@ -1,4 +1,4 @@
-// BugFinder Popup Script
+// Nottto Popup Script
 // Placeholder for future popup functionality
 
 // This popup will be used for:
@@ -6,7 +6,7 @@
 // - Project/workspace selection
 // - Quick settings
 
-console.log("BugFinder popup loaded");
+console.log("Nottto popup loaded");
 
 // Future: Initialize popup UI
 document.addEventListener("DOMContentLoaded", () => {

@@ -1,4 +1,4 @@
-# BugFinder Extension Refactor Plan
+# Nottto Extension Refactor Plan
 
 ## Overview
 
@@ -7,7 +7,7 @@ Refactor the Chrome extension from a flat file structure to a modular architectu
 ## Current Structure
 
 ```
-bugfinder/
+nottto/
 ├── manifest.json
 ├── background.js           # 70 lines
 ├── content.js              # 650+ lines (everything in one file)
@@ -23,7 +23,7 @@ bugfinder/
 ## Target Structure
 
 ```
-bugfinder/                    # Will become apps/extension/ in monorepo
+nottto/                    # Will become apps/extension/ in monorepo
 ├── manifest.json
 ├── dist/                     # Built output (gitignored)
 │   ├── content.js            # Bundled content script
@@ -89,7 +89,7 @@ Entry point that orchestrates everything:
 Centralized state management:
 
 ```typescript
-export interface BugfinderState {
+export interface NotttoState {
   fabricCanvas: fabric.Canvas | null;
   overlay: HTMLElement | null;
   currentTool: string;
@@ -97,7 +97,7 @@ export interface BugfinderState {
   // ... rest of state
 }
 
-export const state: BugfinderState = { ... };
+export const state: NotttoState = { ... };
 export function resetState(): void;
 ```
 
@@ -165,7 +165,7 @@ export function removeKeyboardHandler(): void;
 Base API client:
 
 ```typescript
-const API_BASE = "https://api.bugfinder.com";
+const API_BASE = "https://api.nottto.com";
 
 export async function apiRequest<T>(
   endpoint: string,
@@ -209,7 +209,7 @@ export interface User { ... }
 export interface Workspace { ... }
 export interface Project { ... }
 export interface Annotation { ... }
-export interface BugfinderState { ... }
+export interface NotttoState { ... }
 ```
 
 ## Build Setup
@@ -287,7 +287,7 @@ esbuild.build({
 ```json
 {
   "manifest_version": 3,
-  "name": "BugFinder - Screenshot Annotator",
+  "name": "Nottto - Screenshot Annotator",
   "version": "2.1.0",
   "description": "Capture screenshots and annotate with arrows, boxes, and text",
   "permissions": ["activeTab", "downloads", "scripting", "storage"],
@@ -384,7 +384,7 @@ esbuild.build({
 After refactor, the extension folder is ready to move:
 
 ```bash
-# From bugfinder root
+# From nottto root
 mkdir -p apps
 mv . apps/extension  # Move everything
 # Then set up monorepo root with pnpm-workspace.yaml

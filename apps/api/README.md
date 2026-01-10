@@ -1,6 +1,6 @@
-# BugFinder API
+# Nottto API
 
-Backend API for the BugFinder Chrome extension, built with Hono, Drizzle ORM, and Neon PostgreSQL.
+Backend API for the Nottto Chrome extension, built with Hono, Drizzle ORM, and Neon PostgreSQL.
 
 ## Tech Stack
 
@@ -29,7 +29,7 @@ Backend API for the BugFinder Chrome extension, built with Hono, Drizzle ORM, an
 
 2. Fill in your environment variables:
    ```env
-   DATABASE_URL=postgresql://user:password@host.neon.tech/bugfinder?sslmode=require
+   DATABASE_URL=postgresql://user:password@host.neon.tech/nottto?sslmode=require
    JWT_SECRET=your-jwt-secret-key-min-32-chars
    JWT_REFRESH_SECRET=your-refresh-secret-key-min-32-chars
    BLOB_READ_WRITE_TOKEN=vercel_blob_...

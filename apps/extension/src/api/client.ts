@@ -1,7 +1,7 @@
-// Base API client for BugFinder backend integration
+// Base API client for Nottto backend integration
 // This is a stub - implement when backend is ready
 
-const API_BASE = "https://api.bugfinder.com";
+const API_BASE = "https://api.nottto.com";
 
 let authToken: string | null = null;
 

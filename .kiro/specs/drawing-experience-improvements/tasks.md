@@ -2,7 +2,7 @@
 
 ## Overview
 
-This plan implements seven improvements to the BugFinder drawing experience: visible color picker, proper text font/weight settings, delete button state management, object selectability fixes, Esc key behavior changes, text size options, and auto-switch to Select mode. The implementation modifies `content.js` for logic and `src/input.css` for styling.
+This plan implements seven improvements to the Nottto drawing experience: visible color picker, proper text font/weight settings, delete button state management, object selectability fixes, Esc key behavior changes, text size options, and auto-switch to Select mode. The implementation modifies `content.js` for logic and `src/input.css` for styling.
 
 ## Tasks
 

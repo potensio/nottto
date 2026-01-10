@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
-import { registerSchema, loginSchema, refreshSchema } from "@bugfinder/shared";
+import { registerSchema, loginSchema, refreshSchema } from "@nottto/shared";
 import { authMiddleware } from "../middleware/auth";
 import * as authService from "../services/auth";
 

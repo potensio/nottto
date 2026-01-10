@@ -2,11 +2,11 @@
 
 ## Introduction
 
-Refactor the BugFinder Chrome extension from a flat file structure to a modular TypeScript architecture. This prepares the codebase for monorepo integration and future features (auth, API integration, workspace management).
+Refactor the Nottto Chrome extension from a flat file structure to a modular TypeScript architecture. This prepares the codebase for monorepo integration and future features (auth, API integration, workspace management).
 
 ## Glossary
 
-- **Extension**: The BugFinder Chrome extension for screenshot annotation
+- **Extension**: The Nottto Chrome extension for screenshot annotation
 - **Content_Script**: JavaScript that runs in the context of web pages
 - **Background_Script**: Service worker that handles extension events
 - **Overlay**: The full-screen annotation UI injected into pages
@@ -71,7 +71,7 @@ Refactor the BugFinder Chrome extension from a flat file structure to a modular 
 
 #### Acceptance Criteria
 
-1. THE Extension SHALL define `BugfinderState` interface in `src/types/index.ts`
+1. THE Extension SHALL define `NotttoState` interface in `src/types/index.ts`
 2. THE Extension SHALL define `Task` interface for saved annotations
 3. THE Extension SHALL define `Tool` type for available drawing tools
 

@@ -1,13 +1,13 @@
 import { eq, and } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 import { db } from "../db";
-import { annotations, projects } from "@bugfinder/shared/db";
+import { annotations, projects } from "@nottto/shared/db";
 import { checkProjectAccess } from "./projects";
 import type {
   Annotation,
   CreateAnnotationInput,
   UpdateAnnotationInput,
-} from "@bugfinder/shared";
+} from "@nottto/shared";
 
 export async function list(
   projectId: string,

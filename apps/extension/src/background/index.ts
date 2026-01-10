@@ -1,4 +1,4 @@
-// BugFinder Background Service Worker
+// Nottto Background Service Worker
 
 /**
  * Validates if a tab is suitable for screen capture
@@ -33,12 +33,12 @@ async function waitForDocumentReady(
       // Wait 100ms before retrying
       await new Promise((resolve) => setTimeout(resolve, 100));
     } catch (error) {
-      console.warn("BugFinder: Error checking document ready state", error);
+      console.warn("Nottto: Error checking document ready state", error);
       return false;
     }
   }
 
-  console.warn("BugFinder: Document did not reach ready state within timeout");
+  console.warn("Nottto: Document did not reach ready state within timeout");
   return false;
 }
 
@@ -47,7 +47,7 @@ chrome.action.onClicked.addListener(async (tab) => {
   // Validate tab before attempting capture
   if (!isValidTab(tab)) {
     console.warn(
-      "BugFinder: Cannot capture this page. The extension does not work on browser internal pages."
+      "Nottto: Cannot capture this page. The extension does not work on browser internal pages."
     );
     return;
   }
@@ -56,9 +56,7 @@ chrome.action.onClicked.addListener(async (tab) => {
     // Wait for document to be fully loaded before capture
     const isReady = await waitForDocumentReady(tab.id!);
     if (!isReady) {
-      console.error(
-        "BugFinder: Page did not finish loading. Please try again."
-      );
+      console.error("Nottto: Page did not finish loading. Please try again.");
       return;
     }
 
@@ -69,9 +67,7 @@ chrome.action.onClicked.addListener(async (tab) => {
 
     // Validate capture result
     if (!screenshotDataUrl) {
-      console.error(
-        "BugFinder: Failed to capture screenshot - no data returned"
-      );
+      console.error("Nottto: Failed to capture screenshot - no data returned");
       return;
     }
 
@@ -100,7 +96,7 @@ chrome.action.onClicked.addListener(async (tab) => {
       pageTitle: tab.title,
     });
   } catch (error) {
-    console.error("BugFinder: Failed to capture screenshot", error);
+    console.error("Nottto: Failed to capture screenshot", error);
   }
 });
 

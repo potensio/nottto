@@ -7,7 +7,7 @@ export function createOverlay(): void {
   const state = getState();
 
   state.overlay = document.createElement("div");
-  state.overlay.id = "bugfinder-overlay";
+  state.overlay.id = "nottto-overlay";
   state.overlay.className =
     "fixed top-0 left-0 w-screen h-screen z-overlay bg-bf-bg flex flex-row font-sans text-bf-primary";
   state.overlay.innerHTML = `
@@ -135,7 +135,7 @@ export function cleanupOverlay(): void {
       state.fabricCanvas.off();
       state.fabricCanvas.dispose();
     } catch (e) {
-      console.warn("BugFinder: Error disposing canvas", e);
+      console.warn("Nottto: Error disposing canvas", e);
     }
   }
 

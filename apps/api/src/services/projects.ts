@@ -1,14 +1,14 @@
 import { eq, and } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 import { db } from "../db";
-import { projects, workspaces } from "@bugfinder/shared/db";
+import { projects, workspaces } from "@nottto/shared/db";
 import { checkAccess as checkWorkspaceAccess } from "./workspaces";
 import { generateSlug, generateUniqueSlug } from "../utils/slug";
 import type {
   Project,
   CreateProjectInput,
   UpdateProjectInput,
-} from "@bugfinder/shared";
+} from "@nottto/shared";
 
 export async function list(
   workspaceId: string,

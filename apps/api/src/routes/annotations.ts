@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
-import { updateAnnotationSchema } from "@bugfinder/shared";
+import { updateAnnotationSchema } from "@nottto/shared";
 import { authMiddleware } from "../middleware/auth";
 import * as annotationService from "../services/annotations";
 

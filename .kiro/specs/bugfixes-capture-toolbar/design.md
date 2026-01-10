@@ -2,7 +2,7 @@
 
 ## Overview
 
-This design addresses four UI/UX improvements for the BugFinder Chrome extension's annotation overlay:
+This design addresses four UI/UX improvements for the Nottto Chrome extension's annotation overlay:
 
 1. Canvas horizontal padding and image adaptation
 2. Multi-line annotation titles

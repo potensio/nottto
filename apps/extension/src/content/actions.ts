@@ -111,7 +111,7 @@ export async function saveTask(): Promise<void> {
     await chrome.runtime.sendMessage({
       action: "download",
       url: jsonUrl,
-      filename: `bugfinder-task-${taskId}.json`,
+      filename: `nottto-task-${taskId}.json`,
       saveAs: true,
     });
 
@@ -120,7 +120,7 @@ export async function saveTask(): Promise<void> {
       await chrome.runtime.sendMessage({
         action: "download",
         url: annotatedImageDataUrl,
-        filename: `bugfinder-screenshot-${taskId}.png`,
+        filename: `nottto-screenshot-${taskId}.png`,
         saveAs: false,
       });
     }
@@ -128,7 +128,7 @@ export async function saveTask(): Promise<void> {
     showToast("Task saved successfully!");
     setTimeout(cleanupOverlay, 1500);
   } catch (error) {
-    console.error("BugFinder: Save failed", error);
+    console.error("Nottto: Save failed", error);
     showToast("Failed to save task", "error");
   }
 }

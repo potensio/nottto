@@ -6,7 +6,7 @@ import {
   workspaces,
   workspaceMembers,
   projects,
-} from "@bugfinder/shared/db";
+} from "@nottto/shared/db";
 import {
   hashPassword,
   verifyPassword,
@@ -15,7 +15,7 @@ import {
   generateAccessToken,
 } from "../utils/auth";
 import { generateSlug } from "../utils/slug";
-import type { User, AuthResponse, RefreshResponse } from "@bugfinder/shared";
+import type { User, AuthResponse, RefreshResponse } from "@nottto/shared";
 
 export async function register(
   email: string,

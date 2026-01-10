@@ -1,4 +1,4 @@
-// BugFinder Content Script - Full Page Overlay Annotation
+// Nottto Content Script - Full Page Overlay Annotation
 // Modular TypeScript implementation
 
 import { getState } from "./state";
@@ -7,8 +7,8 @@ import { initCanvas } from "./canvas";
 import type { InitOverlayMessage } from "../types";
 
 // Register message listener only once
-if (!window.bugfinderListenerRegistered) {
-  window.bugfinderListenerRegistered = true;
+if (!window.notttoListenerRegistered) {
+  window.notttoListenerRegistered = true;
 
   chrome.runtime.onMessage.addListener(
     (

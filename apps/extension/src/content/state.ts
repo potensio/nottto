@@ -1,6 +1,6 @@
-import type { BugfinderState, Tool } from "../types";
+import type { NotttoState, Tool } from "../types";
 
-export function createInitialState(): BugfinderState {
+export function createInitialState(): NotttoState {
   return {
     fabricCanvas: null,
     overlay: null,
@@ -18,11 +18,11 @@ export function createInitialState(): BugfinderState {
   };
 }
 
-export function getState(): BugfinderState {
-  if (!window.bugfinderState) {
-    window.bugfinderState = createInitialState();
+export function getState(): NotttoState {
+  if (!window.notttoState) {
+    window.notttoState = createInitialState();
   }
-  return window.bugfinderState;
+  return window.notttoState;
 }
 
 export function resetState(): void {

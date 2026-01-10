@@ -2,7 +2,7 @@
 
 ## Overview
 
-This design addresses seven improvements to the BugFinder annotation tool's drawing experience:
+This design addresses seven improvements to the Nottto annotation tool's drawing experience:
 
 1. Making the color picker visible and functional for changing object/text colors
 2. Ensuring text respects font size and weight settings from the toolbar
@@ -77,7 +77,7 @@ The hidden color picker will be replaced with a visible color input in the toolb
 ```javascript
 // Function to update delete button state based on selection
 function updateDeleteButtonState() {
-  const state = window.bugfinderState;
+  const state = window.notttoState;
   const deleteBtn = document.getElementById("bf-clear-btn");
   const hasSelection = state.fabricCanvas?.getActiveObject() != null;
 
@@ -95,7 +95,7 @@ function updateDeleteButtonState() {
 
 ```javascript
 function addText(x, y, color) {
-  const state = window.bugfinderState;
+  const state = window.notttoState;
   const fontSize = parseInt(document.getElementById("bf-font-size").value);
   const strokeWeight = parseInt(
     document.getElementById("bf-stroke-width").value

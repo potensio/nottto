@@ -2,7 +2,7 @@
 
 ## Overview
 
-Migrate remaining inline CSS styles in the BugFinder Chrome extension to Tailwind CSS utility classes. The implementation follows a configuration-first approach, adding custom utilities before updating the content script.
+Migrate remaining inline CSS styles in the Nottto Chrome extension to Tailwind CSS utility classes. The implementation follows a configuration-first approach, adding custom utilities before updating the content script.
 
 ## Tasks
 

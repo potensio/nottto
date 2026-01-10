@@ -2,7 +2,7 @@
 
 ## Introduction
 
-Backend API for the BugFinder Chrome extension, providing authentication, workspace management, project organization, and annotation storage capabilities. This API enables users to save and manage bug reports captured via the extension, organized into workspaces and projects.
+Backend API for the Nottto Chrome extension, providing authentication, workspace management, project organization, and annotation storage capabilities. This API enables users to save and manage bug reports captured via the extension, organized into workspaces and projects.
 
 ## Glossary
 

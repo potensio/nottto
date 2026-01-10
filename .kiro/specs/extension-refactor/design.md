@@ -2,12 +2,12 @@
 
 ## Overview
 
-This design transforms the BugFinder Chrome extension from a monolithic JavaScript structure to a modular TypeScript architecture. The refactor maintains full functional parity while enabling better maintainability, type safety, and preparation for future backend integration.
+This design transforms the Nottto Chrome extension from a monolithic JavaScript structure to a modular TypeScript architecture. The refactor maintains full functional parity while enabling better maintainability, type safety, and preparation for future backend integration.
 
 ## Architecture
 
 ```
-bugfinder/
+nottto/
 ├── manifest.json              # Updated to reference dist/
 ├── dist/                      # Built output (gitignored)
 │   ├── content.js             # Bundled content script
@@ -54,7 +54,7 @@ bugfinder/
 ```typescript
 export type Tool = "select" | "arrow" | "rect" | "ellipse" | "text";
 
-export interface BugfinderState {
+export interface NotttoState {
   fabricCanvas: fabric.Canvas | null;
   overlay: HTMLElement | null;
   notesInput: HTMLTextAreaElement | null;
@@ -88,23 +88,23 @@ export interface Task {
 ### src/content/state.ts
 
 ```typescript
-import { BugfinderState, Tool } from "../types";
+import { NotttoState, Tool } from "../types";
 
 declare global {
   interface Window {
-    bugfinderState: BugfinderState;
-    bugfinderListenerRegistered?: boolean;
+    notttoState: NotttoState;
+    notttoListenerRegistered?: boolean;
   }
 }
 
-export function getState(): BugfinderState {
-  if (!window.bugfinderState) {
-    window.bugfinderState = createInitialState();
+export function getState(): NotttoState {
+  if (!window.notttoState) {
+    window.notttoState = createInitialState();
   }
-  return window.bugfinderState;
+  return window.notttoState;
 }
 
-export function createInitialState(): BugfinderState {
+export function createInitialState(): NotttoState {
   return {
     fabricCanvas: null,
     overlay: null,
@@ -123,7 +123,7 @@ export function createInitialState(): BugfinderState {
 }
 
 export function resetState(): void {
-  window.bugfinderState = createInitialState();
+  window.notttoState = createInitialState();
 }
 ```
 
@@ -138,7 +138,7 @@ import { setupKeyboardHandler } from "./keyboard";
 export function createOverlay(): void {
   const state = getState();
   state.overlay = document.createElement("div");
-  state.overlay.id = "bugfinder-overlay";
+  state.overlay.id = "nottto-overlay";
   // ... HTML template with Tailwind classes
   document.body.appendChild(state.overlay);
   state.notesInput = document.getElementById(

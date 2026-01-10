@@ -1,8 +1,8 @@
-# Implementation Plan: BugFinder Backend API
+# Implementation Plan: Nottto Backend API
 
 ## Overview
 
-This plan implements the BugFinder Backend API using Hono, Drizzle ORM, and Neon PostgreSQL. Tasks are organized to build incrementally, starting with project setup, then core infrastructure, followed by feature implementation.
+This plan implements the Nottto Backend API using Hono, Drizzle ORM, and Neon PostgreSQL. Tasks are organized to build incrementally, starting with project setup, then core infrastructure, followed by feature implementation.
 
 ## Tasks
 

@@ -1,8 +1,8 @@
-# BugFinder Backend Project Plan
+# Nottto Backend Project Plan
 
 ## Overview
 
-Backend API for BugFinder Chrome extension, supporting authentication, workspaces, projects, and annotation storage.
+Backend API for Nottto Chrome extension, supporting authentication, workspaces, projects, and annotation storage.
 
 ## Tech Stack
 
@@ -19,7 +19,7 @@ Backend API for BugFinder Chrome extension, supporting authentication, workspace
 ## Monorepo Structure
 
 ```
-bugfinder/
+nottto/
 ├── apps/
 │   ├── extension/        # Chrome extension (existing code)
 │   ├── api/              # Hono backend (new)
@@ -157,7 +157,7 @@ annotations (
 
 ## Auth Flow
 
-1. User visits web app (`app.bugfinder.com`) → signs up/logs in
+1. User visits web app (`app.nottto.com`) → signs up/logs in
 2. On signup: create user + default workspace + default project
 3. JWT token returned (access token + refresh token)
 4. Web app stores token, passes to extension via:
@@ -188,7 +188,7 @@ annotations (
 
 ```env
 # Database
-DATABASE_URL=postgresql://...@neon.tech/bugfinder
+DATABASE_URL=postgresql://...@neon.tech/nottto
 
 # Auth
 JWT_SECRET=your-secret-key
@@ -198,8 +198,8 @@ JWT_REFRESH_SECRET=your-refresh-secret
 BLOB_READ_WRITE_TOKEN=vercel_blob_...
 
 # App
-API_URL=https://api.bugfinder.com
-WEB_URL=https://app.bugfinder.com
+API_URL=https://api.nottto.com
+WEB_URL=https://app.nottto.com
 ```
 
 ## Extension Changes Required

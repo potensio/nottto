@@ -1,4 +1,4 @@
-// Auth API stubs for BugFinder backend integration
+// Auth API stubs for Nottto backend integration
 // Implement when backend is ready
 
 import { post, setAuthToken, clearAuthToken } from "./client";

@@ -4,7 +4,7 @@ import {
   createWorkspaceSchema,
   updateWorkspaceSchema,
   createProjectSchema,
-} from "@bugfinder/shared";
+} from "@nottto/shared";
 import { authMiddleware } from "../middleware/auth";
 import * as workspaceService from "../services/workspaces";
 import * as projectService from "../services/projects";

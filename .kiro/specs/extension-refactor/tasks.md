@@ -2,7 +2,7 @@
 
 ## Overview
 
-Refactor the BugFinder Chrome extension from flat JavaScript to modular TypeScript architecture. Tasks are ordered to build incrementally, with each step producing working code.
+Refactor the Nottto Chrome extension from flat JavaScript to modular TypeScript architecture. Tasks are ordered to build incrementally, with each step producing working code.
 
 ## Tasks
 
@@ -31,7 +31,7 @@ Refactor the BugFinder Chrome extension from flat JavaScript to modular TypeScri
 - [x] 2. Create type definitions and utilities
 
   - [x] 2.1 Create `src/types/index.ts`
-    - Define Tool type, BugfinderState interface, Task interface
+    - Define Tool type, NotttoState interface, Task interface
     - _Requirements: 5.1, 5.2, 5.3_
   - [x] 2.2 Create `src/utils/icons.ts`
     - Extract all SVG icon strings from content.js

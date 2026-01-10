@@ -1,4 +1,4 @@
-// Project API stubs for BugFinder backend integration
+// Project API stubs for Nottto backend integration
 // Implement when backend is ready
 
 import { get, post, put, del } from "./client";

@@ -1,8 +1,8 @@
 {
-  "name": "@bugfinder/api",
+  "name": "@nottto/api",
   "version": "1.0.0",
   "private": true,
-  "description": "BugFinder API - Hono backend for annotation storage",
+  "description": "Nottto API - Hono backend for annotation storage",
   "type": "module",
   "scripts": {
     "dev": "bun run --watch src/index.ts",
@@ -16,7 +16,7 @@
     "test": "bun test"
   },
   "dependencies": {
-    "@bugfinder/shared": "workspace:*",
+    "@nottto/shared": "workspace:*",
     "@hono/zod-validator": "^0.4.2",
     "@neondatabase/serverless": "^0.10.4",
     "@vercel/blob": "^0.27.1",

@@ -2,7 +2,7 @@
 
 ## Overview
 
-This design document outlines the approach for migrating remaining inline CSS styles in the BugFinder Chrome extension to Tailwind CSS utility classes. The migration focuses on three main areas: gradients, box shadows, and max-height calculations.
+This design document outlines the approach for migrating remaining inline CSS styles in the Nottto Chrome extension to Tailwind CSS utility classes. The migration focuses on three main areas: gradients, box shadows, and max-height calculations.
 
 ## Architecture
 

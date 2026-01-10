@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This document specifies requirements for UI/UX improvements in the BugFinder Chrome extension's annotation overlay: canvas padding and image adaptation, multi-line annotation titles, hidden form inputs, and canvas-relative toolbar positioning.
+This document specifies requirements for UI/UX improvements in the Nottto Chrome extension's annotation overlay: canvas padding and image adaptation, multi-line annotation titles, hidden form inputs, and canvas-relative toolbar positioning.
 
 ## Glossary
 

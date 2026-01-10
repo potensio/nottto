@@ -6,13 +6,13 @@ import {
   workspaceMembers,
   projects,
   annotations,
-} from "@bugfinder/shared/db";
+} from "@nottto/shared/db";
 import { generateSlug, generateUniqueSlug } from "../utils/slug";
 import type {
   Workspace,
   CreateWorkspaceInput,
   UpdateWorkspaceInput,
-} from "@bugfinder/shared";
+} from "@nottto/shared";
 
 export async function list(userId: string): Promise<Workspace[]> {
   // Get workspaces where user is owner or member

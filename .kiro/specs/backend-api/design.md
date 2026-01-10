@@ -1,8 +1,8 @@
-# Design Document: BugFinder Backend API
+# Design Document: Nottto Backend API
 
 ## Overview
 
-This document describes the architecture and implementation design for the BugFinder Backend API. The API is built using Hono framework running on Bun, with Drizzle ORM connecting to Neon PostgreSQL, and Vercel Blob for file storage. The system provides authentication, workspace/project management, and annotation storage for the BugFinder Chrome extension.
+This document describes the architecture and implementation design for the Nottto Backend API. The API is built using Hono framework running on Bun, with Drizzle ORM connecting to Neon PostgreSQL, and Vercel Blob for file storage. The system provides authentication, workspace/project management, and annotation storage for the Nottto Chrome extension.
 
 ## Architecture
 

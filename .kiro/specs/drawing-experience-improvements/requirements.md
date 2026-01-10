@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This feature improves the drawing experience in the BugFinder annotation tool by adding color selection for objects and text, ensuring text respects font and weight settings, fixing the trash/delete button to only be enabled when an object is selected, improving object selectability, fixing Esc key behavior, updating text size options, and auto-switching to Select mode after object creation.
+This feature improves the drawing experience in the Nottto annotation tool by adding color selection for objects and text, ensuring text respects font and weight settings, fixing the trash/delete button to only be enabled when an object is selected, improving object selectability, fixing Esc key behavior, updating text size options, and auto-switching to Select mode after object creation.
 
 ## Glossary
 

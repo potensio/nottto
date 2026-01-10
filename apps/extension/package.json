@@ -1,8 +1,8 @@
 {
-  "name": "@bugfinder/extension",
+  "name": "@nottto/extension",
   "version": "2.1.0",
   "private": true,
-  "description": "BugFinder Chrome extension for screenshot annotation",
+  "description": "Nottto Chrome extension for screenshot annotation",
   "scripts": {
     "build": "npm run build:js && npm run build:css",
     "build:js": "node esbuild.config.js",
@@ -20,6 +20,6 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "@bugfinder/shared": "workspace:*"
+    "@nottto/shared": "workspace:*"
   }
 }

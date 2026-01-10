@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "BugFinder - Screenshot Annotator",
+  "name": "Nottto - Screenshot Annotator",
   "version": "2.1.0",
   "description": "Capture screenshots and annotate with arrows, boxes, and text in full-screen mode",
   "permissions": ["activeTab", "downloads", "scripting", "storage"],

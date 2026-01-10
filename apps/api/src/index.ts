@@ -15,7 +15,7 @@ app.use("*", logger());
 app.use(
   "*",
   cors({
-    origin: ["http://localhost:3000", "https://app.bugfinder.com"],
+    origin: ["http://localhost:3000", "https://app.nottto.com"],
     credentials: true,
   })
 );
@@ -24,7 +24,7 @@ app.use(
 app.onError(errorHandler);
 
 // Health check
-app.get("/", (c) => c.json({ status: "ok", service: "bugfinder-api" }));
+app.get("/", (c) => c.json({ status: "ok", service: "nottto-api" }));
 
 // Routes
 app.route("/auth", authRoutes);
@@ -42,6 +42,6 @@ export default app;
 
 // Start server when running directly
 const port = process.env.PORT || 3001;
-console.log(`🚀 BugFinder API running on http://localhost:${port}`);
+console.log(`🚀 Nottto API running on http://localhost:${port}`);
 
 export { app };
