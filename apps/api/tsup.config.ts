@@ -2,11 +2,12 @@ import { defineConfig } from "tsup";
 
 export default defineConfig({
   entry: ["src/index.ts"],
-  format: ["cjs"],
+  format: ["esm"],
   target: "node18",
-  outDir: "dist",
+  outDir: "api",
   outExtension: () => ({ js: ".js" }),
   clean: true,
-  sourcemap: true,
+  sourcemap: false,
+  // Bundle workspace dependencies
   noExternal: [/@nottto\/.*/],
 });

@@ -6,6 +6,7 @@ var __export = (target, all) => {
 
 // src/index.ts
 import { Hono as Hono6 } from "hono";
+import { handle } from "hono/vercel";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 
@@ -1065,7 +1066,7 @@ function errorHandler(err, c) {
 }
 
 // src/index.ts
-var app = new Hono6();
+var app = new Hono6().basePath("/api");
 app.use("*", logger());
 app.use(
   "*",
@@ -1084,8 +1085,20 @@ app.route("/upload", uploadRoutes);
 app.notFound(
   (c) => c.json({ error: { code: "NOT_FOUND", message: "Route not found" } }, 404)
 );
+var handler = handle(app);
+var GET = handler;
+var POST = handler;
+var PATCH = handler;
+var PUT = handler;
+var DELETE = handler;
+var OPTIONS = handler;
 var index_default = app;
 export {
+  DELETE,
+  GET,
+  OPTIONS,
+  PATCH,
+  POST,
+  PUT,
   index_default as default
 };
-//# sourceMappingURL=index.js.map
