@@ -1,0 +1,71 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom component classes for complex elements */
+@layer components {
+  .bf-tool-btn {
+    @apply w-10 h-10 flex items-center justify-center bg-transparent border-none rounded-full text-bf-secondary cursor-pointer transition-all duration-150 ease-in-out;
+  }
+
+  .bf-tool-btn:hover {
+    @apply bg-gray-100 text-bf-primary;
+  }
+
+  .bf-tool-btn.active {
+    @apply bg-bf-primary text-white;
+  }
+
+  .bf-tool-btn.danger {
+    @apply text-red-500;
+  }
+
+  .bf-tool-btn.danger:hover {
+    @apply bg-red-50 text-red-600;
+  }
+
+  .bf-tool-btn svg {
+    @apply w-4 h-4;
+    stroke-width: 2;
+  }
+
+  .bf-text-control {
+    @apply px-3 py-1.5 bg-gray-100 border border-bf-border rounded-md text-sm text-bf-primary cursor-pointer outline-none transition-all duration-150 ease-in-out min-w-15 appearance-none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M3 4.5L6 8l3-3.5H3z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    padding-right: 24px;
+  }
+
+  .bf-text-control:hover {
+    @apply bg-gray-200;
+  }
+
+  .bf-action-btn {
+    @apply flex-1 px-5 py-3 rounded-lg text-sm font-medium cursor-pointer transition-all duration-150 ease-in-out text-center;
+  }
+
+  .bf-action-btn.secondary {
+    @apply bg-white text-bf-primary border border-bf-border;
+  }
+
+  .bf-action-btn.secondary:hover {
+    @apply bg-gray-100 border-gray-400;
+  }
+
+  .bf-action-btn.primary {
+    @apply bg-bf-primary text-white border-none;
+  }
+
+  .bf-action-btn.primary:hover {
+    @apply bg-gray-700;
+  }
+
+  .bf-select {
+    @apply px-2 py-1 bg-gray-100 border border-bf-border rounded text-sm text-bf-primary cursor-pointer outline-none;
+  }
+
+  .bf-select:hover {
+    @apply bg-gray-200;
+  }
+}

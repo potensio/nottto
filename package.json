@@ -1,0 +1,12 @@
+{
+  "name": "bugfinder-extension",
+  "version": "2.0.0",
+  "description": "Screenshot annotation Chrome extension with Tailwind CSS",
+  "scripts": {
+    "build-css": "tailwindcss -i ./src/input.css -o ./overlay.css --watch",
+    "build": "tailwindcss -i ./src/input.css -o ./overlay.css --minify"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.0"
+  }
+}
