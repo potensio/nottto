@@ -1,115 +1,172 @@
-# BugFinder - Screenshot Annotation Chrome Extension
+# BugFinder
 
-A full-screen Chrome extension for capturing and annotating screenshots with arrows, boxes, and text. Now powered by **Tailwind CSS** for better maintainability and smaller bundle sizes.
-
-## Features
-
-- Full-screen screenshot annotation overlay
-- Drawing tools: arrows, rectangles, ellipses, text
-- Customizable colors and stroke weights
-- Export annotated screenshots and task data
-- Clean, modern UI built with Tailwind CSS
-
-## Development Setup
-
-### Prerequisites
-
-- Node.js and npm installed
-- Chrome browser for testing
-
-### Building the CSS
-
-This project now uses Tailwind CSS instead of custom CSS. To build the styles:
-
-1. **Install dependencies:**
-
-   ```bash
-   npm install
-   ```
-
-2. **Build the CSS (one-time):**
-
-   ```bash
-   npm run build
-   ```
-
-3. **Development with auto-rebuild:**
-
-   ```bash
-   npm run build-css
-   ```
-
-   This will watch for changes and rebuild automatically.
-
-4. **Or use the build script:**
-   ```bash
-   ./build.sh
-   ```
-
-### Loading the Extension
-
-1. Open Chrome → go to `chrome://extensions/`
-2. Enable **Developer mode** (top right toggle)
-3. Click **Load unpacked**
-4. Select this directory
-
-## Usage
-
-1. Navigate to any webpage
-2. **Click the BugFinder extension icon** in Chrome toolbar
-3. The page freezes and **full-screen annotation mode** opens
-4. Use the floating toolbar to annotate:
-   - **Arrow**: Click and drag to draw arrows
-   - **Rectangle**: Click and drag to draw boxes
-   - **Text**: Click to place, type, press Enter
-5. Add context notes in the right panel
-6. Click **Save Task**
-
-## Keyboard Shortcuts
-
-| Key      | Action         |
-| -------- | -------------- |
-| `A`      | Arrow tool     |
-| `R`      | Rectangle tool |
-| `T`      | Text tool      |
-| `Ctrl+Z` | Undo           |
-| `Ctrl+S` | Save           |
-| `Esc`    | Cancel         |
-
-## Output
-
-Saves two files:
-
-- `bugfinder-task-{id}.json` - Full task data with metadata
-- `bugfinder-screenshot-{id}.png` - Annotated screenshot
+A screenshot annotation tool with a Chrome extension and backend API for capturing, annotating, and managing bug reports.
 
 ## Project Structure
 
 ```
-├── manifest.json          # Extension manifest
-├── background.js          # Service worker
-├── content.js            # Content script with Tailwind classes
-├── overlay.css           # Generated Tailwind CSS (don't edit directly)
-├── src/
-│   └── input.css         # Tailwind source file
-├── tailwind.config.js    # Tailwind configuration
-├── package.json          # Dependencies and scripts
-└── icons/               # Extension icons
+bugfinder/
+├── apps/
+│   ├── api/              # Hono backend API
+│   └── extension/        # Chrome extension
+├── packages/
+│   └── shared/           # Shared types, schemas, database
+├── .kiro/                # Specs and documentation
+├── package.json          # Root workspace config
+└── pnpm-workspace.yaml   # pnpm workspace config
 ```
 
-## Tailwind Migration Benefits
+## Tech Stack
 
-- **Smaller bundle size**: Only used utilities are included
-- **Better maintainability**: Utility classes instead of custom CSS
-- **Consistent design system**: Predefined spacing, colors, and components
-- **Easier responsive design**: Built-in responsive utilities
-- **Better developer experience**: IntelliSense support and faster development
+| Component    | Technology                          |
+| ------------ | ----------------------------------- |
+| Extension    | TypeScript, Fabric.js, Tailwind CSS |
+| API          | Hono, Bun, Drizzle ORM              |
+| Database     | Neon PostgreSQL                     |
+| File Storage | Vercel Blob                         |
+| Auth         | JWT (jose) + bcrypt                 |
 
-## Custom Design Tokens
+## Getting Started
 
-The project uses custom design tokens defined in `tailwind.config.js`:
+### Prerequisites
 
-- **Colors**: `bf-primary`, `bf-secondary`, `bf-accent`, `bf-bg`, `bf-surface`, `bf-border`
-- **Spacing**: Custom spacing values for the extension layout
-- **Z-index**: High z-index values for overlay functionality
-- **Animations**: Custom slide-up animation for toasts
+- [Node.js](https://nodejs.org/) (v18+)
+- [pnpm](https://pnpm.io/) package manager
+- [Bun](https://bun.sh/) runtime (for API)
+- Chrome browser (for extension testing)
+
+### Installation
+
+```bash
+# Install dependencies
+pnpm install
+```
+
+### Development
+
+```bash
+# Run all apps in development mode
+pnpm dev
+
+# Run only the extension
+pnpm dev:extension
+
+# Run only the API
+pnpm dev:api
+```
+
+### Building
+
+```bash
+# Build all apps
+pnpm build
+
+# Build only the extension
+pnpm build:extension
+
+# Build only the API
+pnpm build:api
+```
+
+### Type Checking
+
+```bash
+pnpm typecheck
+```
+
+## Apps
+
+### Chrome Extension (`apps/extension`)
+
+Full-screen screenshot annotation tool with drawing capabilities.
+
+**Features:**
+
+- Full-screen annotation overlay
+- Drawing tools: arrows, rectangles, ellipses, text
+- Customizable colors and stroke weights
+- Export annotated screenshots
+- Keyboard shortcuts
+
+**Loading in Chrome:**
+
+1. Open `chrome://extensions/`
+2. Enable "Developer mode"
+3. Click "Load unpacked"
+4. Select `apps/extension` directory
+
+**Keyboard Shortcuts:**
+| Key | Action |
+|-----|--------|
+| `A` | Arrow tool |
+| `R` | Rectangle tool |
+| `T` | Text tool |
+| `Ctrl+Z` | Undo |
+| `Ctrl+S` | Save |
+| `Esc` | Cancel |
+
+### Backend API (`apps/api`)
+
+REST API for authentication, workspaces, projects, and annotation storage.
+
+**Setup:**
+
+1. Copy environment file:
+   ```bash
+   cp apps/api/.env.example apps/api/.env
+   ```
+2. Fill in your credentials (Neon DB, JWT secrets, Vercel Blob)
+3. Push database schema:
+   ```bash
+   pnpm db:push
+   ```
+
+**API Endpoints:**
+
+- `POST /auth/register` - Create account
+- `POST /auth/login` - Login
+- `POST /auth/refresh` - Refresh token
+- `GET /auth/me` - Get current user
+- `GET/POST/PATCH/DELETE /workspaces` - Workspace CRUD
+- `GET/POST/PATCH/DELETE /projects` - Project CRUD
+- `GET/POST/PATCH/DELETE /annotations` - Annotation CRUD
+- `POST /upload/screenshot` - Upload screenshot
+
+See `apps/api/README.md` for full API documentation.
+
+## Packages
+
+### Shared (`packages/shared`)
+
+Shared code used by both the extension and API:
+
+- TypeScript types and interfaces
+- Zod validation schemas
+- Drizzle database schema
+
+## Environment Variables
+
+### API (`apps/api/.env`)
+
+```env
+DATABASE_URL=postgresql://...@neon.tech/bugfinder
+JWT_SECRET=your-jwt-secret
+JWT_REFRESH_SECRET=your-refresh-secret
+BLOB_READ_WRITE_TOKEN=vercel_blob_...
+```
+
+## Scripts
+
+| Command              | Description                  |
+| -------------------- | ---------------------------- |
+| `pnpm dev`           | Run all apps in dev mode     |
+| `pnpm build`         | Build all apps               |
+| `pnpm typecheck`     | Type check all packages      |
+| `pnpm dev:extension` | Run extension in dev mode    |
+| `pnpm dev:api`       | Run API in dev mode          |
+| `pnpm db:generate`   | Generate database migrations |
+| `pnpm db:migrate`    | Run database migrations      |
+
+## License
+
+MIT
