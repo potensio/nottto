@@ -95,16 +95,16 @@ function createOverlay() {
       <div class="absolute inset-0 pointer-events-none z-10 bg-overlay-gradient"></div>
       
       <!-- Canvas Container -->
-      <div class="flex-1 flex items-center justify-center p-10 relative z-20">
-        <!-- Canvas Area: flex column to stack canvas and toolbar -->
-        <div class="flex flex-col items-center">
+      <div class="flex-1 flex items-center justify-center px-8 relative z-20">
+        <!-- Canvas Area: relative container for absolute toolbar positioning -->
+        <div class="relative flex flex-col items-center justify-center w-full h-full">
           <!-- Canvas Wrapper -->
-          <div class="relative bg-white rounded-xl shadow-lg max-w-full max-h-full overflow-visible shadow-canvas">
-            <canvas id="bf-fabric-canvas" class="bg-transparent max-w-full max-h-canvas"></canvas>
+          <div class="relative bg-white rounded-xl shadow-lg max-w-full overflow-visible">
+            <canvas id="bf-fabric-canvas" class="bg-transparent max-w-full"></canvas>
           </div>
           
-          <!-- Floating Toolbar (sibling below canvas wrapper) -->
-          <div class="mt-4 flex items-center gap-1 px-4 py-2 bg-white rounded-full shadow-lg z-100 shadow-toolbar">
+          <!-- Floating Toolbar (absolute positioned at bottom of container) -->
+          <div class="absolute bottom-10 left-1/2 transform -translate-x-1/2 flex items-center gap-1 px-4 py-2 bg-white rounded-full shadow-lg z-100">
             <div class="flex items-center gap-1">
               <button class="bf-tool-btn" data-tool="select" title="Select (S)">${icons.select}</button>
               <button class="bf-tool-btn active" data-tool="arrow" title="Arrow (A)">${icons.arrow}</button>
@@ -143,7 +143,7 @@ function createOverlay() {
     <div class="w-90 min-w-90 bg-white border-l border-bf-border flex flex-col h-full">
       <div class="flex-1 p-6 overflow-y-auto">
         <!-- Title -->
-        <input type="text" id="bf-title-input" placeholder="Write an annotation title" class="w-full p-0 border-none bg-transparent text-xl font-normal text-bf-primary outline-none mb-6 placeholder-gray-400">
+        <textarea id="bf-title-input" placeholder="Write an annotation title" rows="1" class="w-full p-0 border-none bg-transparent text-xl font-normal text-bf-primary outline-none mb-6 placeholder-gray-400 resize-none overflow-hidden"></textarea>
         
         <!-- Form Fields -->
         <div class="flex items-start gap-3 py-3 border-b border-gray-100">
@@ -181,7 +181,7 @@ function createOverlay() {
         <!-- Description -->
         <div class="mt-6">
           <div class="text-sm font-medium text-bf-primary mb-2">Description</div>
-          <textarea id="bf-description-input" placeholder="What is this annotation about?" class="w-full min-h-25 p-3 border border-bf-border rounded-lg bg-bf-bg text-sm font-sans text-bf-primary outline-none resize-y transition-all duration-150 ease-in-out placeholder-gray-400 focus:border-bf-primary focus:bg-white"></textarea>
+          <textarea id="bf-description-input" placeholder="What is this annotation about?" class="w-full min-h-25 p-3 border-none rounded-lg bg-bf-bg text-sm font-sans text-bf-primary outline-none resize-y transition-all duration-150 ease-in-out placeholder-gray-400 focus:bg-white"></textarea>
         </div>
       </div>
       
@@ -287,6 +287,13 @@ function setupEventListeners() {
   // Setup keyboard handler
   setupKeyboardHandler();
   document.body.style.overflow = "hidden";
+
+  // Auto-resize title textarea
+  const titleInput = document.getElementById("bf-title-input");
+  titleInput.addEventListener("input", function () {
+    this.style.height = "auto";
+    this.style.height = this.scrollHeight + "px";
+  });
 }
 
 function initFabric(dataUrl) {
@@ -297,8 +304,9 @@ function initFabric(dataUrl) {
   const img = new Image();
   img.onload = () => {
     // Calculate fit-to-screen dimensions
-    const viewportWidth = window.innerWidth - 80; // Padding
-    const viewportHeight = window.innerHeight - 200; // Toolbar + Bottom panel spaces
+    // Account for: form panel (360px) + horizontal padding (px-16 = 64px * 2 = 128px)
+    const viewportWidth = window.innerWidth - 360 - 128;
+    const viewportHeight = window.innerHeight - 160; // Top/bottom padding + toolbar space
 
     const scaleX = viewportWidth / img.width;
     const scaleY = viewportHeight / img.height;

@@ -2,60 +2,59 @@
 
 ## Introduction
 
-This document specifies requirements for fixing bugs in the BugFinder Chrome extension: unreliable screen capture resulting in white images on subsequent captures, ESC key not working after first use, and incorrect toolbar positioning relative to the canvas.
+This document specifies requirements for UI/UX improvements in the BugFinder Chrome extension's annotation overlay: canvas padding and image adaptation, multi-line annotation titles, hidden form inputs, and canvas-relative toolbar positioning.
 
 ## Glossary
 
-- **Screen_Capture_Module**: The component in background.js responsible for capturing the visible tab using `chrome.tabs.captureVisibleTab`
-- **Overlay_System**: The full-page annotation overlay created by content.js that displays the captured screenshot
-- **Floating_Toolbar**: The drawing tools toolbar that should appear anchored to the bottom of the canvas container
-- **Canvas_Container**: The wrapper div containing the Fabric.js canvas element
+- **Canvas_Container**: The wrapper div containing the Fabric.js canvas element and its parent layout
 - **Fabric_Canvas**: The Fabric.js canvas instance used for rendering the screenshot and annotations
-- **Content_Script_State**: The module-level state variables in content.js that track overlay, canvas, and event listeners
+- **Floating_Toolbar**: The drawing tools toolbar that appears below the canvas for annotation tools
+- **Annotation_Title_Input**: The text input field where users enter the annotation title
+- **Form_Panel**: The right-side panel containing the annotation form fields (title, type, priority, description)
+- **Hidden_Input**: An HTML input element with type="hidden" used to store form values without visible UI
 
 ## Requirements
 
-### Requirement 1: Reliable Screen Capture
+### Requirement 1: Canvas Horizontal Padding and Image Adaptation
 
-**User Story:** As a user, I want the screen capture to reliably capture the current page, so that I never see a blank white image when trying to annotate.
-
-#### Acceptance Criteria
-
-1. WHEN the user clicks the extension icon THEN the Screen_Capture_Module SHALL ensure the tab is fully loaded and active before attempting capture
-2. WHEN capturing the visible tab THEN the Screen_Capture_Module SHALL use proper async/await handling with the chrome.tabs.captureVisibleTab API to ensure the capture completes
-3. WHEN the tab contains dynamic content or is still loading THEN the Screen_Capture_Module SHALL wait for the document ready state to be "complete" before capturing
-4. IF the capture fails or returns invalid data THEN the Screen_Capture_Module SHALL log the error and notify the user with a descriptive error message
-5. WHEN injecting scripts into the tab THEN the Screen_Capture_Module SHALL verify the tab is in a valid state (not a chrome:// URL, not discarded) before proceeding
-
-### Requirement 2: Canvas-Relative Toolbar Positioning
-
-**User Story:** As a user, I want the drawing toolbar to stay anchored to the bottom of the canvas area, so that I can easily access tools regardless of the screenshot size.
+**User Story:** As a user, I want the captured screenshot to have proper horizontal padding and adapt to its container, so that the image doesn't overlap other UI elements and displays correctly within the available space.
 
 #### Acceptance Criteria
 
-1. THE Floating_Toolbar SHALL be positioned at the bottom of the Canvas_Container with a fixed offset
-2. WHEN the canvas is smaller than the viewport THEN the Floating_Toolbar SHALL remain anchored below the canvas, not at the bottom of the viewport
-3. WHEN the canvas is resized or the window is resized THEN the Floating_Toolbar SHALL maintain its position relative to the Canvas_Container
-4. THE Floating_Toolbar SHALL have a floating appearance with appropriate shadow and background styling
+1. THE Canvas_Container SHALL have horizontal padding to prevent the screenshot from overlapping adjacent UI elements
+2. WHEN the screenshot is displayed THEN the Fabric_Canvas SHALL adapt its dimensions to fit within the parent container boundaries
+3. WHEN the viewport is resized THEN the Fabric_Canvas SHALL maintain proper spacing from container edges
+4. THE screenshot image SHALL scale proportionally to fit within the available container width minus padding
 
-### Requirement 3: Reliable Repeated Capture Sessions
+### Requirement 2: Multi-line Annotation Title
 
-**User Story:** As a user, I want to be able to capture screenshots multiple times in a row, so that I can annotate different parts of a page or retry if I made a mistake.
-
-#### Acceptance Criteria
-
-1. WHEN the user closes the overlay and triggers a new capture THEN the Overlay_System SHALL display the new screenshot correctly
-2. WHEN the overlay is closed THEN the Content_Script_State SHALL be fully reset to allow a fresh capture session
-3. WHEN the content script is re-injected THEN the Overlay_System SHALL not create duplicate event listeners or DOM elements
-4. WHEN a previous overlay exists THEN the Screen_Capture_Module SHALL clean it up before initializing a new one
-
-### Requirement 4: Reliable ESC Key Functionality
-
-**User Story:** As a user, I want to press ESC to close the annotation overlay at any time, so that I can quickly cancel and return to the page.
+**User Story:** As a user, I want to write annotation titles with more than one line, so that I can provide detailed titles for complex issues.
 
 #### Acceptance Criteria
 
-1. WHEN the user presses ESC THEN the Overlay_System SHALL close the overlay and restore the page to its original state
-2. WHEN the overlay is closed and reopened THEN the ESC key handler SHALL continue to function correctly
-3. WHEN the content script is re-injected THEN the keyboard event listener SHALL be properly registered without duplicates
-4. IF the user is editing text in an input field THEN the ESC key SHALL NOT close the overlay
+1. THE Annotation_Title_Input SHALL support multi-line text entry
+2. WHEN the user presses Enter in the title field THEN the input SHALL create a new line instead of submitting the form
+3. THE Annotation_Title_Input SHALL expand vertically to accommodate multiple lines of text
+4. WHEN the title contains multiple lines THEN the Form_Panel SHALL display all lines without truncation
+
+### Requirement 3: Borderless Form Inputs
+
+**User Story:** As a user, I want the form inputs (title, type, priority, description) to have no visible borders, so that the form feels more natural and less cluttered.
+
+#### Acceptance Criteria
+
+1. THE Form_Panel input fields SHALL have no visible borders in their default state
+2. THE Form_Panel select elements SHALL have no visible borders in their default state
+3. WHEN the user focuses on an input field THEN the field MAY show subtle visual feedback without adding borders
+4. THE borderless styling SHALL maintain visual consistency across all form elements (inputs, selects, textareas)
+
+### Requirement 4: Canvas-Relative Toolbar Positioning
+
+**User Story:** As a user, I want the drawing toolbar to be positioned 40px from the bottom of the canvas, so that the toolbar stays visually connected to the canvas regardless of screen size.
+
+#### Acceptance Criteria
+
+1. THE Floating_Toolbar SHALL be positioned 40px below the bottom edge of the Fabric_Canvas
+2. WHEN the canvas is smaller than the viewport THEN the Floating_Toolbar SHALL remain anchored relative to the canvas, not the viewport
+3. WHEN the canvas is resized THEN the Floating_Toolbar SHALL maintain its 40px offset from the canvas bottom
+4. THE Floating_Toolbar positioning SHALL be relative to the Canvas_Container element, not the screen or viewport

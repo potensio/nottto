@@ -1,91 +1,65 @@
-# Implementation Plan: BugFixes - Capture & Toolbar
+# Implementation Plan: BugFixes Capture Toolbar
 
 ## Overview
 
-This plan implements fixes for four bugs: unreliable screen capture, incorrect toolbar positioning, white/blank image on repeated captures, and ESC key not working after first use. The implementation modifies `background.js` for capture improvements and `content.js` for state management and toolbar positioning.
+Implementation of four UI/UX improvements: canvas padding, multi-line titles, borderless inputs, and canvas-relative toolbar positioning.
 
 ## Tasks
 
-- [x] 1. Implement reliable screen capture in background.js
+- [x] 1. Update canvas container layout with horizontal padding
 
-  - [x] 1.1 Add tab validation helper function
+  - Modify `createOverlay()` in `content.js`
+  - Add `px-16` horizontal padding to canvas container
+  - Add `relative` positioning to parent container for toolbar anchoring
+  - Ensure canvas wrapper has `max-w-full` constraint
+  - _Requirements: 1.1, 1.2, 1.3, 1.4_
 
-    - Create `isValidTab(tab)` function that checks for null tab, null tab.id, chrome:// URLs, chrome-extension:// URLs, about: URLs, and discarded tabs
-    - Return false for any invalid condition, true otherwise
-    - _Requirements: 1.5_
+- [x] 2. Implement multi-line annotation title
 
-  - [x] 1.2 Add document ready state check function
-
-    - Create `waitForDocumentReady(tabId)` async function
-    - Use chrome.scripting.executeScript to check document.readyState
-    - Wait and retry if state is not "complete"
-    - _Requirements: 1.3_
-
-  - [x] 1.3 Update main capture flow with validation and error handling
-    - Add tab validation check at start of click handler
-    - Call waitForDocumentReady before capture
-    - Wrap capture in try-catch with proper error logging
-    - _Requirements: 1.1, 1.2, 1.4_
-
-- [x] 2. Fix toolbar positioning in content.js
-
-  - [x] 2.1 Restructure canvas area DOM layout
-
-    - Change canvas container to use flex column layout
-    - Move toolbar outside the canvas wrapper div
-    - Make toolbar a sibling element below the canvas wrapper
+  - [x] 2.1 Replace title input with textarea
+    - Change `<input type="text">` to `<textarea>` in `createOverlay()`
+    - Add classes: `resize-none overflow-hidden`
+    - Set initial `rows="1"`
     - _Requirements: 2.1, 2.2_
+  - [x] 2.2 Add auto-resize behavior for title textarea
+    - Add input event listener in `setupEventListeners()`
+    - Implement height auto-adjustment on input
+    - _Requirements: 2.3, 2.4_
 
-  - [x] 2.2 Update toolbar CSS classes
-    - Remove absolute positioning classes (-bottom-15, left-1/2, transform)
-    - Add margin-top for spacing from canvas
-    - Keep floating appearance styles (shadow, background, rounded)
-    - _Requirements: 2.1, 2.4_
+- [x] 3. Apply borderless styling to form inputs
 
-- [x] 3. Implement state management for repeated captures
+  - [x] 3.1 Update select element styling
+    - Modify `.bf-select` class in `src/input.css`
+    - Change to `bg-transparent border-none`
+    - _Requirements: 3.1, 3.2_
+  - [x] 3.2 Update description textarea styling
+    - Remove border from description textarea in `createOverlay()`
+    - Change `border border-bf-border` to `border-none`
+    - _Requirements: 3.1, 3.4_
 
-  - [x] 3.1 Refactor content.js to use window-level state
+- [x] 4. Reposition toolbar relative to canvas container
 
-    - Replace IIFE pattern with window.bugfinderState object
-    - Move all state variables (fabricCanvas, overlay, keyboardHandler, etc.) to window.bugfinderState
-    - Initialize state object if not exists
-    - _Requirements: 3.2_
+  - Move toolbar to use absolute positioning
+  - Add `absolute bottom-10 left-1/2 transform -translate-x-1/2`
+  - Remove `mt-4` margin class
+  - Ensure parent container has `relative h-full` classes
+  - _Requirements: 4.1, 4.2, 4.3, 4.4_
 
-  - [x] 3.2 Implement comprehensive cleanup function
+- [x] 5. Update initFabric canvas sizing
 
-    - Create cleanupOverlay function that resets ALL state variables
-    - Dispose Fabric canvas properly (off() then dispose())
-    - Remove overlay DOM element
-    - Remove keyboard event listener using stored reference
-    - Reset body overflow style
-    - _Requirements: 3.2, 3.4_
+  - Account for new horizontal padding (px-16 = 64px each side)
+  - Update viewport width calculation: `window.innerWidth - 360 - 128` (form panel + padding)
+  - _Requirements: 1.2, 1.4_
 
-  - [x] 3.3 Implement single message listener with cleanup
+- [ ]\* 6. Checkpoint - Manual testing
+  - Test canvas padding with various screenshot sizes
+  - Test multi-line title entry with Enter key
+  - Test borderless form appearance
+  - Test toolbar position with small and large screenshots
+  - Ensure all tests pass, ask the user if questions arise
 
-    - Register message listener only once using window.bugfinderListenerRegistered flag
-    - Call cleanupOverlay before initializing new overlay in message handler
-    - Remove the bugfinderInjected guard that prevents re-initialization
-    - _Requirements: 3.3, 3.1_
+## Notes
 
-- [x] 4. Fix keyboard handler management
-
-  - [x] 4.1 Implement proper keyboard handler registration
-
-    - Store keyboard handler function reference in window.bugfinderState.keyboardHandler
-    - Remove existing handler before adding new one in setupKeyboardHandler
-    - Ensure handler is removed in cleanupOverlay
-    - _Requirements: 4.2, 4.3_
-
-  - [x] 4.2 Verify input field check in keyboard handler
-    - Ensure handler checks for TEXTAREA and INPUT[type="text"] targets
-    - Ensure handler checks for Fabric IText editing state
-    - Skip shortcuts when user is typing
-    - _Requirements: 4.4_
-
-- [ ] 5. Checkpoint - Test the fixes
-  - Ensure extension loads without errors
-  - Test screen capture on various pages
-  - Verify toolbar positioning with different screenshot sizes
-  - Test repeated captures (close with ESC, capture again)
-  - Verify ESC key works on first and subsequent sessions
-  - Verify no duplicate overlays or event listeners in DevTools
+- All changes are in `content.js` and `src/input.css`
+- No new dependencies required
+- Tailwind classes used: `px-16`, `bottom-10`, `resize-none`, `border-none`, `bg-transparent`
