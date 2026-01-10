@@ -1,16 +1,16 @@
 {
   "installCommand": "cd ../.. && pnpm install",
   "buildCommand": "pnpm run build",
-  "builds": [
-    {
-      "src": "dist/index.js",
-      "use": "@vercel/node"
+  "outputDirectory": "dist",
+  "functions": {
+    "index.js": {
+      "runtime": "nodejs18.x"
     }
-  ],
-  "routes": [
+  },
+  "rewrites": [
     {
-      "src": "/(.*)",
-      "dest": "dist/index.js"
+      "source": "/(.*)",
+      "destination": "/index.js"
     }
   ]
 }
