@@ -8,8 +8,10 @@
     "dev": "pnpm -r --parallel dev",
     "dev:extension": "pnpm --filter @nottto/extension dev",
     "dev:api": "pnpm --filter @nottto/api dev",
+    "dev:web": "pnpm --filter @nottto/web dev",
     "build:extension": "pnpm --filter @nottto/extension build",
     "build:api": "pnpm --filter @nottto/api build",
+    "build:web": "pnpm --filter @nottto/web build",
     "typecheck": "pnpm -r typecheck",
     "db:generate": "pnpm --filter @nottto/api db:generate",
     "db:migrate": "pnpm --filter @nottto/api db:migrate"
