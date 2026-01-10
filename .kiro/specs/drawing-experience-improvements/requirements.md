@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This feature improves the drawing experience in the BugFinder annotation tool by adding color selection for objects and text, ensuring text respects font and weight settings, and fixing the trash/delete button to only be enabled when an object is selected.
+This feature improves the drawing experience in the BugFinder annotation tool by adding color selection for objects and text, ensuring text respects font and weight settings, fixing the trash/delete button to only be enabled when an object is selected, improving object selectability, fixing Esc key behavior, updating text size options, and auto-switching to Select mode after object creation.
 
 ## Glossary
 
@@ -13,6 +13,8 @@ This feature improves the drawing experience in the BugFinder annotation tool by
 - **Delete_Button**: The trash icon button in the toolbar used to remove selected objects
 - **Font_Size_Selector**: The dropdown control for selecting text size
 - **Stroke_Weight_Selector**: The dropdown control for selecting line thickness
+- **Select_Mode**: The tool mode that allows users to click and select existing objects
+- **Drawing_Mode**: Any tool mode (arrow, rect, ellipse, text) used to create new objects
 
 ## Requirements
 
@@ -55,3 +57,49 @@ This feature improves the drawing experience in the BugFinder annotation tool by
 5. WHEN the Delete_Button is disabled, THE Delete_Button SHALL display with reduced opacity and not respond to clicks
 6. WHEN the Delete_Button is enabled and clicked, THE Canvas SHALL remove the currently selected object
 7. WHEN the selected object is deleted, THE Delete_Button SHALL return to disabled state
+
+### Requirement 4: Object Selectability
+
+**User Story:** As a user, I want to be able to select text and objects on the canvas, so that I can modify or delete them after creation.
+
+#### Acceptance Criteria
+
+1. WHEN an object is created on the Canvas, THE Canvas SHALL make that object selectable when in Select_Mode
+2. WHEN a user switches to Select_Mode, THE Canvas SHALL enable selection for all existing objects
+3. WHEN a user clicks on an object in Select_Mode, THE Canvas SHALL select that object and display selection handles
+4. WHEN text editing is completed, THE Canvas SHALL ensure the text object remains selectable
+5. WHEN an arrow, rectangle, or ellipse is created, THE Canvas SHALL set selectable and evented properties to true after creation completes
+
+### Requirement 5: Escape Key Behavior
+
+**User Story:** As a user, I want the Esc key to clear my current selection without closing the extension, so that I can deselect objects without losing my work.
+
+#### Acceptance Criteria
+
+1. WHEN a user presses Esc while an object is selected, THE Canvas SHALL deselect the object and clear the selection
+2. WHEN a user presses Esc while no object is selected, THE Canvas SHALL take no action (extension remains open)
+3. WHEN a user presses Esc while editing text, THE Canvas SHALL exit text editing mode and deselect the text
+4. THE Esc key SHALL never close the extension overlay
+
+### Requirement 6: Text Size Options
+
+**User Story:** As a user, I want more text size options including smaller sizes, so that I can create annotations with appropriate text sizing for different contexts.
+
+#### Acceptance Criteria
+
+1. THE Font_Size_Selector SHALL include 12px as an available option
+2. THE Font_Size_Selector SHALL include 14px as an available option
+3. THE Font_Size_Selector SHALL have 16px as the default selected value
+4. THE Font_Size_Selector SHALL display options in ascending order: 12px, 14px, 16px, 20px, 24px, 32px
+
+### Requirement 7: Auto-Switch to Select Mode
+
+**User Story:** As a user, I want the tool to automatically switch to Select mode after I finish creating an object or typing text, so that I can immediately interact with what I just created.
+
+#### Acceptance Criteria
+
+1. WHEN a user finishes drawing a rectangle, THE Toolbar SHALL automatically switch to Select_Mode
+2. WHEN a user finishes drawing an ellipse, THE Toolbar SHALL automatically switch to Select_Mode
+3. WHEN a user finishes drawing an arrow, THE Toolbar SHALL automatically switch to Select_Mode
+4. WHEN a user exits text editing mode, THE Toolbar SHALL automatically switch to Select_Mode
+5. WHEN auto-switching to Select_Mode, THE Canvas SHALL make the newly created object selected

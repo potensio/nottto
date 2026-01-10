@@ -2,7 +2,7 @@
 
 ## Overview
 
-This plan implements three improvements to the BugFinder drawing experience: visible color picker, proper text font/weight settings, and delete button state management. The implementation modifies `content.js` for logic and `src/input.css` for styling.
+This plan implements seven improvements to the BugFinder drawing experience: visible color picker, proper text font/weight settings, delete button state management, object selectability fixes, Esc key behavior changes, text size options, and auto-switch to Select mode. The implementation modifies `content.js` for logic and `src/input.css` for styling.
 
 ## Tasks
 
@@ -88,7 +88,72 @@ This plan implements three improvements to the BugFinder drawing experience: vis
     - **Property 5: Delete Removes Selected Object**
     - **Validates: Requirements 3.6**
 
-- [ ] 6. Final checkpoint - Ensure all tests pass
+- [x] 6. Implement object selectability fix
+
+  - [x] 6.1 Update onMouseUp to make shapes selectable after creation
+    - Set `selectable: true` and `evented: true` on rect/ellipse after drawing completes
+    - Call `setCoords()` to ensure selection handles work
+    - _Requirements: 4.1, 4.5_
+  - [x] 6.2 Update arrow group creation to be selectable
+    - Set `selectable: true` and `evented: true` on arrow group after creation
+    - _Requirements: 4.1, 4.5_
+  - [x] 6.3 Ensure text remains selectable after editing
+    - Verify text object has `selectable: true` after `exitEditing()`
+    - _Requirements: 4.4_
+  - [ ]\* 6.4 Write property test for object selectability
+    - **Property 6: Objects Are Selectable After Creation**
+    - **Validates: Requirements 4.1, 4.2, 4.5**
+
+- [x] 7. Implement Escape key behavior change
+
+  - [x] 7.1 Update keyboard handler to not close extension on Esc
+    - Remove `cleanupOverlay()` call from Esc handler
+    - _Requirements: 5.4_
+  - [x] 7.2 Implement Esc to clear selection
+    - If object is selected, call `discardActiveObject()`
+    - If text is being edited, call `exitEditing()` first
+    - _Requirements: 5.1, 5.3_
+  - [ ]\* 7.3 Write property test for Esc clears selection
+    - **Property 7: Escape Key Clears Selection**
+    - **Validates: Requirements 5.1, 5.3, 5.4**
+  - [ ]\* 7.4 Write property test for Esc never closes extension
+    - **Property 8: Escape Key Never Closes Extension**
+    - **Validates: Requirements 5.2, 5.4**
+
+- [x] 8. Update text size options
+
+  - [x] 8.1 Add 12px and 14px options to font size selector
+    - Update HTML in `createOverlay()` to include new options
+    - _Requirements: 6.1, 6.2_
+  - [x] 8.2 Change default text size to 16px
+    - Set `selected` attribute on 16px option instead of 20px
+    - _Requirements: 6.3_
+  - [x] 8.3 Ensure options are in ascending order
+    - Order: 12px, 14px, 16px, 20px, 24px, 32px
+    - _Requirements: 6.4_
+  - [ ]\* 8.4 Write unit test for font size options
+    - Verify all options exist and 16px is default
+    - _Requirements: 6.1, 6.2, 6.3, 6.4_
+
+- [x] 9. Implement auto-switch to Select mode
+
+  - [x] 9.1 Create helper function for switching to Select and selecting object
+    - Function `switchToSelectAndSelect(obj)` that calls `selectTool('select')` and sets active object
+    - _Requirements: 7.5_
+  - [x] 9.2 Call auto-switch after shape creation in onMouseUp
+    - After rect/ellipse/arrow creation completes, call `switchToSelectAndSelect()`
+    - _Requirements: 7.1, 7.2, 7.3_
+  - [x] 9.3 Add text:editing:exited event listener for text auto-switch
+    - Listen for `text:editing:exited` event and call `switchToSelectAndSelect()`
+    - _Requirements: 7.4_
+  - [ ]\* 9.4 Write property test for auto-switch after shapes
+    - **Property 9: Auto-Switch to Select Mode After Object Creation**
+    - **Validates: Requirements 7.1, 7.2, 7.3, 7.5**
+  - [ ]\* 9.5 Write property test for auto-switch after text
+    - **Property 10: Auto-Switch to Select Mode After Text Editing**
+    - **Validates: Requirements 7.4, 7.5**
+
+- [x] 10. Final checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes

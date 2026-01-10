@@ -115,8 +115,10 @@ function createOverlay() {
             <div class="flex items-center gap-1">
               <button class="bf-tool-btn" data-tool="text" title="Text (T)">${icons.text}</button>
               <select id="bf-font-size" class="bf-text-control" title="Font Size">
-                <option value="16">16px</option>
-                <option value="20" selected>20px</option>
+                <option value="12">12px</option>
+                <option value="14">14px</option>
+                <option value="16" selected>16px</option>
+                <option value="20">20px</option>
                 <option value="24">24px</option>
                 <option value="32">32px</option>
               </select>
@@ -229,7 +231,15 @@ function setupKeyboardHandler() {
     }
 
     if (e.key === "Escape") {
-      cleanupOverlay();
+      e.preventDefault();
+      // Esc clears selection, never closes extension (user must use Cancel button)
+      const activeObj = state.fabricCanvas?.getActiveObject();
+      if (activeObj && activeObj.isEditing) {
+        activeObj.exitEditing();
+      }
+      state.fabricCanvas?.discardActiveObject();
+      state.fabricCanvas?.requestRenderAll();
+      updateDeleteButtonState();
     } else if (e.key === "s" || e.key === "S") {
       if (e.ctrlKey || e.metaKey) {
         e.preventDefault();
@@ -353,6 +363,14 @@ function initFabric(dataUrl) {
     state.fabricCanvas.on("selection:cleared", updateDeleteButtonState);
     state.fabricCanvas.on("object:removed", updateDeleteButtonState);
 
+    // Auto-switch to Select mode when text editing is exited
+    state.fabricCanvas.on("text:editing:exited", function (e) {
+      if (e.target) {
+        e.target.set({ selectable: true, evented: true });
+        switchToSelectAndSelect(e.target);
+      }
+    });
+
     // Reset selection mode based on tool
     selectTool(state.currentTool);
 
@@ -399,6 +417,17 @@ function selectTool(tool) {
 }
 
 // --- Drawing Logic ---
+
+// Helper function to switch to Select mode and select the object
+function switchToSelectAndSelect(obj) {
+  const state = window.bugfinderState;
+  selectTool("select");
+  if (obj && state.fabricCanvas) {
+    state.fabricCanvas.setActiveObject(obj);
+    state.fabricCanvas.requestRenderAll();
+    updateDeleteButtonState();
+  }
+}
 
 function onMouseDown(o) {
   const state = window.bugfinderState;
@@ -552,15 +581,21 @@ function onMouseUp() {
         head,
       ],
       {
-        selectable: false,
-        evented: false,
+        selectable: true,
+        evented: true,
       }
     );
 
     state.fabricCanvas.add(arrowGroup);
+    // Auto-switch to Select mode and select the arrow
+    switchToSelectAndSelect(arrowGroup);
     state.activeObject = null;
   } else if (state.currentTool === "rect" || state.currentTool === "ellipse") {
+    // Make the shape selectable after creation
+    state.activeObject.set({ selectable: true, evented: true });
     state.activeObject.setCoords();
+    // Auto-switch to Select mode and select the shape
+    switchToSelectAndSelect(state.activeObject);
     state.activeObject = null;
   }
 }
