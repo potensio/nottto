@@ -127,16 +127,18 @@ function createOverlay() {
               </select>
             </div>
             <div class="w-px h-6 bg-bf-border mx-2"></div>
+            <div class="w-px h-6 bg-bf-border mx-2"></div>
+            <div class="flex items-center gap-1">
+              <input type="color" id="bf-color-picker" value="#ff3366" class="bf-color-picker" title="Color">
+            </div>
+            <div class="w-px h-6 bg-bf-border mx-2"></div>
             <div class="flex items-center gap-1">
               <button class="bf-tool-btn" id="bf-undo-btn" title="Undo (Ctrl+Z)">${icons.undo}</button>
-              <button class="bf-tool-btn danger" id="bf-clear-btn" title="Clear All">${icons.clear}</button>
+              <button class="bf-tool-btn danger" id="bf-delete-btn" title="Delete Selected" disabled>${icons.clear}</button>
             </div>
           </div>
         </div>
       </div>
-      
-      <!-- Hidden color picker -->
-      <input type="color" id="bf-color-picker" value="#ff3366" class="absolute opacity-0 pointer-events-none">
     </div>
     
     <!-- Right Panel (Form) -->
@@ -269,8 +271,8 @@ function setupEventListeners() {
   // Action buttons
   document.getElementById("bf-undo-btn").addEventListener("click", undo);
   document
-    .getElementById("bf-clear-btn")
-    .addEventListener("click", clearAnnotations);
+    .getElementById("bf-delete-btn")
+    .addEventListener("click", deleteSelected);
   document
     .getElementById("bf-cancel-btn")
     .addEventListener("click", cleanupOverlay);
@@ -282,6 +284,9 @@ function setupEventListeners() {
     .addEventListener("input", updateContextStyles);
   document
     .getElementById("bf-stroke-width")
+    .addEventListener("change", updateContextStyles);
+  document
+    .getElementById("bf-font-size")
     .addEventListener("change", updateContextStyles);
 
   // Setup keyboard handler
@@ -342,8 +347,17 @@ function initFabric(dataUrl) {
     state.fabricCanvas.on("mouse:move", onMouseMove);
     state.fabricCanvas.on("mouse:up", onMouseUp);
 
+    // Hook up selection events for delete button state
+    state.fabricCanvas.on("selection:created", updateDeleteButtonState);
+    state.fabricCanvas.on("selection:updated", updateDeleteButtonState);
+    state.fabricCanvas.on("selection:cleared", updateDeleteButtonState);
+    state.fabricCanvas.on("object:removed", updateDeleteButtonState);
+
     // Reset selection mode based on tool
     selectTool(state.currentTool);
+
+    // Initialize delete button state
+    updateDeleteButtonState();
   };
   img.src = dataUrl;
 }
@@ -404,7 +418,7 @@ function onMouseDown(o) {
 
   if (state.currentTool === "text") {
     state.isDrawing = false;
-    addText(state.startX, state.startY, color, strokeWidth);
+    addText(state.startX, state.startY, color);
     return;
   }
 
@@ -551,9 +565,16 @@ function onMouseUp() {
   }
 }
 
-function addText(x, y, color, fontSizeBase) {
+function addText(x, y, color) {
   const state = window.bugfinderState;
-  const fontSize = 20 + fontSizeBase * 2;
+  const fontSize = parseInt(document.getElementById("bf-font-size").value);
+  const strokeWeight = parseInt(
+    document.getElementById("bf-stroke-width").value
+  );
+
+  // Map stroke weight to font weight: Thin(2)→400, Medium(4)→600, Thick(6)→700
+  const fontWeightMap = { 2: 400, 4: 600, 6: 700 };
+  const fontWeight = fontWeightMap[strokeWeight] || 600;
 
   const text = new fabric.IText("Type here...", {
     left: x,
@@ -561,7 +582,7 @@ function addText(x, y, color, fontSizeBase) {
     fontFamily: "Segoe UI, system-ui, sans-serif",
     fill: color,
     fontSize: fontSize,
-    fontWeight: "bold",
+    fontWeight: fontWeight,
     backgroundColor: "rgba(0,0,0,0.75)",
     padding: 5,
     cornerColor: "#ffffff",
@@ -584,12 +605,18 @@ function updateContextStyles() {
   const strokeWidth = parseInt(
     document.getElementById("bf-stroke-width").value
   );
+  const fontSize = parseInt(document.getElementById("bf-font-size").value);
+
+  // Map stroke weight to font weight: Thin(2)→400, Medium(4)→600, Thick(6)→700
+  const fontWeightMap = { 2: 400, 4: 600, 6: 700 };
+  const fontWeight = fontWeightMap[strokeWidth] || 600;
+
   const active = state.fabricCanvas?.getActiveObject();
 
   if (active) {
     if (active.type === "i-text") {
-      active.set({ fill: color });
-    } else if (active.type === "rect") {
+      active.set({ fill: color, fontSize: fontSize, fontWeight: fontWeight });
+    } else if (active.type === "rect" || active.type === "ellipse") {
       active.set({ stroke: color, strokeWidth: strokeWidth });
     } else if (active.type === "group") {
       active.getObjects().forEach((obj) => {
@@ -609,6 +636,32 @@ function undo() {
   const objects = state.fabricCanvas?.getObjects();
   if (objects && objects.length > 0) {
     state.fabricCanvas.remove(objects[objects.length - 1]);
+  }
+}
+
+function deleteSelected() {
+  const state = window.bugfinderState;
+  const active = state.fabricCanvas?.getActiveObject();
+  if (active) {
+    state.fabricCanvas.remove(active);
+    state.fabricCanvas.discardActiveObject();
+    updateDeleteButtonState();
+  }
+}
+
+function updateDeleteButtonState() {
+  const state = window.bugfinderState;
+  const deleteBtn = document.getElementById("bf-delete-btn");
+  if (!deleteBtn) return;
+
+  const hasSelection = state.fabricCanvas?.getActiveObject() != null;
+
+  if (hasSelection) {
+    deleteBtn.classList.remove("disabled");
+    deleteBtn.disabled = false;
+  } else {
+    deleteBtn.classList.add("disabled");
+    deleteBtn.disabled = true;
   }
 }
 
