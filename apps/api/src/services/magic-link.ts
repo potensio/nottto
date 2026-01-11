@@ -191,17 +191,18 @@ export async function verifyMagicLink(
 
     existingUser = newUser;
 
-    // Create default "Personal" workspace with unique slug
+    // Create default workspace using user's fullname as the slug
     const existingWorkspaces = await db
       .select({ slug: workspaces.slug })
       .from(workspaces);
     const existingSlugs = existingWorkspaces.map((w) => w.slug);
-    const workspaceSlug = generateUniqueSlug("Personal", existingSlugs);
+    const workspaceName = tokenRecord.name || "Personal";
+    const workspaceSlug = generateUniqueSlug(workspaceName, existingSlugs);
 
     const [newWorkspace] = await db
       .insert(workspaces)
       .values({
-        name: "Personal",
+        name: workspaceName,
         slug: workspaceSlug,
         icon: "📁", // Default icon
         ownerId: newUser.id,

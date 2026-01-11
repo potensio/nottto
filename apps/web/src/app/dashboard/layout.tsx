@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import { useWorkspaces, useProjects } from "@/lib/hooks";
+import { useWorkspaces, useProjects, useCreateWorkspace } from "@/lib/hooks";
 import { AuthGuard } from "@/components/AuthGuard";
 
 export default function DashboardLayout({
@@ -13,14 +13,19 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { user, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
   const [showWorkspaceDropdown, setShowWorkspaceDropdown] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const [showCreateWorkspaceModal, setShowCreateWorkspaceModal] =
+    useState(false);
+  const [newWorkspaceName, setNewWorkspaceName] = useState("");
 
   // Fetch workspaces
   const { data: workspaces = [] } = useWorkspaces();
+  const createWorkspace = useCreateWorkspace();
 
   // Extract workspace slug from pathname
   const workspaceSlug = pathname.split("/")[2];
@@ -68,6 +73,27 @@ export default function DashboardLayout({
     return () => document.removeEventListener("click", handleClickOutside);
   }, []);
 
+  const handleCreateWorkspace = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newWorkspaceName.trim()) return;
+
+    try {
+      const workspace = await createWorkspace.mutateAsync(
+        newWorkspaceName.trim()
+      );
+      setShowCreateWorkspaceModal(false);
+      setNewWorkspaceName("");
+      router.push(`/dashboard/${workspace.slug}`);
+    } catch (err) {
+      console.error("Failed to create workspace:", err);
+    }
+  };
+
+  const openCreateWorkspaceModal = () => {
+    setShowWorkspaceDropdown(false);
+    setShowCreateWorkspaceModal(true);
+  };
+
   // Don't show layout on workspace selector page
   if (pathname === "/dashboard") {
     return <AuthGuard>{children}</AuthGuard>;
@@ -80,7 +106,7 @@ export default function DashboardLayout({
         <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
           <div className="absolute top-0 -right-40 w-[600px] h-[600px] bg-red-50 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob"></div>
           <div className="absolute bottom-0 -left-40 w-[600px] h-[600px] bg-orange-50 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob delay-2000"></div>
-          <div className="absolute inset-0 tech-grid opacity-30"></div>
+          <div className="absolute inset-0 tech-grid opacity-60"></div>
         </div>
 
         {/* Header */}
@@ -103,72 +129,6 @@ export default function DashboardLayout({
               <Link href="/dashboard" className="flex items-center h-6">
                 <img src="/nottto-logo.png" alt="Nottto" className="h-full" />
               </Link>
-
-              {/* Workspace selector */}
-              {workspaces.length > 1 && currentWorkspace && (
-                <div className="relative ml-4" data-dropdown="workspace">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowWorkspaceDropdown(!showWorkspaceDropdown);
-                      setShowUserDropdown(false);
-                    }}
-                    className="flex items-center gap-2 px-3 py-1.5 bg-neutral-100 hover:bg-neutral-200 rounded-lg transition-colors"
-                  >
-                    <span className="text-lg">
-                      {currentWorkspace.icon || "📁"}
-                    </span>
-                    <span className="text-sm font-medium text-neutral-700">
-                      {currentWorkspace.name}
-                    </span>
-                    <iconify-icon
-                      icon="lucide:chevron-down"
-                      className="text-neutral-400"
-                    ></iconify-icon>
-                  </button>
-
-                  {showWorkspaceDropdown && (
-                    <div className="absolute top-full left-0 mt-2 w-56 bg-white rounded-lg border border-neutral-200 shadow-lg py-1 z-50">
-                      {workspaces.map((workspace) => (
-                        <Link
-                          key={workspace.id}
-                          href={`/dashboard/${workspace.slug}`}
-                          className={`flex items-center gap-3 px-4 py-2 hover:bg-neutral-50 transition-colors ${
-                            workspace.slug === workspaceSlug
-                              ? "bg-neutral-50"
-                              : ""
-                          }`}
-                          onClick={() => setShowWorkspaceDropdown(false)}
-                        >
-                          <span className="text-lg">
-                            {workspace.icon || "📁"}
-                          </span>
-                          <span className="text-sm text-neutral-700">
-                            {workspace.name}
-                          </span>
-                          {workspace.slug === workspaceSlug && (
-                            <iconify-icon
-                              icon="lucide:check"
-                              className="ml-auto text-accent"
-                            ></iconify-icon>
-                          )}
-                        </Link>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-              {/* Single workspace display */}
-              {workspaces.length === 1 && currentWorkspace && (
-                <div className="flex items-center gap-2 ml-4 px-3 py-1.5">
-                  <span className="text-lg">
-                    {currentWorkspace.icon || "📁"}
-                  </span>
-                  <span className="text-sm font-medium text-neutral-700">
-                    {currentWorkspace.name}
-                  </span>
-                </div>
-              )}
             </div>
 
             {/* Right section */}
@@ -226,6 +186,74 @@ export default function DashboardLayout({
           }`}
         >
           <div className="p-4 h-full flex flex-col">
+            {/* Workspace selector */}
+            {currentWorkspace && (
+              <div className="mb-4 pb-4 border-b border-neutral-200">
+                <div className="relative" data-dropdown="workspace">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowWorkspaceDropdown(!showWorkspaceDropdown);
+                      setShowUserDropdown(false);
+                    }}
+                    className="flex items-center gap-2 w-full px-3 py-2 bg-neutral-100 hover:bg-neutral-200 rounded-lg transition-colors"
+                  >
+                    <span className="text-lg">
+                      {currentWorkspace.icon || "📁"}
+                    </span>
+                    <span className="text-sm font-medium text-neutral-700 flex-1 text-left truncate">
+                      {currentWorkspace.name}
+                    </span>
+                    <iconify-icon
+                      icon="lucide:chevron-down"
+                      className="text-neutral-400"
+                    ></iconify-icon>
+                  </button>
+
+                  {showWorkspaceDropdown && (
+                    <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-lg border border-neutral-200 shadow-lg py-1 z-50">
+                      {workspaces.map((workspace) => (
+                        <Link
+                          key={workspace.id}
+                          href={`/dashboard/${workspace.slug}`}
+                          className={`flex items-center gap-3 px-4 py-2 hover:bg-neutral-50 transition-colors ${
+                            workspace.slug === workspaceSlug
+                              ? "bg-neutral-50"
+                              : ""
+                          }`}
+                          onClick={() => setShowWorkspaceDropdown(false)}
+                        >
+                          <span className="text-lg">
+                            {workspace.icon || "📁"}
+                          </span>
+                          <span className="text-sm text-neutral-700 truncate">
+                            {workspace.name}
+                          </span>
+                          {workspace.slug === workspaceSlug && (
+                            <iconify-icon
+                              icon="lucide:check"
+                              className="ml-auto text-accent"
+                            ></iconify-icon>
+                          )}
+                        </Link>
+                      ))}
+                      <div className="border-t border-neutral-100 mt-1 pt-1">
+                        <button
+                          onClick={openCreateWorkspaceModal}
+                          className="flex items-center gap-3 px-4 py-2 hover:bg-neutral-50 transition-colors text-neutral-600 w-full text-left"
+                        >
+                          <iconify-icon
+                            icon="lucide:plus"
+                            className="text-neutral-400"
+                          ></iconify-icon>
+                          <span className="text-sm">Create workspace</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
             {/* Projects section */}
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xs font-medium text-neutral-500 uppercase tracking-wider">
@@ -327,6 +355,64 @@ export default function DashboardLayout({
         >
           {children}
         </main>
+
+        {/* Create Workspace Modal */}
+        {showCreateWorkspaceModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
+              <div className="p-6 border-b border-neutral-100">
+                <h3 className="text-xl font-instrument-serif text-neutral-900">
+                  Create workspace
+                </h3>
+                <p className="text-sm text-neutral-500 mt-1">
+                  Workspaces help you organize your projects and annotations.
+                </p>
+              </div>
+              <form onSubmit={handleCreateWorkspace}>
+                <div className="p-6">
+                  <label className="block text-sm font-medium text-neutral-700 mb-2">
+                    Workspace name
+                  </label>
+                  <input
+                    type="text"
+                    value={newWorkspaceName}
+                    onChange={(e) => setNewWorkspaceName(e.target.value)}
+                    placeholder="e.g., My Company, Personal"
+                    className="w-full px-4 py-3 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-colors"
+                    autoFocus
+                  />
+                </div>
+                <div className="p-6 pt-0 flex gap-3 justify-end">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowCreateWorkspaceModal(false);
+                      setNewWorkspaceName("");
+                    }}
+                    className="px-4 py-2 text-neutral-600 hover:bg-neutral-100 rounded-lg transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={
+                      !newWorkspaceName.trim() || createWorkspace.isPending
+                    }
+                    className="px-4 py-2 bg-neutral-900 text-white rounded-lg hover:bg-neutral-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  >
+                    {createWorkspace.isPending && (
+                      <iconify-icon
+                        icon="lucide:loader-2"
+                        className="animate-spin"
+                      ></iconify-icon>
+                    )}
+                    Create workspace
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
     </AuthGuard>
   );

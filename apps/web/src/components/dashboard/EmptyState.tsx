@@ -104,10 +104,10 @@ export function EmptyState({
           className="text-3xl text-neutral-400"
         ></iconify-icon>
       </div>
-      <h3 className="text-xl font-instrument-serif text-neutral-900 mb-2">
+      <h3 className="text-2xl font-instrument-serif text-neutral-900 mb-2">
         {config.title}
       </h3>
-      <p className="text-neutral-500 mb-6 text-center max-w-md px-4">
+      <p className="text-sm text-neutral-500 mb-6 text-center max-w-md px-4">
         {config.description}
       </p>
       {renderAction()}
