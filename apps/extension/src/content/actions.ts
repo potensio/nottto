@@ -1,6 +1,7 @@
 import { getState } from "./state";
 import { showToast } from "../utils/toast";
-import { getFormData } from "./form";
+import { getFormData, validateForm } from "./form";
+import { createAnnotation } from "../api/annotations";
 import type { Task } from "../types";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -68,6 +69,23 @@ export async function saveTask(): Promise<void> {
   // Import cleanupOverlay dynamically to avoid circular dependency
   const { cleanupOverlay } = await import("./overlay");
 
+  // Validate form before submission
+  const validation = validateForm();
+  if (!validation.valid) {
+    showToast(validation.errors[0], "error");
+    return;
+  }
+
+  // Get form values
+  const formData = getFormData();
+
+  // Disable save button to prevent double submission
+  const saveBtn = document.getElementById("bf-save-btn") as HTMLButtonElement;
+  if (saveBtn) {
+    saveBtn.disabled = true;
+    saveBtn.textContent = "Saving...";
+  }
+
   // De-select everything so selection handles don't show up in screenshot
   state.fabricCanvas?.discardActiveObject();
   state.fabricCanvas?.renderAll();
@@ -80,13 +98,54 @@ export async function saveTask(): Promise<void> {
     multiplier: multiplier,
   });
 
+  try {
+    // Create annotation via API with base64 screenshot
+    await createAnnotation({
+      projectId: formData.projectId!,
+      title: formData.title || "Untitled Annotation",
+      description: formData.description || undefined,
+      type: formData.type || undefined,
+      priority: formData.priority || undefined,
+      pageUrl: state.pageUrl,
+      pageTitle: state.pageTitle,
+      screenshotAnnotatedBase64: annotatedImageDataUrl,
+    });
+
+    showToast("Annotation saved successfully!");
+    setTimeout(cleanupOverlay, 1500);
+  } catch (error) {
+    console.error("Nottto: Save failed", error);
+    showToast("Failed to save annotation", "error");
+
+    // Re-enable save button for retry
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      saveBtn.textContent = "Save";
+    }
+  }
+}
+
+/**
+ * Legacy save function that downloads files locally (fallback)
+ */
+export async function saveTaskLocally(): Promise<void> {
+  const state = getState();
+  const { cleanupOverlay } = await import("./overlay");
+
+  state.fabricCanvas?.discardActiveObject();
+  state.fabricCanvas?.renderAll();
+
+  const multiplier = 1 / state.canvasScale;
+  const annotatedImageDataUrl = state.fabricCanvas?.toDataURL({
+    format: "png",
+    multiplier: multiplier,
+  });
+
   const taskId =
     Date.now().toString(36) + Math.random().toString(36).substring(2);
 
-  // Get form values
   const formData = getFormData();
 
-  // Create task object
   const task: Task = {
     id: taskId,
     createdAt: new Date().toISOString(),
@@ -101,7 +160,6 @@ export async function saveTask(): Promise<void> {
     canvasData: state.fabricCanvas?.toJSON() || {},
   };
 
-  // Download JSON
   const jsonBlob = new Blob([JSON.stringify(task, null, 2)], {
     type: "application/json",
   });
@@ -115,7 +173,6 @@ export async function saveTask(): Promise<void> {
       saveAs: true,
     });
 
-    // Download annotated image
     if (annotatedImageDataUrl) {
       await chrome.runtime.sendMessage({
         action: "download",

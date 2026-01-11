@@ -25,11 +25,14 @@ if (!window.notttoListenerRegistered) {
         state.pageUrl = message.pageUrl;
         state.pageTitle = message.pageTitle;
 
-        // Create and initialize overlay
-        createOverlay();
-        initCanvas(message.screenshot);
+        // Create and initialize overlay (async)
+        createOverlay().then(() => {
+          initCanvas(message.screenshot);
+          sendResponse({ success: true });
+        });
 
-        sendResponse({ success: true });
+        // Return true to indicate we'll send response asynchronously
+        return true;
       }
       return true;
     }

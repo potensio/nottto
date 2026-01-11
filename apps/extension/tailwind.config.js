@@ -4,15 +4,19 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ["Inter", "Segoe UI", "system-ui", "-apple-system", "sans-serif"],
+        sans: ["Manrope", "system-ui", "-apple-system", "sans-serif"],
+        serif: ["Instrument Serif", "serif"],
+        mono: ["JetBrains Mono", "monospace"],
       },
       colors: {
-        "bf-primary": "#1a1a1a",
-        "bf-secondary": "#666666",
-        "bf-accent": "#ff3366",
+        "bf-primary": "#171717",
+        "bf-secondary": "#525252",
+        "bf-accent": "#eb3b3b",
         "bf-bg": "#fafafa",
         "bf-surface": "#ffffff",
         "bf-border": "#e5e5e5",
+        "bf-toolbar": "#171717",
+        "bf-toolbar-border": "#404040",
       },
       spacing: {
         15: "3.75rem",

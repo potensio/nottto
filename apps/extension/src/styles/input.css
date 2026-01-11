@@ -2,26 +2,85 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Google Fonts injection for extension */
+@import url("https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&display=swap");
+
+/* Tech Grid Background */
+.bf-tech-grid {
+  background-size: 50px 50px;
+  background-image: linear-gradient(
+      to right,
+      rgba(0, 0, 0, 0.05) 1px,
+      transparent 1px
+    ),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
+}
+
+/* Animated gradient blobs */
+.bf-gradient-blob {
+  position: absolute;
+  border-radius: 9999px;
+  mix-blend-mode: multiply;
+  filter: blur(64px);
+  opacity: 0.4;
+  animation: bfMoveGradient 10s infinite alternate cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.bf-gradient-blob.blob-1 {
+  top: 0;
+  left: -10rem;
+  width: 400px;
+  height: 400px;
+  background-color: #fecaca;
+}
+
+.bf-gradient-blob.blob-2 {
+  bottom: 0;
+  right: -10rem;
+  width: 400px;
+  height: 400px;
+  background-color: #fed7aa;
+  animation-delay: 2s;
+}
+
+@keyframes bfMoveGradient {
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(30px, -50px) scale(1.1);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.9);
+  }
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+}
+
 /* Custom component classes for complex elements */
 @layer components {
+  /* Dark toolbar tool buttons */
   .bf-tool-btn {
-    @apply w-10 h-10 flex items-center justify-center bg-transparent border-none rounded-full text-bf-secondary cursor-pointer transition-all duration-150 ease-in-out;
+    @apply w-10 h-10 flex items-center justify-center bg-transparent border-none rounded-full text-neutral-400 cursor-pointer transition-all duration-150 ease-in-out;
   }
 
   .bf-tool-btn:hover {
-    @apply bg-gray-100 text-bf-primary;
+    @apply bg-white/10 text-white;
   }
 
   .bf-tool-btn.active {
-    @apply bg-bf-primary text-white;
+    @apply text-white;
+    background-color: #eb3b3b;
+    box-shadow: 0 4px 12px rgba(235, 59, 59, 0.3);
   }
 
   .bf-tool-btn.danger {
-    @apply text-red-500;
+    @apply text-red-400;
   }
 
   .bf-tool-btn.danger:hover {
-    @apply bg-red-50 text-red-600;
+    @apply bg-red-500/20 text-red-300;
   }
 
   .bf-tool-btn svg {
@@ -29,16 +88,17 @@
     stroke-width: 2;
   }
 
+  /* Dark toolbar controls */
   .bf-text-control {
-    @apply px-3 py-1.5 bg-gray-100 border border-bf-border rounded-md text-sm text-bf-primary cursor-pointer outline-none transition-all duration-150 ease-in-out min-w-15 appearance-none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M3 4.5L6 8l3-3.5H3z'/%3E%3C/svg%3E");
+    @apply px-3 py-1.5 bg-white/10 border border-white/20 rounded-md text-sm text-white cursor-pointer outline-none transition-all duration-150 ease-in-out min-w-15 appearance-none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23a3a3a3' d='M3 4.5L6 8l3-3.5H3z'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 8px center;
     padding-right: 24px;
   }
 
   .bf-text-control:hover {
-    @apply bg-gray-200;
+    @apply bg-white/20 border-white/30;
   }
 
   .bf-action-btn {
@@ -62,15 +122,16 @@
   }
 
   .bf-select {
-    @apply px-2 py-1 bg-transparent border-none rounded text-sm text-bf-primary cursor-pointer outline-none;
+    @apply px-2 py-2 bg-transparent border-none rounded text-sm text-bf-primary cursor-pointer outline-none;
   }
 
   .bf-select:hover {
     @apply bg-gray-100;
   }
 
+  /* Dark toolbar color picker */
   .bf-color-picker {
-    @apply w-10 h-10 p-1 bg-transparent border-2 border-bf-border rounded-full cursor-pointer transition-all duration-150 ease-in-out;
+    @apply w-8 h-8 p-0.5 bg-transparent border-2 border-white/30 rounded-full cursor-pointer transition-all duration-150 ease-in-out;
     -webkit-appearance: none;
     appearance: none;
   }
@@ -90,7 +151,7 @@
   }
 
   .bf-color-picker:hover {
-    @apply border-bf-primary;
+    @apply border-white/50;
   }
 
   .bf-tool-btn.disabled {
@@ -98,6 +159,444 @@
   }
 
   .bf-tool-btn.disabled:hover {
-    @apply bg-transparent text-bf-secondary;
+    @apply bg-transparent text-neutral-400;
+  }
+
+  /* Dark toolbar divider */
+  .bf-toolbar-divider {
+    @apply w-px h-6 bg-white/20 mx-2;
+  }
+}
+
+/* Form Header Styles */
+@layer components {
+  .bf-form-header {
+    @apply flex items-center justify-between px-4 py-3 border-b border-bf-border bg-white;
+  }
+
+  .bf-header-left {
+    @apply flex items-center gap-2;
+  }
+
+  .bf-header-right {
+    @apply flex items-center;
+  }
+
+  .bf-workspace-selector {
+    @apply flex items-center gap-2;
+  }
+
+  .bf-header-select {
+    @apply px-2 py-1.5 bg-gray-50 border border-bf-border rounded-md text-sm text-bf-primary cursor-pointer outline-none transition-all duration-150 ease-in-out min-w-32 appearance-none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M3 4.5L6 8l3-3.5H3z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    padding-right: 24px;
+  }
+
+  .bf-header-select:hover {
+    @apply bg-gray-100 border-gray-300;
+  }
+
+  .bf-header-select:focus {
+    @apply border-bf-primary ring-1 ring-bf-primary;
+  }
+
+  .bf-header-select:disabled {
+    @apply opacity-60 cursor-not-allowed;
+  }
+}
+
+/* Custom Workspace Switcher */
+@layer components {
+  .bf-workspace-switcher {
+    @apply relative;
+  }
+
+  .bf-workspace-trigger {
+    @apply flex items-center gap-2 px-3 py-2 bg-gray-50 border border-bf-border rounded-lg;
+    @apply text-sm text-bf-primary cursor-pointer;
+    @apply transition-all duration-150 ease-in-out;
+    @apply hover:bg-gray-100 hover:border-gray-300;
+  }
+
+  .bf-workspace-trigger:disabled {
+    @apply opacity-60 cursor-not-allowed;
+  }
+
+  .bf-workspace-icon {
+    @apply w-4 h-4 text-gray-400 flex-shrink-0;
+  }
+
+  .bf-workspace-icon svg {
+    @apply w-full h-full;
+  }
+
+  .bf-workspace-name {
+    @apply font-medium truncate max-w-32;
+  }
+
+  .bf-workspace-chevron {
+    @apply w-4 h-4 text-gray-400 flex-shrink-0;
+  }
+
+  .bf-workspace-chevron svg {
+    @apply w-full h-full;
+  }
+
+  .bf-workspace-dropdown {
+    @apply absolute left-0 top-full mt-1 w-56 bg-white rounded-lg shadow-lg border border-bf-border z-50 overflow-hidden;
+  }
+
+  .bf-workspace-list {
+    @apply py-1 max-h-64 overflow-y-auto;
+  }
+
+  .bf-workspace-item {
+    @apply w-full flex items-center justify-between px-3 py-2 text-sm text-bf-primary;
+    @apply bg-transparent border-none cursor-pointer text-left;
+    @apply transition-colors duration-150;
+    @apply hover:bg-gray-50;
+  }
+
+  .bf-workspace-item.selected {
+    @apply bg-gray-50;
+  }
+
+  .bf-workspace-item-name {
+    @apply truncate;
+  }
+
+  .bf-workspace-check {
+    @apply w-4 h-4 text-bf-accent flex-shrink-0;
+  }
+
+  .bf-workspace-check svg {
+    @apply w-full h-full;
+  }
+}
+
+/* User Avatar Styles */
+@layer components {
+  .bf-user-area {
+    @apply relative;
+  }
+
+  .bf-user-avatar {
+    @apply w-10 h-10 rounded-full cursor-pointer border-2 border-transparent transition-all duration-150 ease-in-out overflow-hidden flex items-center justify-center bg-transparent p-0;
+  }
+
+  .bf-user-avatar:hover {
+    @apply border-gray-200;
+  }
+
+  .bf-avatar-img {
+    @apply w-full h-full object-cover rounded-full;
+  }
+
+  .bf-avatar-initials {
+    @apply w-full h-full flex items-center justify-center text-white text-sm font-medium rounded-full;
+  }
+
+  .bf-avatar-placeholder {
+    @apply w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 text-sm font-medium;
+  }
+}
+
+/* Avatar Dropdown Styles */
+@layer components {
+  .bf-avatar-dropdown {
+    @apply absolute right-0 top-full mt-2 w-56 bg-white rounded-lg shadow-lg border border-bf-border z-50 overflow-hidden;
+  }
+
+  .bf-avatar-dropdown[data-hidden="true"] {
+    display: none;
+  }
+
+  .bf-dropdown-header {
+    @apply px-4 py-3 bg-gray-50;
+  }
+
+  .bf-dropdown-email {
+    @apply text-sm text-bf-primary font-medium truncate block;
+  }
+
+  .bf-dropdown-divider {
+    @apply h-px bg-bf-border;
+  }
+
+  .bf-dropdown-item {
+    @apply w-full flex items-center gap-3 px-4 py-3 text-sm text-bf-secondary bg-transparent border-none cursor-pointer transition-all duration-150 ease-in-out text-left;
+  }
+
+  .bf-dropdown-item:hover {
+    @apply bg-gray-50 text-bf-primary;
+  }
+
+  .bf-dropdown-item svg {
+    @apply w-4 h-4 flex-shrink-0;
+  }
+}
+
+/* Icon Button Styles */
+@layer components {
+  .bf-icon-btn {
+    @apply w-8 h-8 flex items-center justify-center bg-transparent border border-bf-border rounded-md text-bf-secondary cursor-pointer transition-all duration-150 ease-in-out;
+  }
+
+  .bf-icon-btn:hover:not(:disabled) {
+    @apply bg-gray-100 text-bf-primary border-gray-300;
+  }
+
+  .bf-icon-btn:disabled {
+    @apply opacity-50 cursor-not-allowed;
+  }
+
+  .bf-icon-btn svg {
+    @apply w-4 h-4;
+  }
+}
+
+/* Input Styles */
+@layer components {
+  .bf-input {
+    @apply px-3 py-2 bg-white border border-bf-border rounded-md text-sm text-bf-primary outline-none transition-all duration-150 ease-in-out;
+  }
+
+  .bf-input:focus {
+    @apply border-bf-primary ring-1 ring-bf-primary;
+  }
+
+  .bf-input::placeholder {
+    @apply text-gray-400;
+  }
+}
+
+/* Inline Create Button (next to Project label) */
+@layer components {
+  .bf-create-btn-inline {
+    @apply w-5 h-5 p-0.5 rounded flex items-center justify-center;
+    @apply bg-transparent border-bf-accent;
+    @apply text-bf-accent cursor-pointer;
+    @apply transition-all duration-150;
+  }
+
+  .bf-create-btn-inline:hover:not(:disabled) {
+    @apply text-bf-accent/80;
+  }
+
+  .bf-create-btn-inline:disabled {
+    @apply opacity-40 cursor-not-allowed;
+  }
+
+  .bf-create-btn-inline svg {
+    @apply w-4 h-4;
+  }
+}
+
+/* Create Project Card */
+@layer components {
+  .bf-create-project-card {
+    @apply mt-3 p-3 bg-gray-50 rounded-lg border border-gray-200;
+  }
+
+  .bf-input-compact {
+    @apply w-full px-2 py-1 text-xs border border-gray-200 rounded bg-white;
+    @apply outline-none transition-all duration-150 ease-in-out;
+  }
+
+  .bf-input-compact:focus {
+    @apply ring-1 ring-bf-primary border-bf-primary;
+  }
+
+  .bf-input-compact::placeholder {
+    @apply text-gray-400;
+  }
+
+  .bf-btn-sm {
+    @apply text-xs py-1 px-2 rounded font-medium cursor-pointer;
+    @apply transition-colors duration-150 border-none;
+  }
+
+  .bf-btn-sm.secondary {
+    @apply bg-gray-200 text-gray-600;
+  }
+
+  .bf-btn-sm.secondary:hover {
+    @apply bg-gray-300;
+  }
+
+  .bf-btn-sm.primary {
+    @apply bg-bf-primary text-white;
+  }
+
+  .bf-btn-sm.primary:hover {
+    @apply bg-gray-700;
+  }
+
+  .bf-btn-sm:disabled {
+    @apply opacity-50 cursor-not-allowed;
+  }
+}
+
+/* Description Input - Transparent background until focused */
+@layer components {
+  .bf-description-input {
+    @apply w-full min-h-40 px-0 py-0 rounded-md font-sans text-bf-primary;
+    @apply outline-none resize-y transition-all duration-150 ease-in-out;
+    @apply bg-transparent border-none;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .bf-description-input::placeholder {
+    @apply text-gray-400;
+    font-size: 14px;
+  }
+
+  .bf-description-input:focus {
+    @apply bg-gray-100 px-3 py-2;
+  }
+}
+
+/* Title Input */
+@layer components {
+  .bf-title-input {
+    @apply w-full px-0 py-0 border-none bg-transparent font-serif text-bf-primary;
+    @apply outline-none resize-none overflow-hidden;
+    @apply text-2xl leading-tight;
+    @apply transition-all duration-150 ease-in-out rounded-md;
+  }
+
+  .bf-title-input::placeholder {
+    @apply text-gray-400 text-2xl;
+  }
+
+  .bf-title-input:focus {
+    @apply bg-gray-100 px-3 py-2;
+  }
+}
+
+/* Type Selector - Horizontal Icon Buttons */
+@layer components {
+  .bf-type-selector {
+    @apply flex items-center gap-2;
+  }
+
+  .bf-type-btn {
+    @apply w-8 h-8 flex items-center justify-center rounded-md border border-bf-border;
+    @apply bg-transparent text-bf-secondary cursor-pointer;
+    @apply transition-all duration-150 ease-in-out;
+    @apply relative;
+  }
+
+  .bf-type-btn:hover {
+    @apply bg-gray-100 text-bf-primary border-gray-300;
+  }
+
+  .bf-type-btn.active {
+    @apply bg-bf-accent/10 text-bf-accent border-bf-accent;
+  }
+
+  .bf-type-btn svg {
+    @apply w-4 h-4;
+  }
+
+  /* Tooltip */
+  .bf-type-btn[data-tooltip]::before {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 6px 10px;
+    font-size: 12px;
+    font-weight: 500;
+    color: white;
+    background-color: #1f2937;
+    border-radius: 6px;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.15s, visibility 0.15s;
+    z-index: 50;
+  }
+
+  /* Tooltip arrow */
+  .bf-type-btn[data-tooltip]::after {
+    content: "";
+    position: absolute;
+    bottom: calc(100% + 2px);
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: #1f2937;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.15s, visibility 0.15s;
+    z-index: 50;
+  }
+
+  .bf-type-btn[data-tooltip]:hover::before,
+  .bf-type-btn[data-tooltip]:hover::after {
+    opacity: 1;
+    visibility: visible;
+  }
+}
+
+/* Priority Selector - Radio Button Style */
+@layer components {
+  .bf-priority-selector {
+    @apply flex items-center gap-1.5;
+  }
+
+  .bf-priority-dot {
+    @apply w-5 h-5 rounded-full border border-gray-300 cursor-pointer;
+    @apply bg-white transition-all duration-150 ease-in-out;
+    @apply flex items-center justify-center p-1;
+  }
+
+  .bf-priority-dot:hover {
+    @apply border-gray-400;
+  }
+
+  .bf-priority-dot::after {
+    content: "";
+    @apply w-full h-full rounded-full bg-transparent transition-all duration-150 ease-in-out;
+  }
+
+  .bf-priority-dot.filled {
+    @apply border-bf-accent;
+  }
+
+  .bf-priority-dot.filled::after {
+    @apply bg-bf-accent;
+  }
+}
+
+/* Canvas Action Buttons (Copy/Download) */
+@layer components {
+  .bf-canvas-action-btn {
+    @apply w-8 h-8 flex items-center justify-center rounded-md;
+    @apply bg-white/90 backdrop-blur-sm border border-gray-200 shadow-sm;
+    @apply text-gray-600 cursor-pointer;
+    @apply transition-all duration-150 ease-in-out;
+  }
+
+  .bf-canvas-action-btn:hover {
+    @apply bg-white text-bf-primary border-gray-300 shadow-md;
+  }
+
+  .bf-canvas-action-btn:active {
+    @apply scale-95;
+  }
+
+  .bf-canvas-action-btn.success {
+    @apply bg-green-50 text-green-600 border-green-200;
+  }
+
+  .bf-canvas-action-btn svg {
+    @apply w-4 h-4;
+    stroke-width: 2;
   }
 }

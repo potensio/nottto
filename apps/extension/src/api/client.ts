@@ -53,6 +53,12 @@ export async function apiRequest<T>(
   options: RequestInit = {}
 ): Promise<T> {
   let accessToken = await getAccessToken();
+  console.log(
+    "Nottto API: Making request to",
+    endpoint,
+    "with token:",
+    accessToken ? "present" : "missing"
+  );
 
   const makeRequest = async (token: string | null) => {
     const headers: HeadersInit = {
@@ -71,12 +77,18 @@ export async function apiRequest<T>(
   };
 
   let response = await makeRequest(accessToken);
+  console.log("Nottto API: Response status:", response.status);
 
   // Handle 401 - try to refresh token
   if (response.status === 401 && accessToken) {
+    console.log("Nottto API: Got 401, attempting token refresh...");
     const newToken = await refreshAccessToken();
     if (newToken) {
+      console.log("Nottto API: Token refreshed, retrying request...");
       response = await makeRequest(newToken);
+      console.log("Nottto API: Retry response status:", response.status);
+    } else {
+      console.log("Nottto API: Token refresh failed");
     }
   }
 
@@ -84,7 +96,9 @@ export async function apiRequest<T>(
     let errorMessage = `API request failed: ${response.statusText}`;
     try {
       const errorData = await response.json();
-      errorMessage = errorData.message || errorMessage;
+      errorMessage =
+        errorData.message || errorData.error?.message || errorMessage;
+      console.log("Nottto API: Error response:", errorData);
     } catch {
       // Ignore JSON parse errors
     }

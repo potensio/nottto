@@ -4,6 +4,7 @@
   "version": "2.1.0",
   "description": "Capture screenshots and annotate with arrows, boxes, and text in full-screen mode",
   "permissions": ["activeTab", "downloads", "scripting", "storage"],
+  "host_permissions": ["http://localhost:3001/*", "https://api.nottto.com/*"],
 
   "action": {
     "default_icon": {

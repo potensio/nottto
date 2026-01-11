@@ -234,24 +234,19 @@ export function addText(x: number, y: number, color: string): void {
   const fontSizeSelect = document.getElementById(
     "bf-font-size"
   ) as HTMLSelectElement;
-  const strokeWidthSelect = document.getElementById(
-    "bf-stroke-width"
+  const fontWeightSelect = document.getElementById(
+    "bf-font-weight"
   ) as HTMLSelectElement;
   const fontSize = parseInt(fontSizeSelect.value);
-  const strokeWeight = parseInt(strokeWidthSelect.value);
-
-  // Map stroke weight to font weight: Thin(2)→400, Medium(4)→600, Thick(6)→700
-  const fontWeightMap: Record<number, number> = { 2: 400, 4: 600, 6: 700 };
-  const fontWeight = fontWeightMap[strokeWeight] || 600;
+  const fontWeight = parseInt(fontWeightSelect.value);
 
   const text = new fabric.IText("Type here...", {
     left: x,
     top: y,
-    fontFamily: "Segoe UI, system-ui, sans-serif",
+    fontFamily: "Manrope, system-ui, sans-serif",
     fill: color,
     fontSize: fontSize,
     fontWeight: fontWeight,
-    backgroundColor: "rgba(0,0,0,0.75)",
     padding: 5,
     cornerColor: "#ffffff",
     cornerStrokeColor: "#000000",

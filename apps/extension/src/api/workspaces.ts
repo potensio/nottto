@@ -1,5 +1,4 @@
-// Workspace API stubs for Nottto backend integration
-// Implement when backend is ready
+// Workspace API for Nottto backend integration
 
 import { get, post, put, del } from "./client";
 
@@ -23,24 +22,31 @@ export interface UpdateWorkspaceData {
 }
 
 export async function listWorkspaces(): Promise<Workspace[]> {
-  return get<Workspace[]>("/workspaces");
+  const response = await get<{ workspaces: Workspace[] }>("/workspaces");
+  return response.workspaces;
 }
 
 export async function getWorkspace(id: string): Promise<Workspace> {
-  return get<Workspace>(`/workspaces/${id}`);
+  const response = await get<{ workspace: Workspace }>(`/workspaces/${id}`);
+  return response.workspace;
 }
 
 export async function createWorkspace(
   data: CreateWorkspaceData
 ): Promise<Workspace> {
-  return post<Workspace>("/workspaces", data);
+  const response = await post<{ workspace: Workspace }>("/workspaces", data);
+  return response.workspace;
 }
 
 export async function updateWorkspace(
   id: string,
   data: UpdateWorkspaceData
 ): Promise<Workspace> {
-  return put<Workspace>(`/workspaces/${id}`, data);
+  const response = await put<{ workspace: Workspace }>(
+    `/workspaces/${id}`,
+    data
+  );
+  return response.workspace;
 }
 
 export async function deleteWorkspace(id: string): Promise<void> {

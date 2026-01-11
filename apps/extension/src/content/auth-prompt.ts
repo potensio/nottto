@@ -43,6 +43,8 @@ export function showAuthPrompt(): void {
   const style = document.createElement("style");
   style.id = "nottto-auth-prompt-styles";
   style.textContent = `
+    @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Manrope:wght@400;500;600;700&display=swap');
+
     .nottto-auth-backdrop {
       position: fixed;
       top: 0;
@@ -54,7 +56,7 @@ export function showAuthPrompt(): void {
       align-items: center;
       justify-content: center;
       z-index: 2147483647;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     }
 
     .nottto-auth-modal {
@@ -71,25 +73,26 @@ export function showAuthPrompt(): void {
     .nottto-auth-icon {
       width: 64px;
       height: 64px;
-      background: #f5f5f5;
+      background: #fef2f2;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
       margin: 0 auto 20px;
-      color: #525252;
+      color: #eb3b3b;
     }
 
     .nottto-auth-title {
+      font-family: 'Instrument Serif', serif;
       font-size: 24px;
-      font-weight: 600;
+      font-weight: 400;
       color: #171717;
       margin: 0 0 8px;
     }
 
     .nottto-auth-description {
       font-size: 14px;
-      color: #737373;
+      color: #525252;
       margin: 0 0 24px;
       line-height: 1.5;
     }

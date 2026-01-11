@@ -27,8 +27,7 @@ export interface CreateAnnotationData {
   priority?: string;
   pageUrl: string;
   pageTitle: string;
-  screenshotBase64?: string;
-  canvasData?: object;
+  screenshotAnnotatedBase64?: string; // Base64 data URL from canvas.toDataURL()
 }
 
 export interface UpdateAnnotationData {
