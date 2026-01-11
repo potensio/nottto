@@ -13,6 +13,9 @@ export type { StatsBarProps } from "./StatsBar";
 export { EmptyState } from "./EmptyState";
 export type { EmptyStateProps } from "./EmptyState";
 
+export { CreateProjectModal } from "./CreateProjectModal";
+export type { CreateProjectModalProps } from "./CreateProjectModal";
+
 export {
   AnnotationCardSkeleton,
   SidebarSkeleton,

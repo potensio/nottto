@@ -79,10 +79,11 @@ export const createAnnotationSchema = z.object({
   description: z.string().max(5000).optional(),
   type: annotationTypeSchema.optional(),
   priority: annotationPrioritySchema.optional(),
-  pageUrl: z.string().url("Invalid URL").optional(),
+  pageUrl: z.string().max(2048).optional(), // Allow any string for page URLs (some may not be valid URLs)
   pageTitle: z.string().max(255).optional(),
   screenshotOriginal: z.string().url("Invalid URL").optional(),
   screenshotAnnotated: z.string().url("Invalid URL").optional(),
+  screenshotAnnotatedBase64: z.string().optional(), // Base64 data URL from extension
   canvasData: z.any().optional(),
 });
 

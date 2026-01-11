@@ -1,8 +1,9 @@
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 import { db } from "../db";
-import { annotations, projects } from "@nottto/shared/db";
+import { annotations } from "@nottto/shared/db";
 import { checkProjectAccess } from "./projects";
+import { uploadBase64Screenshot } from "./upload";
 import type {
   Annotation,
   CreateAnnotationInput,
@@ -45,12 +46,22 @@ export async function list(
 export async function create(
   projectId: string,
   userId: string,
-  data: CreateAnnotationInput
+  data: CreateAnnotationInput & { screenshotAnnotatedBase64?: string }
 ): Promise<Annotation> {
   // Check project access
   const hasAccess = await checkProjectAccess(projectId, userId);
   if (!hasAccess) {
     throw new HTTPException(403, { message: "Access denied to this project" });
+  }
+
+  // Process base64 screenshot if provided
+  let screenshotAnnotatedUrl = data.screenshotAnnotated || null;
+  if (data.screenshotAnnotatedBase64) {
+    const uploadResult = await uploadBase64Screenshot(
+      data.screenshotAnnotatedBase64,
+      userId
+    );
+    screenshotAnnotatedUrl = uploadResult.url;
   }
 
   const [newAnnotation] = await db
@@ -65,7 +76,7 @@ export async function create(
       pageUrl: data.pageUrl || null,
       pageTitle: data.pageTitle || null,
       screenshotOriginal: data.screenshotOriginal || null,
-      screenshotAnnotated: data.screenshotAnnotated || null,
+      screenshotAnnotated: screenshotAnnotatedUrl,
       canvasData: data.canvasData || null,
     })
     .returning();

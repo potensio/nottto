@@ -21,7 +21,7 @@ body {
 }
 
 .font-hand {
-  font-family: "Kalam", cursive;
+  font-family: "Gochi Hand", cursive;
 }
 
 /* Moving Gradient Background */
@@ -179,28 +179,28 @@ body {
     opacity: 1;
   }
   15% {
-    transform: translate(150px, 130px);
+    transform: translate(70px, 55px);
   }
   25% {
-    transform: translate(320px, 130px);
+    transform: translate(270px, 55px);
   }
   30% {
-    transform: translate(320px, 210px);
+    transform: translate(270px, 125px);
   }
   35% {
-    transform: translate(150px, 210px);
+    transform: translate(70px, 125px);
   }
   40% {
-    transform: translate(150px, 130px);
+    transform: translate(70px, 55px);
   }
   45% {
-    transform: translate(340px, 170px);
+    transform: translate(285px, 90px);
   }
   60% {
-    transform: translate(400px, 170px);
+    transform: translate(345px, 90px);
   }
   80% {
-    transform: translate(420px, 200px);
+    transform: translate(365px, 120px);
     opacity: 1;
   }
   90% {

@@ -76,16 +76,20 @@ export default function AnnotationDetailPage() {
           >
             Dashboard
           </Link>
-          <iconify-icon
-            icon="lucide:chevron-right"
-            className="text-xs"
-          ></iconify-icon>
-          <Link
-            href={`/dashboard/${workspaceSlug}/projects/${annotation.project.slug}`}
-            className="hover:text-neutral-600 transition-colors"
-          >
-            {annotation.project.name}
-          </Link>
+          {annotation.project && (
+            <>
+              <iconify-icon
+                icon="lucide:chevron-right"
+                className="text-xs"
+              ></iconify-icon>
+              <Link
+                href={`/dashboard/${workspaceSlug}/projects/${annotation.project.slug}`}
+                className="hover:text-neutral-600 transition-colors"
+              >
+                {annotation.project.name}
+              </Link>
+            </>
+          )}
         </nav>
 
         {/* Title */}
@@ -185,17 +189,19 @@ export default function AnnotationDetailPage() {
           )}
 
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <h3 className="text-xs font-medium text-neutral-400 uppercase tracking-wider mb-1">
-                Project
-              </h3>
-              <Link
-                href={`/dashboard/${workspaceSlug}/projects/${annotation.project.slug}`}
-                className="text-sm text-accent hover:underline"
-              >
-                {annotation.project.name}
-              </Link>
-            </div>
+            {annotation.project && (
+              <div>
+                <h3 className="text-xs font-medium text-neutral-400 uppercase tracking-wider mb-1">
+                  Project
+                </h3>
+                <Link
+                  href={`/dashboard/${workspaceSlug}/projects/${annotation.project.slug}`}
+                  className="text-sm text-accent hover:underline"
+                >
+                  {annotation.project.name}
+                </Link>
+              </div>
+            )}
 
             {annotation.user && (
               <div>

@@ -109,10 +109,10 @@ export default function HomePage() {
                   </defs>
                   {/* The Box Annotation */}
                   <rect
-                    x="150"
-                    y="130"
-                    width="170"
-                    height="80"
+                    x="70"
+                    y="55"
+                    width="200"
+                    height="70"
                     fill="rgba(235, 59, 59, 0.05)"
                     stroke="#eb3b3b"
                     strokeWidth="2"
@@ -123,8 +123,8 @@ export default function HomePage() {
                   {/* Resize Handles */}
                   <g className="resize-handles">
                     <rect
-                      x="146"
-                      y="126"
+                      x="66"
+                      y="51"
                       width="8"
                       height="8"
                       fill="white"
@@ -132,8 +132,8 @@ export default function HomePage() {
                       strokeWidth="1.5"
                     ></rect>
                     <rect
-                      x="316"
-                      y="126"
+                      x="266"
+                      y="51"
                       width="8"
                       height="8"
                       fill="white"
@@ -141,8 +141,8 @@ export default function HomePage() {
                       strokeWidth="1.5"
                     ></rect>
                     <rect
-                      x="316"
-                      y="206"
+                      x="266"
+                      y="121"
                       width="8"
                       height="8"
                       fill="white"
@@ -150,8 +150,8 @@ export default function HomePage() {
                       strokeWidth="1.5"
                     ></rect>
                     <rect
-                      x="146"
-                      y="206"
+                      x="66"
+                      y="121"
                       width="8"
                       height="8"
                       fill="white"
@@ -161,7 +161,7 @@ export default function HomePage() {
                   </g>
                   {/* The Arrow Annotation */}
                   <path
-                    d="M 340 170 L 400 170"
+                    d="M 285 90 L 345 90"
                     stroke="#eb3b3b"
                     strokeWidth="2"
                     fill="none"
@@ -170,7 +170,7 @@ export default function HomePage() {
                     strokeLinecap="round"
                   ></path>
                   {/* Text Label */}
-                  <foreignObject x="410" y="155" width="200" height="100">
+                  <foreignObject x="355" y="75" width="200" height="100">
                     <div className="annotation-text">
                       <div className="text-accent text-lg font-hand font-bold leading-none">
                         Check padding!
@@ -201,8 +201,7 @@ export default function HomePage() {
                       <div className="text-xs font-semibold text-indigo-500 uppercase">
                         Pro
                       </div>
-                      {/* Intentionally misaligned price - BUG */}
-                      <div className="text-2xl font-bold mt-8 ml-6">$29</div>
+                      <div className="text-2xl font-bold mt-2">$29</div>
                     </div>
                   </div>
                   <div className="mt-6 w-full h-10 bg-neutral-900 rounded flex items-center justify-center text-white text-sm font-medium">

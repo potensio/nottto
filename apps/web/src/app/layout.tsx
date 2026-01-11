@@ -31,7 +31,7 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&family=Instrument+Serif:wght@400&family=Kalam:wght@400;700&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&family=Instrument+Serif:wght@400&family=Gochi+Hand&display=swap"
           rel="stylesheet"
         />
         <script

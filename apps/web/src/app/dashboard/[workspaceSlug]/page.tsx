@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   useWorkspaces,
   useProjects,
@@ -12,11 +12,14 @@ import {
   AnnotationList,
   AnnotationListSkeleton,
   EmptyState,
+  CreateProjectModal,
 } from "@/components/dashboard";
 
 export default function WorkspaceDashboardPage() {
   const params = useParams();
   const workspaceSlug = params.workspaceSlug as string;
+  const [isCreateProjectModalOpen, setIsCreateProjectModalOpen] =
+    useState(false);
 
   // Get workspaces to find the current one by slug
   const { data: workspaces } = useWorkspaces();
@@ -61,6 +64,15 @@ export default function WorkspaceDashboardPage() {
         .length,
     };
   }, [annotations]);
+
+  const handleProjectCreated = (project: {
+    id: string;
+    name: string;
+    slug: string;
+  }) => {
+    // Project list will be automatically refreshed via React Query invalidation
+    console.log("Project created:", project.name);
+  };
 
   if (isLoading) {
     return (
@@ -119,6 +131,50 @@ export default function WorkspaceDashboardPage() {
         highPriorityCount={stats.highPriorityCount}
       />
 
+      {/* Projects section header with create button */}
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl font-instrument-serif text-neutral-900">
+          Projects
+        </h2>
+        <button
+          onClick={() => setIsCreateProjectModalOpen(true)}
+          className="bg-neutral-900 text-white px-4 py-2 rounded-lg font-medium hover:bg-neutral-800 transition-colors flex items-center gap-2 min-h-[44px]"
+        >
+          <iconify-icon icon="lucide:plus"></iconify-icon>
+          New Project
+        </button>
+      </div>
+
+      {/* Projects list */}
+      {projects && projects.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+          {projects.map((project) => (
+            <a
+              key={project.id}
+              href={`/dashboard/${workspaceSlug}/projects/${project.slug}`}
+              className="bg-white p-4 rounded-lg border border-neutral-200 hover:border-neutral-300 hover:shadow-sm transition-all"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-neutral-100 rounded-lg flex items-center justify-center">
+                  <iconify-icon
+                    icon="lucide:folder"
+                    className="text-neutral-500"
+                  ></iconify-icon>
+                </div>
+                <div>
+                  <h3 className="font-medium text-neutral-900">
+                    {project.name}
+                  </h3>
+                  <p className="text-sm text-neutral-500">
+                    {project.annotationCount || 0} annotations
+                  </p>
+                </div>
+              </div>
+            </a>
+          ))}
+        </div>
+      )}
+
       {/* Empty state or annotations */}
       {!annotations || annotations.length === 0 ? (
         <EmptyState type="no-annotations" workspaceSlug={workspaceSlug} />
@@ -142,6 +198,14 @@ export default function WorkspaceDashboardPage() {
           />
         </>
       )}
+
+      {/* Create Project Modal */}
+      <CreateProjectModal
+        workspaceId={workspaceId}
+        isOpen={isCreateProjectModalOpen}
+        onClose={() => setIsCreateProjectModalOpen(false)}
+        onSuccess={handleProjectCreated}
+      />
     </div>
   );
 }

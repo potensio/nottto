@@ -17,11 +17,28 @@ app.use("*", logger());
 app.use(
   "*",
   cors({
-    origin: [
-      "http://localhost:3000",
-      "https://app.nottto.com",
-      "chrome-extension://*",
-    ],
+    origin: (origin) => {
+      // Allow requests with no origin (like mobile apps or curl)
+      if (!origin) return "http://localhost:3000";
+
+      // Allow localhost for development
+      if (origin === "http://localhost:3000") return origin;
+
+      // Allow production web app
+      if (origin === "https://app.nottto.com") return origin;
+
+      // Allow any Chrome extension
+      if (origin.startsWith("chrome-extension://")) return origin;
+
+      // In development, allow any origin for content script requests
+      // Content scripts make requests with the page's origin, not the extension's
+      if (process.env.NODE_ENV !== "production") {
+        return origin;
+      }
+
+      // Default fallback
+      return "http://localhost:3000";
+    },
     credentials: true,
   })
 );

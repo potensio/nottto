@@ -13,7 +13,7 @@ export interface AnnotationListProps {
     pageUrl?: string;
     pageTitle?: string;
     createdAt: string;
-    project: {
+    project?: {
       name: string;
       slug: string;
     };
@@ -103,7 +103,7 @@ export function AnnotationList({
               )}
             </div>
             <div className="flex items-center gap-3 text-sm text-neutral-500">
-              {showProject && (
+              {showProject && annotation.project && (
                 <>
                   <span>{annotation.project.name}</span>
                   <span className="text-neutral-300">•</span>
