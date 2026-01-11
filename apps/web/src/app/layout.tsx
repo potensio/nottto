@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { Providers } from "@/lib/providers";
 
 export const metadata: Metadata = {
   title: "Annotate.QA - Visual Bug Reporting Tool",
@@ -38,8 +39,8 @@ export default function RootLayout({
           defer
         />
       </head>
-      <body className="min-h-screen flex flex-col relative overflow-hidden text-neutral-900 selection:bg-red-100">
-        {children}
+      <body className="min-h-screen flex flex-col relative text-neutral-900 selection:bg-red-100">
+        <Providers>{children}</Providers>
       </body>
     </html>
   );
