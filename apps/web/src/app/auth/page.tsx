@@ -28,28 +28,24 @@ export default function AuthPage() {
         {/* Content */}
         <div className="relative z-10 flex flex-col justify-between p-12 text-white">
           {/* Logo */}
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-white/10 backdrop-blur rounded-lg flex items-center justify-center">
-              <iconify-icon
-                icon="lucide:pencil-ruler"
-                className="text-xl text-white"
-              ></iconify-icon>
-            </div>
-            <span className="font-bold tracking-tight text-xl">
-              Nott<span className="text-accent">to</span>
-            </span>
+          <div className="flex h-6">
+            <img
+              src="/nottto-logo-negative.png"
+              alt="Description"
+              className="h-full"
+            />
           </div>
 
           {/* Center Content */}
           <div className="max-w-md">
-            <h1 className="text-4xl font-instrument-serif font-normal mb-6 leading-tight">
+            <h1 className="text-6xl font-instrument-serif font-normal mb-6 leading-tight">
               Capture bugs,
               <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-orange-600">
+              <span className="text-6xl text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-orange-600">
                 ship faster
               </span>
             </h1>
-            <p className="text-neutral-400 text-lg leading-relaxed">
+            <p className="text-neutral-400 leading-relaxed">
               Screenshot, annotate, and share bug reports in seconds. Join
               thousands of teams streamlining their feedback workflow.
             </p>
@@ -108,14 +104,9 @@ export default function AuthPage() {
 
           {/* Header */}
           <div className="mb-8">
-            <h2 className="text-3xl font-instrument-serif font-normal text-neutral-900 mb-2">
+            <h2 className="text-4xl font-instrument-serif font-normal text-neutral-900 mb-2">
               {isLogin ? "Welcome back" : "Create account"}
             </h2>
-            <p className="text-neutral-500">
-              {isLogin
-                ? "Enter your credentials to access your workspace"
-                : "Start capturing and annotating screenshots today"}
-            </p>
           </div>
 
           {/* Toggle */}
@@ -128,7 +119,7 @@ export default function AuthPage() {
                   : "text-neutral-500 hover:text-neutral-700"
               }`}
             >
-              Sign In
+              Login
             </button>
             <button
               onClick={() => setIsLogin(false)}
@@ -138,7 +129,7 @@ export default function AuthPage() {
                   : "text-neutral-500 hover:text-neutral-700"
               }`}
             >
-              Sign Up
+              Register
             </button>
           </div>
 
@@ -223,8 +214,7 @@ export default function AuthPage() {
               type="submit"
               className="w-full bg-neutral-900 text-white py-3 rounded-lg font-medium hover:bg-neutral-800 transition-colors flex items-center justify-center gap-2"
             >
-              {isLogin ? "Sign In" : "Create Account"}
-              <iconify-icon icon="lucide:arrow-right" width="18"></iconify-icon>
+              {isLogin ? "Login" : "Create Account"}
             </button>
           </form>
 

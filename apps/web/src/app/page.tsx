@@ -10,42 +10,18 @@ export default function HomePage() {
       </div>
 
       {/* Navigation */}
-      <nav className="relative z-50 w-full max-w-7xl mx-auto px-6 py-6 flex items-center justify-between border-b border-neutral-200/50 backdrop-blur-sm">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-neutral-900 rounded flex items-center justify-center text-white">
-            <iconify-icon
-              icon="lucide:pen-tool"
-              className="text-lg"
-            ></iconify-icon>
-          </div>
-          <span className="font-bold tracking-tight text-lg">
-            Annotate<span className="text-accent">.QA</span>
-          </span>
+      <nav className="relative z-50 w-full max-w-7xl mx-auto px-10 py-6 flex items-center justify-between border-b border-neutral-200/50 backdrop-blur-sm">
+        <div className="flex items-center gap-3 h-6 ">
+          <img src="/nottto-logo.png" alt="Description" className="h-full" />
         </div>
         <div className="hidden md:flex items-center gap-8 bg-white/50 px-6 py-2 rounded-full border border-neutral-200/50 shadow-sm">
           <a
-            href="#"
+            href="/auth"
             className="text-xs font-mono text-neutral-500 hover:text-accent transition-colors uppercase tracking-widest"
           >
-            Capture
-          </a>
-          <a
-            href="#"
-            className="text-xs font-mono text-neutral-500 hover:text-accent transition-colors uppercase tracking-widest"
-          >
-            Mark Up
-          </a>
-          <a
-            href="#"
-            className="text-xs font-mono text-neutral-500 hover:text-accent transition-colors uppercase tracking-widest"
-          >
-            Report
+            Login
           </a>
         </div>
-        <button className="hidden md:flex items-center gap-2 text-xs font-mono uppercase bg-neutral-900 text-white px-4 py-2 rounded hover:bg-neutral-800 transition-colors shadow-lg shadow-neutral-900/10">
-          <span>Install Extension</span>
-          <iconify-icon icon="lucide:download" width="14"></iconify-icon>
-        </button>
       </nav>
 
       {/* Main Content */}
@@ -62,14 +38,14 @@ export default function HomePage() {
         </div>
 
         {/* Hero Text */}
-        <div className="text-center max-w-4xl mx-auto mb-16 z-20 relative px-4">
+        <div className="text-center max-w-4xl mx-auto mb-10 z-20 relative px-4">
           <h1 className="text-5xl md:text-7xl tracking-tight text-neutral-900 leading-[0.95] mb-6 reveal-text font-instrument-serif font-normal">
             Spot bugs. Annotate. <br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-orange-500 font-instrument-serif font-normal">
               Push to Linear instantly.
             </span>
           </h1>
-          <p className="md:text-lg text-neutral-500 max-w-2xl mx-auto leading-relaxed">
+          <p className="md:text-lg text-neutral-500 max-w-2xl mx-auto mb-6 leading-relaxed font-manrope">
             The fastest way to report visual bugs. Use the{" "}
             <strong className="text-neutral-800 font-medium">
               annotation toolbar
@@ -77,6 +53,10 @@ export default function HomePage() {
             to draw rectangles, arrows, and text directly on your build, then
             sync with one click.
           </p>
+          <button className="hidden md:flex items-center mx-auto gap-2 text-xs font-mono uppercase bg-neutral-900 text-white px-4 py-4 rounded hover:bg-neutral-800 transition-colors shadow-lg shadow-neutral-900/10">
+            <span>Install Extension</span>
+            <iconify-icon icon="lucide:download" width="14"></iconify-icon>
+          </button>
         </div>
 
         {/* 3D Visualization Area */}
@@ -201,10 +181,6 @@ export default function HomePage() {
 
                 {/* Mocked "Buggy" Content */}
                 <div className="max-w-xl mx-auto bg-white p-8 rounded-xl border border-neutral-200 shadow-sm opacity-90">
-                  <div className="flex justify-between items-center mb-8">
-                    <div className="w-32 h-6 bg-neutral-200 rounded"></div>
-                    <div className="w-8 h-8 bg-neutral-100 rounded-full"></div>
-                  </div>
                   <h2 className="text-2xl font-bold text-neutral-800 mb-2">
                     Upgrade Plan
                   </h2>
