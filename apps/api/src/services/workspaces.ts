@@ -26,6 +26,7 @@ export async function list(userId: string): Promise<Workspace[]> {
       id: workspaces.id,
       name: workspaces.name,
       slug: workspaces.slug,
+      icon: workspaces.icon,
       ownerId: workspaces.ownerId,
       createdAt: workspaces.createdAt,
       updatedAt: workspaces.updatedAt,
@@ -46,6 +47,7 @@ export async function list(userId: string): Promise<Workspace[]> {
     id: ws.id,
     name: ws.name,
     slug: ws.slug,
+    icon: ws.icon,
     ownerId: ws.ownerId,
     createdAt: ws.createdAt,
     updatedAt: ws.updatedAt,
@@ -69,6 +71,7 @@ export async function create(
     .values({
       name: data.name,
       slug,
+      icon: "📁", // Default icon
       ownerId: userId,
     })
     .returning();
@@ -84,6 +87,7 @@ export async function create(
     id: newWorkspace.id,
     name: newWorkspace.name,
     slug: newWorkspace.slug,
+    icon: newWorkspace.icon,
     ownerId: newWorkspace.ownerId,
     createdAt: newWorkspace.createdAt,
     updatedAt: newWorkspace.updatedAt,
@@ -116,6 +120,40 @@ export async function get(
     id: workspace.id,
     name: workspace.name,
     slug: workspace.slug,
+    icon: workspace.icon,
+    ownerId: workspace.ownerId,
+    createdAt: workspace.createdAt,
+    updatedAt: workspace.updatedAt,
+  };
+}
+
+export async function getBySlug(
+  slug: string,
+  userId: string
+): Promise<Workspace> {
+  const [workspace] = await db
+    .select()
+    .from(workspaces)
+    .where(eq(workspaces.slug, slug))
+    .limit(1);
+
+  if (!workspace) {
+    throw new HTTPException(404, { message: "Workspace not found" });
+  }
+
+  // Check if user has access
+  const hasAccess = await checkAccess(workspace.id, userId);
+  if (!hasAccess) {
+    throw new HTTPException(403, {
+      message: "Access denied to this workspace",
+    });
+  }
+
+  return {
+    id: workspace.id,
+    name: workspace.name,
+    slug: workspace.slug,
+    icon: workspace.icon,
     ownerId: workspace.ownerId,
     createdAt: workspace.createdAt,
     updatedAt: workspace.updatedAt,
@@ -170,6 +208,7 @@ export async function update(
     id: updated.id,
     name: updated.name,
     slug: updated.slug,
+    icon: updated.icon,
     ownerId: updated.ownerId,
     createdAt: updated.createdAt,
     updatedAt: updated.updatedAt,

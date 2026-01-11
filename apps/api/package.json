@@ -5,8 +5,8 @@
   "description": "Nottto API - Hono backend for annotation storage",
   "type": "module",
   "scripts": {
-    "dev": "vercel dev",
-    "dev:local": "bun run --watch src/index.ts",
+    "dev": "tsx watch src/server.ts",
+    "dev:vercel": "vercel dev",
     "build": "tsup",
     "start": "vercel dev",
     "typecheck": "tsc --noEmit",
@@ -22,16 +22,20 @@
     "@nottto/shared": "workspace:*",
     "@vercel/blob": "^0.27.1",
     "bcryptjs": "^2.4.3",
+    "dotenv": "^17.2.3",
     "drizzle-orm": "^0.38.3",
     "hono": "^4.6.16",
     "jose": "^5.9.6",
+    "resend": "^6.7.0",
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@hono/node-server": "^1.19.8",
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^25.0.6",
     "drizzle-kit": "^0.30.2",
     "tsup": "^8.5.1",
+    "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "vercel": "^50.1.6"
   }

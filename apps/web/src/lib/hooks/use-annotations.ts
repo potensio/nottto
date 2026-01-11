@@ -7,7 +7,7 @@ import {
 } from "../mock-data";
 
 // Set to true to use mock data instead of real API
-const USE_MOCK_DATA = true;
+const USE_MOCK_DATA = false;
 
 export interface AnnotationSummary {
   id: string;

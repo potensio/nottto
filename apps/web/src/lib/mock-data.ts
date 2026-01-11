@@ -7,8 +7,8 @@ export const mockUser = {
 };
 
 export const mockWorkspaces = [
-  { id: "ws-1", name: "Acme Corp", slug: "acme-corp" },
-  { id: "ws-2", name: "Personal", slug: "personal" },
+  { id: "ws-1", name: "Acme Corp", slug: "acme-corp", icon: "🏢" },
+  { id: "ws-2", name: "Personal", slug: "personal", icon: "📁" },
 ];
 
 export const mockProjects = {

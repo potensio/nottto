@@ -1,21 +1,13 @@
 // Base API client for Nottto backend integration
-// This is a stub - implement when backend is ready
+import {
+  getAccessToken,
+  getRefreshToken,
+  updateAccessToken,
+  clearAuthState,
+} from "../utils/auth-storage";
+import { config } from "../config";
 
-const API_BASE = "https://api.nottto.com";
-
-let authToken: string | null = null;
-
-export function setAuthToken(token: string): void {
-  authToken = token;
-}
-
-export function clearAuthToken(): void {
-  authToken = null;
-}
-
-export function getAuthToken(): string | null {
-  return authToken;
-}
+const API_BASE = config.API_URL;
 
 export interface ApiError {
   message: string;
@@ -23,29 +15,82 @@ export interface ApiError {
   status?: number;
 }
 
+/**
+ * Attempts to refresh the access token using the stored refresh token.
+ * Returns the new access token or null if refresh failed.
+ */
+async function refreshAccessToken(): Promise<string | null> {
+  const refreshToken = await getRefreshToken();
+  if (!refreshToken) return null;
+
+  try {
+    const response = await fetch(`${API_BASE}/auth/refresh`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refreshToken }),
+    });
+
+    if (!response.ok) {
+      // Refresh token is invalid, clear auth state
+      await clearAuthState();
+      return null;
+    }
+
+    const data = await response.json();
+    await updateAccessToken(data.accessToken);
+    return data.accessToken;
+  } catch {
+    await clearAuthState();
+    return null;
+  }
+}
+
+/**
+ * Makes an authenticated API request with automatic token refresh on 401.
+ */
 export async function apiRequest<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const headers: HeadersInit = {
-    "Content-Type": "application/json",
-    ...(options.headers || {}),
+  let accessToken = await getAccessToken();
+
+  const makeRequest = async (token: string | null) => {
+    const headers: HeadersInit = {
+      "Content-Type": "application/json",
+      ...(options.headers || {}),
+    };
+
+    if (token) {
+      (headers as Record<string, string>)["Authorization"] = `Bearer ${token}`;
+    }
+
+    return fetch(`${API_BASE}${endpoint}`, {
+      ...options,
+      headers,
+    });
   };
 
-  if (authToken) {
-    (headers as Record<string, string>)[
-      "Authorization"
-    ] = `Bearer ${authToken}`;
+  let response = await makeRequest(accessToken);
+
+  // Handle 401 - try to refresh token
+  if (response.status === 401 && accessToken) {
+    const newToken = await refreshAccessToken();
+    if (newToken) {
+      response = await makeRequest(newToken);
+    }
   }
 
-  const response = await fetch(`${API_BASE}${endpoint}`, {
-    ...options,
-    headers,
-  });
-
   if (!response.ok) {
+    let errorMessage = `API request failed: ${response.statusText}`;
+    try {
+      const errorData = await response.json();
+      errorMessage = errorData.message || errorMessage;
+    } catch {
+      // Ignore JSON parse errors
+    }
+
     const error: ApiError = {
-      message: `API request failed: ${response.statusText}`,
+      message: errorMessage,
       status: response.status,
     };
     throw error;
@@ -74,4 +119,21 @@ export async function put<T>(endpoint: string, data: unknown): Promise<T> {
 
 export async function del<T>(endpoint: string): Promise<T> {
   return apiRequest<T>(endpoint, { method: "DELETE" });
+}
+
+// Legacy exports for backward compatibility
+export function setAuthToken(_token: string): void {
+  // No-op: tokens are now managed via chrome.storage
+  console.warn("setAuthToken is deprecated. Use saveAuthState instead.");
+}
+
+export function clearAuthToken(): void {
+  // No-op: tokens are now managed via chrome.storage
+  console.warn("clearAuthToken is deprecated. Use clearAuthState instead.");
+}
+
+export function getAuthToken(): string | null {
+  // No-op: tokens are now managed via chrome.storage
+  console.warn("getAuthToken is deprecated. Use getAccessToken instead.");
+  return null;
 }

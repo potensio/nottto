@@ -41,6 +41,14 @@ workspaceRoutes.get("/:id", async (c) => {
   return c.json({ workspace });
 });
 
+// GET /workspaces/by-slug/:slug - Get workspace by slug
+workspaceRoutes.get("/by-slug/:slug", async (c) => {
+  const userId = c.get("userId");
+  const slug = c.req.param("slug");
+  const workspace = await workspaceService.getBySlug(slug, userId);
+  return c.json({ workspace });
+});
+
 // PATCH /workspaces/:id - Update workspace
 workspaceRoutes.patch(
   "/:id",

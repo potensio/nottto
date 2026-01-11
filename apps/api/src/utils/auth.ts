@@ -2,8 +2,8 @@ import bcrypt from "bcryptjs";
 import { SignJWT, jwtVerify } from "jose";
 
 const SALT_ROUNDS = 10;
-const ACCESS_TOKEN_EXPIRY = "15m";
-const REFRESH_TOKEN_EXPIRY = "7d";
+const ACCESS_TOKEN_EXPIRY = "1h"; // 1 hour per requirements
+const REFRESH_TOKEN_EXPIRY = "30d"; // 30 days per requirements
 
 // Password hashing
 export async function hashPassword(password: string): Promise<string> {

@@ -14,6 +14,7 @@ export interface Workspace {
   id: string;
   name: string;
   slug: string;
+  icon: string;
   ownerId: string;
   createdAt: Date;
   updatedAt: Date;

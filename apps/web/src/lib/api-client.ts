@@ -1,4 +1,5 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
 
 interface ApiError {
   status: number;
@@ -157,6 +158,34 @@ class ApiClient {
     return data;
   }
 
+  // Magic Link Auth endpoints
+  async requestMagicLink(
+    email: string,
+    isRegister: boolean = false,
+    name?: string
+  ) {
+    return this.fetch<{
+      message: string;
+      email: string;
+    }>("/auth/magic-link", {
+      method: "POST",
+      body: JSON.stringify({ email, isRegister, name }),
+    });
+  }
+
+  async verifyMagicLink(token: string) {
+    const data = await this.fetch<{
+      user: { id: string; email: string; name: string | null };
+      tokens: { accessToken: string; refreshToken: string };
+      isNewUser: boolean;
+    }>("/auth/verify-magic-link", {
+      method: "POST",
+      body: JSON.stringify({ token }),
+    });
+    this.setTokens(data.tokens.accessToken, data.tokens.refreshToken);
+    return data;
+  }
+
   async getMe() {
     return this.fetch<{ user: { id: string; email: string; name: string } }>(
       "/auth/me"
@@ -173,22 +202,51 @@ class ApiClient {
   // Workspace endpoints
   async getWorkspaces() {
     return this.fetch<{
-      workspaces: Array<{ id: string; name: string; slug: string }>;
+      workspaces: Array<{
+        id: string;
+        name: string;
+        slug: string;
+        icon: string;
+      }>;
     }>("/workspaces");
   }
 
   async getWorkspace(id: string) {
     return this.fetch<{
-      workspace: { id: string; name: string; slug: string };
+      workspace: { id: string; name: string; slug: string; icon: string };
     }>(`/workspaces/${id}`);
+  }
+
+  async getWorkspaceBySlug(slug: string) {
+    return this.fetch<{
+      workspace: {
+        id: string;
+        name: string;
+        slug: string;
+        icon: string;
+        ownerId: string;
+      };
+    }>(`/workspaces/by-slug/${slug}`);
   }
 
   async createWorkspace(name: string) {
     return this.fetch<{
-      workspace: { id: string; name: string; slug: string };
+      workspace: { id: string; name: string; slug: string; icon: string };
     }>("/workspaces", {
       method: "POST",
       body: JSON.stringify({ name }),
+    });
+  }
+
+  async updateWorkspace(
+    id: string,
+    data: { name?: string; slug?: string; icon?: string }
+  ) {
+    return this.fetch<{
+      workspace: { id: string; name: string; slug: string; icon: string };
+    }>(`/workspaces/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
     });
   }
 

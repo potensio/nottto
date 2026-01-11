@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useWorkspaces } from "@/lib/hooks";
 import { EmptyState } from "@/components/dashboard";
@@ -8,13 +7,6 @@ import { EmptyState } from "@/components/dashboard";
 export default function DashboardPage() {
   const router = useRouter();
   const { data: workspaces, isLoading, error } = useWorkspaces();
-
-  useEffect(() => {
-    // Auto-redirect if single workspace
-    if (workspaces && workspaces.length === 1) {
-      router.replace(`/dashboard/${workspaces[0].slug}`);
-    }
-  }, [workspaces, router]);
 
   if (isLoading) {
     return (

@@ -6,6 +6,8 @@ import {
   timestamp,
   jsonb,
   unique,
+  index,
+  boolean,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
@@ -13,17 +15,55 @@ import { relations } from "drizzle-orm";
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
   email: varchar("email", { length: 255 }).unique().notNull(),
-  passwordHash: varchar("password_hash", { length: 255 }).notNull(),
+  passwordHash: varchar("password_hash", { length: 255 }), // Nullable for magic link auth
   name: varchar("name", { length: 255 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
+
+// Magic Link Tokens table
+export const magicLinkTokens = pgTable(
+  "magic_link_tokens",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    email: varchar("email", { length: 255 }).notNull(),
+    tokenHash: varchar("token_hash", { length: 255 }).notNull(),
+    name: varchar("name", { length: 255 }), // For registration - stores user's full name
+    isRegister: boolean("is_register").default(false).notNull(), // Distinguishes login vs register
+    expiresAt: timestamp("expires_at").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    usedAt: timestamp("used_at"),
+  },
+  (table) => [
+    index("idx_magic_link_tokens_email").on(table.email),
+    index("idx_magic_link_tokens_expires_at").on(table.expiresAt),
+  ]
+);
+
+// Rate Limit Records table
+export const rateLimitRecords = pgTable(
+  "rate_limit_records",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    identifier: varchar("identifier", { length: 255 }).notNull(),
+    action: varchar("action", { length: 50 }).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("idx_rate_limit_identifier_action").on(
+      table.identifier,
+      table.action,
+      table.createdAt
+    ),
+  ]
+);
 
 // Workspaces table
 export const workspaces = pgTable("workspaces", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: varchar("name", { length: 255 }).notNull(),
   slug: varchar("slug", { length: 255 }).unique().notNull(),
+  icon: varchar("icon", { length: 50 }).default("📁").notNull(),
   ownerId: uuid("owner_id")
     .references(() => users.id, { onDelete: "cascade" })
     .notNull(),
@@ -149,3 +189,7 @@ export type ProjectRecord = typeof projects.$inferSelect;
 export type NewProjectRecord = typeof projects.$inferInsert;
 export type AnnotationRecord = typeof annotations.$inferSelect;
 export type NewAnnotationRecord = typeof annotations.$inferInsert;
+export type MagicLinkTokenRecord = typeof magicLinkTokens.$inferSelect;
+export type NewMagicLinkTokenRecord = typeof magicLinkTokens.$inferInsert;
+export type RateLimitRecord = typeof rateLimitRecords.$inferSelect;
+export type NewRateLimitRecord = typeof rateLimitRecords.$inferInsert;

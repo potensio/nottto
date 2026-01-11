@@ -16,6 +16,22 @@ export const refreshSchema = z.object({
   refreshToken: z.string().min(1, "Refresh token is required"),
 });
 
+// Magic Link schemas
+export const magicLinkRequestSchema = z
+  .object({
+    email: z.string().email("Invalid email format"),
+    isRegister: z.boolean().default(false),
+    name: z.string().min(1, "Full name is required").max(255).optional(),
+  })
+  .refine(
+    (data) => !data.isRegister || (data.name && data.name.trim().length > 0),
+    { message: "Full name is required for registration", path: ["name"] }
+  );
+
+export const magicLinkVerifySchema = z.object({
+  token: z.string().min(1, "Token is required"),
+});
+
 // Workspace schemas
 export const createWorkspaceSchema = z.object({
   name: z.string().min(1, "Name is required").max(255),
@@ -29,6 +45,7 @@ export const updateWorkspaceSchema = z.object({
     .max(255)
     .regex(/^[a-z0-9-]+$/, "Slug must be lowercase alphanumeric with hyphens")
     .optional(),
+  icon: z.string().min(1).max(50).optional(),
 });
 
 // Project schemas
@@ -85,6 +102,8 @@ export const updateAnnotationSchema = z.object({
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type RefreshInput = z.infer<typeof refreshSchema>;
+export type MagicLinkRequestInput = z.infer<typeof magicLinkRequestSchema>;
+export type MagicLinkVerifyInput = z.infer<typeof magicLinkVerifySchema>;
 export type CreateWorkspaceInput = z.infer<typeof createWorkspaceSchema>;
 export type UpdateWorkspaceInput = z.infer<typeof updateWorkspaceSchema>;
 export type CreateProjectInput = z.infer<typeof createProjectSchema>;

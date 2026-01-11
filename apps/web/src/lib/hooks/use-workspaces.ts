@@ -3,12 +3,13 @@ import { apiClient } from "../api-client";
 import { mockWorkspaces } from "../mock-data";
 
 // Set to true to use mock data instead of real API
-const USE_MOCK_DATA = true;
+const USE_MOCK_DATA = false;
 
 export interface Workspace {
   id: string;
   name: string;
   slug: string;
+  icon: string;
 }
 
 export function useWorkspaces() {
@@ -48,6 +49,26 @@ export function useCreateWorkspace() {
     mutationFn: async (name: string) => {
       const data = await apiClient.createWorkspace(name);
       return data.workspace;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["workspaces"] });
+    },
+  });
+}
+
+export function useUpdateWorkspace() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: { name?: string; slug?: string; icon?: string };
+    }) => {
+      const response = await apiClient.updateWorkspace(id, data);
+      return response.workspace;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["workspaces"] });
