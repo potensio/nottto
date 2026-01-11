@@ -34,19 +34,19 @@ export default function HomePage() {
         <div className="hidden md:flex items-center gap-8 bg-white/50 px-6 py-2 rounded-full border border-neutral-200/50 shadow-sm">
           <a
             href="#"
-            className="text-xs font-mono text-neutral-500 hover:text-accent transition-colors uppercase tracking-widest font-sans"
+            className="text-xs font-mono text-neutral-500 hover:text-accent transition-colors uppercase tracking-widest"
           >
             Features
           </a>
           <a
             href="#"
-            className="text-xs font-mono text-neutral-500 hover:text-accent transition-colors uppercase tracking-widest font-sans"
+            className="text-xs font-mono text-neutral-500 hover:text-accent transition-colors uppercase tracking-widest"
           >
             Pricing
           </a>
           <a
             href="#"
-            className="text-xs font-mono text-neutral-500 hover:text-accent transition-colors uppercase tracking-widest font-sans"
+            className="text-xs font-mono text-neutral-500 hover:text-accent transition-colors uppercase tracking-widest"
           >
             Docs
           </a>
@@ -62,7 +62,7 @@ export default function HomePage() {
         {/* Badge */}
         <div className="mb-8 inline-flex items-center gap-2 bg-white border border-orange-100 shadow-sm rounded-full px-3 py-1 animate-pulse">
           <span className="w-2 h-2 rounded-full bg-accent"></span>
-          <span className="text-xs font-mono text-neutral-600 uppercase tracking-widest font-sans">
+          <span className="text-xs font-mono text-neutral-600 uppercase tracking-widest">
             Now Available for Chrome
           </span>
         </div>
@@ -77,7 +77,7 @@ export default function HomePage() {
           </h1>
           <p className="md:text-xl text-lg text-neutral-500 max-w-2xl mx-auto leading-relaxed font-sans">
             Capture, annotate, and share screenshots with{" "}
-            <span className="font-mono text-xs bg-neutral-100 px-1 py-0.5 rounded text-neutral-900 font-sans">
+            <span className="font-mono text-xs bg-neutral-100 px-1 py-0.5 rounded text-neutral-900">
               one click
             </span>
             . Arrows, shapes, text annotations, and instant sharing for faster
@@ -85,7 +85,7 @@ export default function HomePage() {
           </p>
 
           {/* Code snippet decoration */}
-          <div className="absolute -right-12 top-0 hidden lg:block opacity-20 font-mono text-[10px] text-left leading-tight font-sans">
+          <div className="absolute -right-12 top-0 hidden lg:block opacity-20 font-mono text-[10px] text-left leading-tight">
             capture()
             <br />
             annotate.arrow
@@ -154,11 +154,11 @@ export default function HomePage() {
           <div className="absolute top-10 left-4 md:left-20 flex flex-col gap-2 p-4 glass-panel rounded-xl z-20 w-48 border-l-2 border-accent transform transition-transform hover:scale-105 duration-300">
             <div className="flex items-center justify-between text-neutral-400 text-xs font-mono uppercase tracking-wider">
               <iconify-icon icon="lucide:timer"></iconify-icon>
-              <span className="font-sans">Capture Time</span>
+              <span>Capture Time</span>
             </div>
             <div className="text-2xl text-neutral-900 tracking-tight font-instrument-serif font-normal">
               0.3
-              <span className="text-sm font-medium text-neutral-500 ml-1 font-sans">
+              <span className="text-sm font-medium text-neutral-500 ml-1">
                 sec
               </span>
             </div>
@@ -171,17 +171,17 @@ export default function HomePage() {
           <div className="absolute bottom-20 right-4 md:right-20 flex flex-col gap-2 p-4 glass-panel rounded-xl z-20 w-56 border-l-2 border-neutral-800 transform transition-transform hover:scale-105 duration-300">
             <div className="flex items-center justify-between text-neutral-400 text-xs font-mono uppercase tracking-wider">
               <iconify-icon icon="lucide:image"></iconify-icon>
-              <span className="font-sans">Screenshots Captured</span>
+              <span>Screenshots Captured</span>
             </div>
             <div className="text-2xl text-neutral-900 tracking-tight font-instrument-serif font-normal">
               24.8
-              <span className="text-sm font-medium text-neutral-500 ml-1 font-sans">
+              <span className="text-sm font-medium text-neutral-500 ml-1">
                 K
               </span>
             </div>
             <div className="flex gap-1 mt-1">
               <div className="h-1 w-1 bg-green-500 rounded-full"></div>
-              <span className="text-[10px] font-mono text-green-600 font-sans">
+              <span className="text-[10px] font-mono text-green-600">
                 +340 today
               </span>
             </div>
@@ -207,7 +207,7 @@ export default function HomePage() {
               {/* Header */}
               <div className="flex justify-between items-end mb-6">
                 <div>
-                  <p className="text-[10px] font-mono text-neutral-400 uppercase tracking-widest mb-1 font-sans">
+                  <p className="text-[10px] font-mono text-neutral-400 uppercase tracking-widest mb-1">
                     My Workspace
                   </p>
                   <h2 className="text-3xl text-neutral-900 tracking-tighter font-instrument-serif font-normal">
@@ -286,7 +286,7 @@ export default function HomePage() {
               {/* Transaction List */}
               <div className="flex-1 bg-white rounded-t-3xl shadow-[0_-5px_20px_rgba(0,0,0,0.02)] p-4 -mx-5 relative">
                 <div className="w-12 h-1 bg-neutral-200 rounded-full mx-auto mb-4"></div>
-                <div className="text-xs font-mono text-neutral-400 uppercase mb-3 font-sans">
+                <div className="text-xs font-mono text-neutral-400 uppercase mb-3">
                   Recent Captures
                 </div>
                 {/* Item 1 */}
@@ -299,7 +299,7 @@ export default function HomePage() {
                       <div className="text-sm font-bold text-neutral-900 font-sans">
                         Login button broken
                       </div>
-                      <div className="text-[10px] text-neutral-400 font-mono font-sans">
+                      <div className="text-[10px] text-neutral-400 font-mono">
                         Dashboard • 2 min ago
                       </div>
                     </div>
@@ -318,7 +318,7 @@ export default function HomePage() {
                       <div className="text-sm font-bold text-neutral-900 font-sans">
                         UI alignment fix
                       </div>
-                      <div className="text-[10px] text-neutral-400 font-mono font-sans">
+                      <div className="text-[10px] text-neutral-400 font-mono">
                         Settings • Resolved
                       </div>
                     </div>
@@ -339,7 +339,7 @@ export default function HomePage() {
           <div>
             <div className="flex items-center gap-2 mb-2">
               <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-              <span className="text-xs font-mono uppercase text-neutral-500 font-sans">
+              <span className="text-xs font-mono uppercase text-neutral-500">
                 Extension Ready
               </span>
             </div>
