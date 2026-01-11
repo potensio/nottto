@@ -2,21 +2,21 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Nottto - Screenshot Annotation Tool",
+  title: "Annotate.QA - Visual Bug Reporting Tool",
   description:
-    "Capture, annotate, and share screenshots with one click. Arrows, shapes, text annotations, and instant sharing for faster bug reporting.",
+    "The fastest way to report visual bugs. Draw rectangles, arrows, and text directly on your build, then push to Linear instantly.",
   keywords: [
-    "screenshot",
+    "bug reporting",
     "annotation",
-    "bug report",
+    "QA tool",
+    "Linear integration",
+    "visual feedback",
     "chrome extension",
-    "screen capture",
-    "feedback tool",
   ],
   openGraph: {
-    title: "Nottto - Screenshot Annotation Tool",
+    title: "Annotate.QA - Visual Bug Reporting Tool",
     description:
-      "Capture, annotate, and share screenshots with one click. Arrows, shapes, text annotations, and instant sharing for faster bug reporting.",
+      "The fastest way to report visual bugs. Draw rectangles, arrows, and text directly on your build, then push to Linear instantly.",
     type: "website",
   },
 };
@@ -30,7 +30,7 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&family=Instrument+Serif:wght@400&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&family=Instrument+Serif:wght@400&family=Kalam:wght@400;700&display=swap"
           rel="stylesheet"
         />
         <script
@@ -38,7 +38,7 @@ export default function RootLayout({
           defer
         />
       </head>
-      <body className="min-h-screen flex flex-col relative overflow-hidden text-neutral-900 selection:bg-orange-100">
+      <body className="min-h-screen flex flex-col relative overflow-hidden text-neutral-900 selection:bg-red-100">
         {children}
       </body>
     </html>
