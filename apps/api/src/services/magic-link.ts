@@ -245,6 +245,7 @@ export async function verifyMagicLink(
     id: existingUser.id,
     email: existingUser.email,
     name: existingUser.name,
+    profilePicture: existingUser.profilePicture,
     createdAt: existingUser.createdAt,
     updatedAt: existingUser.updatedAt,
   };

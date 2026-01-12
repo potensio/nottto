@@ -13,6 +13,7 @@ interface User {
   id: string;
   name: string | null;
   email: string;
+  profilePicture: string | null;
 }
 
 interface AuthContextType {
@@ -21,6 +22,10 @@ interface AuthContextType {
   isAuthenticated: boolean;
   requestMagicLink: (email: string) => Promise<{ email: string }>;
   verifyMagicLink: (token: string) => Promise<{ isNewUser: boolean }>;
+  updateUser: (data: {
+    name?: string;
+    profilePicture?: string | null;
+  }) => Promise<void>;
   logout: () => void;
 }
 
@@ -63,6 +68,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { isNewUser: result.isNewUser };
   };
 
+  const updateUser = async (data: {
+    name?: string;
+    profilePicture?: string | null;
+  }) => {
+    const result = await apiClient.updateMe(data);
+    setUser(result.user);
+  };
+
   const logout = () => {
     setUser(null);
     apiClient.logout();
@@ -76,6 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAuthenticated: !!user,
         requestMagicLink,
         verifyMagicLink,
+        updateUser,
         logout,
       }}
     >

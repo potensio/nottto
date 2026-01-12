@@ -165,13 +165,13 @@ export default function AuthPage() {
         {/* Content */}
         <div className="relative z-10 flex flex-col justify-between p-12 text-white">
           {/* Logo */}
-          <div className="flex h-6">
+          <a href="/" className="flex h-6 hover:opacity-80 transition-opacity">
             <img
               src="/nottto-logo-negative.png"
               alt="Nottto"
               className="h-full"
             />
-          </div>
+          </a>
 
           {/* Center Content */}
           <div className="max-w-md">
@@ -227,7 +227,10 @@ export default function AuthPage() {
       <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-neutral-50">
         <div className="w-full max-w-md">
           {/* Mobile Logo */}
-          <div className="flex items-center gap-3 mb-10 lg:hidden">
+          <a
+            href="/"
+            className="flex items-center gap-3 mb-10 lg:hidden hover:opacity-80 transition-opacity"
+          >
             <div className="w-10 h-10 bg-neutral-900 rounded-lg flex items-center justify-center">
               <iconify-icon
                 icon="lucide:pencil-ruler"
@@ -237,7 +240,7 @@ export default function AuthPage() {
             <span className="font-bold tracking-tight text-xl text-neutral-900">
               Nott<span className="text-accent">to</span>
             </span>
-          </div>
+          </a>
 
           {step === "form" && (
             <>
@@ -510,17 +513,6 @@ export default function AuthPage() {
               </div>
             </>
           )}
-
-          {/* Back to home */}
-          <div className="mt-8 text-center">
-            <a
-              href="/"
-              className="text-sm text-neutral-500 hover:text-neutral-700 transition-colors inline-flex items-center gap-1"
-            >
-              <iconify-icon icon="lucide:arrow-left" width="14"></iconify-icon>
-              Back to home
-            </a>
-          </div>
         </div>
       </div>
     </div>

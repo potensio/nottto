@@ -187,9 +187,61 @@ class ApiClient {
   }
 
   async getMe() {
-    return this.fetch<{ user: { id: string; email: string; name: string } }>(
-      "/auth/me"
-    );
+    return this.fetch<{
+      user: {
+        id: string;
+        email: string;
+        name: string | null;
+        profilePicture: string | null;
+      };
+    }>("/auth/me");
+  }
+
+  async updateMe(data: { name?: string; profilePicture?: string | null }) {
+    return this.fetch<{
+      user: {
+        id: string;
+        email: string;
+        name: string | null;
+        profilePicture: string | null;
+      };
+    }>("/auth/me", {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteAccount() {
+    return this.fetch<{ success: boolean; message: string }>("/auth/me", {
+      method: "DELETE",
+    });
+  }
+
+  async uploadProfilePicture(file: File) {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const url = `${API_BASE_URL}/upload/profile-picture`;
+    const headers: HeadersInit = {};
+
+    if (this.accessToken) {
+      headers["Authorization"] = `Bearer ${this.accessToken}`;
+    }
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers,
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response
+        .json()
+        .catch(() => ({ message: "Upload failed" }));
+      throw { status: response.status, message: error.message };
+    }
+
+    return response.json() as Promise<{ url: string }>;
   }
 
   logout() {

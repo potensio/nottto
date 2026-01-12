@@ -99,7 +99,14 @@ export const updateAnnotationSchema = z.object({
   canvasData: z.any().optional().nullable(),
 });
 
+// User profile schemas
+export const updateUserProfileSchema = z.object({
+  name: z.string().min(1, "Name is required").max(255).optional(),
+  profilePicture: z.string().url("Invalid URL").optional().nullable(),
+});
+
 // Type exports from schemas
+export type UpdateUserProfileInput = z.infer<typeof updateUserProfileSchema>;
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type RefreshInput = z.infer<typeof refreshSchema>;

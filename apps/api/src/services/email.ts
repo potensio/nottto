@@ -4,9 +4,17 @@ import {
   getMagicLinkEmailText,
 } from "../templates/magic-link-email";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Lazy initialization - env vars may not be available at module load time in serverless
+let resend: Resend | null = null;
 
-const EMAIL_FROM = process.env.EMAIL_FROM || "Nottto <noreply@nottto.com>";
+function getResendClient(): Resend {
+  if (!resend) {
+    resend = new Resend(process.env.RESEND_API_KEY);
+  }
+  return resend;
+}
+
+const EMAIL_FROM = process.env.EMAIL_FROM || "Hanif <noreply@nottto.com>";
 const EMAIL_MODE = process.env.EMAIL_MODE || "production";
 const MAGIC_LINK_EXPIRATION_MINUTES = 15;
 
@@ -37,7 +45,7 @@ export async function sendMagicLinkEmail(
 
   // Production mode: send actual email via Resend
   try {
-    const { error } = await resend.emails.send({
+    const { error } = await getResendClient().emails.send({
       from: EMAIL_FROM,
       to: email,
       subject: "Sign in to Nottto",

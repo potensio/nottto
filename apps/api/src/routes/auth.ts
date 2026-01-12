@@ -6,6 +6,7 @@ import {
   refreshSchema,
   magicLinkRequestSchema,
   magicLinkVerifySchema,
+  updateUserProfileSchema,
 } from "@nottto/shared";
 import { authMiddleware } from "../middleware/auth";
 import * as authService from "../services/auth";
@@ -65,4 +66,24 @@ authRoutes.get("/me", authMiddleware, async (c) => {
   const userId = c.get("userId");
   const user = await authService.getUser(userId);
   return c.json({ user });
+});
+
+// PATCH /auth/me - Update current user profile (protected)
+authRoutes.patch(
+  "/me",
+  authMiddleware,
+  zValidator("json", updateUserProfileSchema),
+  async (c) => {
+    const userId = c.get("userId");
+    const data = c.req.valid("json");
+    const user = await authService.updateUser(userId, data);
+    return c.json({ user });
+  }
+);
+
+// DELETE /auth/me - Delete current user account (protected)
+authRoutes.delete("/me", authMiddleware, async (c) => {
+  const userId = c.get("userId");
+  await authService.deleteUser(userId);
+  return c.json({ success: true, message: "Account deleted successfully" });
 });

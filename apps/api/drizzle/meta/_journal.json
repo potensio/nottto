@@ -15,6 +15,13 @@
       "when": 1768138216939,
       "tag": "0001_auth-workspace-enhancements",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1736697600000,
+      "tag": "0002_add_profile_picture",
+      "breakpoints": true
     }
   ]
 }

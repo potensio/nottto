@@ -4,7 +4,12 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import { useWorkspaces, useProjects, useCreateWorkspace } from "@/lib/hooks";
+import {
+  useWorkspaces,
+  useProjects,
+  useCreateWorkspace,
+  useCreateProject,
+} from "@/lib/hooks";
 import { AuthGuard } from "@/components/AuthGuard";
 
 export default function DashboardLayout({
@@ -23,6 +28,7 @@ export default function DashboardLayout({
     useState(false);
   const [newWorkspaceName, setNewWorkspaceName] = useState("");
   const [showIntegrationToast, setShowIntegrationToast] = useState(false);
+  const [showCreateProjectModal, setShowCreateProjectModal] = useState(false);
 
   // Fetch workspaces
   const { data: workspaces = [] } = useWorkspaces();
@@ -116,7 +122,7 @@ export default function DashboardLayout({
         </div>
 
         {/* Header */}
-        <header className="fixed top-0 left-0 right-0 h-16 bg-white/80 backdrop-blur-sm border-b border-neutral-200 z-40">
+        <header className="fixed top-0 left-0 right-0 h-16 bg-white/80 backdrop-blur-sm border-b border-neutral-200 z-10">
           <div className="h-full px-4 flex items-center justify-between">
             {/* Left section */}
             <div className="flex items-center gap-4">
@@ -150,9 +156,17 @@ export default function DashboardLayout({
                     }}
                     className="flex items-center gap-2 p-1.5 hover:bg-neutral-100 rounded-lg transition-colors"
                   >
-                    <div className="w-8 h-8 bg-neutral-900 rounded-full flex items-center justify-center text-white text-sm font-medium">
-                      {(user.name || user.email).charAt(0).toUpperCase()}
-                    </div>
+                    {user.profilePicture ? (
+                      <img
+                        src={user.profilePicture}
+                        alt={user.name || user.email}
+                        className="w-8 h-8 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-8 h-8 bg-neutral-900 rounded-full flex items-center justify-center text-white text-sm font-medium">
+                        {(user.name || user.email).charAt(0).toUpperCase()}
+                      </div>
+                    )}
                   </button>
 
                   {showUserDropdown && (
@@ -167,6 +181,14 @@ export default function DashboardLayout({
                           {user.email}
                         </div>
                       </div>
+                      <Link
+                        href={`/dashboard/${workspaceSlug}/account`}
+                        onClick={() => setShowUserDropdown(false)}
+                        className="flex items-center gap-3 px-4 py-2 hover:bg-neutral-50 transition-colors text-neutral-700 w-full text-left"
+                      >
+                        <iconify-icon icon="lucide:user"></iconify-icon>
+                        <span className="text-sm">Account Settings</span>
+                      </Link>
                       <button
                         onClick={() => {
                           setShowUserDropdown(false);
@@ -187,7 +209,7 @@ export default function DashboardLayout({
 
         {/* Sidebar */}
         <aside
-          className={`fixed top-16 left-0 bottom-0 w-64 bg-white/80 backdrop-blur-sm border-r border-neutral-200 z-30 transition-transform duration-300 ${
+          className={`fixed top-16 left-0 bottom-0 w-64 bg-white/80 backdrop-blur-sm border-r border-neutral-200 z-10 bg-red-500 transition-transform duration-300 ${
             sidebarOpen ? "translate-x-0" : "-translate-x-full"
           }`}
         >
@@ -321,10 +343,16 @@ export default function DashboardLayout({
               <h3 className="text-xs font-medium text-neutral-500 uppercase tracking-wider">
                 Projects
               </h3>
-              <button className="p-1 hover:bg-neutral-100 rounded transition-colors">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowCreateProjectModal(true);
+                }}
+                className="p-1 hover:bg-neutral-100 rounded transition-colors"
+              >
                 <iconify-icon
                   icon="lucide:plus"
-                  className="text-neutral-400 text-sm"
+                  className="text-orange-500 text-sm"
                 ></iconify-icon>
               </button>
             </div>
@@ -381,7 +409,7 @@ export default function DashboardLayout({
                   icon="lucide:settings"
                   className="text-lg text-neutral-400"
                 ></iconify-icon>
-                <span className="text-sm font-medium">Settings</span>
+                <span className="text-sm font-medium">Workspace Settings</span>
               </Link>
             </div>
           </div>
@@ -421,7 +449,7 @@ export default function DashboardLayout({
 
         {/* Main content */}
         <main
-          className={`pt-16 min-h-screen transition-all duration-300 relative z-10 ${
+          className={`pt-16 min-h-screen transition-all duration-300 relative z-0 ${
             sidebarOpen && !isMobile ? "lg:pl-64" : ""
           }`}
         >
@@ -485,7 +513,120 @@ export default function DashboardLayout({
             </div>
           </div>
         )}
+
+        {/* Create Project Modal */}
+        {showCreateProjectModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
+              <div className="p-6 border-b border-neutral-100">
+                <h3 className="text-xl font-instrument-serif text-neutral-900">
+                  Create New Project
+                </h3>
+                <p className="text-sm text-neutral-500 mt-1">
+                  Projects help you organize your annotations.
+                </p>
+              </div>
+              <CreateProjectModalForm
+                workspaceId={currentWorkspace?.id || ""}
+                onClose={() => setShowCreateProjectModal(false)}
+                onSuccess={() => setShowCreateProjectModal(false)}
+              />
+            </div>
+          </div>
+        )}
       </div>
     </AuthGuard>
+  );
+}
+
+function CreateProjectModalForm({
+  workspaceId,
+  onClose,
+  onSuccess,
+}: {
+  workspaceId: string;
+  onClose: () => void;
+  onSuccess: (project: { id: string; name: string; slug: string }) => void;
+}) {
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const createProject = useCreateProject(workspaceId);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      setError("Please enter a project name");
+      return;
+    }
+
+    try {
+      const project = await createProject.mutateAsync({
+        name: trimmedName,
+        description: description.trim() || undefined,
+      });
+      onSuccess(project);
+    } catch (err) {
+      console.error("Failed to create project:", err);
+      setError("Failed to create project. Please try again.");
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <div className="p-6">
+        <label className="block text-sm font-medium text-neutral-700 mb-2">
+          Project name
+        </label>
+        <input
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="e.g., Website Redesign, Mobile App"
+          className="w-full px-4 py-3 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-colors"
+          autoFocus
+        />
+        <label className="block text-sm font-medium text-neutral-700 mb-2 mt-4">
+          Description <span className="text-neutral-400">(optional)</span>
+        </label>
+        <textarea
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="What is this project about?"
+          rows={3}
+          className="w-full px-4 py-3 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-colors resize-none"
+        />
+        {error && (
+          <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+            {error}
+          </div>
+        )}
+      </div>
+      <div className="p-6 pt-0 flex gap-3 justify-end">
+        <button
+          type="button"
+          onClick={onClose}
+          className="px-4 py-2 text-neutral-600 hover:bg-neutral-100 rounded-lg transition-colors"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          disabled={!name.trim() || createProject.isPending}
+          className="px-4 py-2 bg-neutral-900 text-white rounded-lg hover:bg-neutral-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+        >
+          {createProject.isPending && (
+            <iconify-icon
+              icon="lucide:loader-2"
+              className="animate-spin"
+            ></iconify-icon>
+          )}
+          Create project
+        </button>
+      </div>
+    </form>
   );
 }

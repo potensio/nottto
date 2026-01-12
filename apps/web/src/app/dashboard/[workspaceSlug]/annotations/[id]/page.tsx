@@ -251,7 +251,7 @@ export default function AnnotationDetailPage() {
       {/* Lightbox */}
       {showLightbox && annotation.screenshotAnnotated && (
         <div
-          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
+          className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-4"
           onClick={() => setShowLightbox(false)}
         >
           <button

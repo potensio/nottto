@@ -83,6 +83,7 @@ export async function register(
     id: newUser.id,
     email: newUser.email,
     name: newUser.name,
+    profilePicture: newUser.profilePicture,
     createdAt: newUser.createdAt,
     updatedAt: newUser.updatedAt,
   };
@@ -121,6 +122,7 @@ export async function login(
     id: user.id,
     email: user.email,
     name: user.name,
+    profilePicture: user.profilePicture,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
   };
@@ -175,7 +177,56 @@ export async function getUser(userId: string): Promise<User> {
     id: user.id,
     email: user.email,
     name: user.name,
+    profilePicture: user.profilePicture,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
   };
+}
+
+export async function updateUser(
+  userId: string,
+  data: { name?: string; profilePicture?: string | null }
+): Promise<User> {
+  const [user] = await db
+    .select()
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+
+  if (!user) {
+    throw new HTTPException(404, { message: "User not found" });
+  }
+
+  const [updatedUser] = await db
+    .update(users)
+    .set({
+      ...data,
+      updatedAt: new Date(),
+    })
+    .where(eq(users.id, userId))
+    .returning();
+
+  return {
+    id: updatedUser.id,
+    email: updatedUser.email,
+    name: updatedUser.name,
+    profilePicture: updatedUser.profilePicture,
+    createdAt: updatedUser.createdAt,
+    updatedAt: updatedUser.updatedAt,
+  };
+}
+
+export async function deleteUser(userId: string): Promise<void> {
+  const [user] = await db
+    .select()
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+
+  if (!user) {
+    throw new HTTPException(404, { message: "User not found" });
+  }
+
+  // Delete user - cascades will handle related data
+  await db.delete(users).where(eq(users.id, userId));
 }

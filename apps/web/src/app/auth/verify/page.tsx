@@ -1,18 +1,24 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, Suspense, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { apiClient } from "@/lib/api-client";
+import { useAuth } from "@/lib/auth-context";
 
 type VerifyStatus = "verifying" | "success" | "error";
 
 function VerifyContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { verifyMagicLink } = useAuth();
   const [status, setStatus] = useState<VerifyStatus>("verifying");
   const [error, setError] = useState<string | null>(null);
+  const verificationAttempted = useRef(false);
 
   useEffect(() => {
+    // Prevent double verification in React strict mode
+    if (verificationAttempted.current) return;
+
     const token = searchParams.get("token");
 
     if (!token) {
@@ -21,19 +27,23 @@ function VerifyContent() {
       return;
     }
 
+    verificationAttempted.current = true;
+
     const verifyToken = async () => {
       try {
-        const result = await apiClient.verifyMagicLink(token);
+        // Use the auth context's verifyMagicLink to properly set user state
+        await verifyMagicLink(token);
+
+        // Get tokens from apiClient for extension notification
+        const accessToken = apiClient.getAccessToken();
 
         // Notify extension if it's listening
-        if (typeof window !== "undefined") {
+        if (typeof window !== "undefined" && accessToken) {
           window.postMessage(
             {
               type: "NOTTTO_AUTH_SUCCESS",
               payload: {
-                accessToken: result.tokens.accessToken,
-                refreshToken: result.tokens.refreshToken,
-                user: result.user,
+                accessToken,
               },
             },
             "*"
@@ -57,7 +67,7 @@ function VerifyContent() {
     };
 
     verifyToken();
-  }, [searchParams, router]);
+  }, [searchParams, router, verifyMagicLink]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-neutral-50 p-8">

@@ -22,3 +22,18 @@ uploadRoutes.post("/screenshot", async (c) => {
   const result = await uploadService.uploadScreenshot(file, userId);
   return c.json(result, 201);
 });
+
+// POST /upload/profile-picture - Upload profile picture to Vercel Blob
+uploadRoutes.post("/profile-picture", async (c) => {
+  const userId = c.get("userId");
+
+  const body = await c.req.parseBody();
+  const file = body["file"];
+
+  if (!file || !(file instanceof File)) {
+    throw new HTTPException(400, { message: "No file provided" });
+  }
+
+  const result = await uploadService.uploadProfilePicture(file, userId);
+  return c.json(result, 201);
+});
