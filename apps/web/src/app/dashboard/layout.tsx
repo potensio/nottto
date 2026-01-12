@@ -22,6 +22,7 @@ export default function DashboardLayout({
   const [showCreateWorkspaceModal, setShowCreateWorkspaceModal] =
     useState(false);
   const [newWorkspaceName, setNewWorkspaceName] = useState("");
+  const [showIntegrationToast, setShowIntegrationToast] = useState(false);
 
   // Fetch workspaces
   const { data: workspaces = [] } = useWorkspaces();
@@ -92,6 +93,11 @@ export default function DashboardLayout({
   const openCreateWorkspaceModal = () => {
     setShowWorkspaceDropdown(false);
     setShowCreateWorkspaceModal(true);
+  };
+
+  const handleIntegrationClick = () => {
+    setShowIntegrationToast(true);
+    setTimeout(() => setShowIntegrationToast(false), 3000);
   };
 
   // Don't show layout on workspace selector page
@@ -188,7 +194,7 @@ export default function DashboardLayout({
           <div className="p-4 h-full flex flex-col">
             {/* Workspace selector */}
             {currentWorkspace && (
-              <div className="mb-4 pb-4 border-b border-neutral-200">
+              <div className="mb-4">
                 <div className="relative" data-dropdown="workspace">
                   <button
                     onClick={(e) => {
@@ -196,17 +202,25 @@ export default function DashboardLayout({
                       setShowWorkspaceDropdown(!showWorkspaceDropdown);
                       setShowUserDropdown(false);
                     }}
-                    className="flex items-center gap-2 w-full px-3 py-2 bg-neutral-100 hover:bg-neutral-200 rounded-lg transition-colors"
+                    className="flex items-center gap-3 w-full px-3 py-2.5 hover:bg-neutral-100 rounded-lg transition-colors"
                   >
-                    <span className="text-lg">
-                      {currentWorkspace.icon || "📁"}
-                    </span>
-                    <span className="text-sm font-medium text-neutral-700 flex-1 text-left truncate">
-                      {currentWorkspace.name}
-                    </span>
+                    <div className="w-8 h-8 bg-neutral-100 rounded-lg flex items-center justify-center text-neutral-600 text-lg font-mono border border-neutral-200">
+                      #
+                    </div>
+                    <div className="flex-1 text-left min-w-0">
+                      <div className="text-sm font-semibold text-neutral-900 truncate">
+                        {currentWorkspace.name}
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>
+                        <span className="text-xs text-neutral-500 truncate">
+                          {user?.email}
+                        </span>
+                      </div>
+                    </div>
                     <iconify-icon
-                      icon="lucide:chevron-down"
-                      className="text-neutral-400"
+                      icon="lucide:chevrons-up-down"
+                      className="text-neutral-400 text-sm"
                     ></iconify-icon>
                   </button>
 
@@ -223,9 +237,9 @@ export default function DashboardLayout({
                           }`}
                           onClick={() => setShowWorkspaceDropdown(false)}
                         >
-                          <span className="text-lg">
-                            {workspace.icon || "📁"}
-                          </span>
+                          <div className="w-6 h-6 bg-neutral-100 rounded flex items-center justify-center text-neutral-500 text-xs font-mono">
+                            #
+                          </div>
                           <span className="text-sm text-neutral-700 truncate">
                             {workspace.name}
                           </span>
@@ -254,15 +268,63 @@ export default function DashboardLayout({
                 </div>
               </div>
             )}
+
+            {/* Link Integrations */}
+            <div className="mb-4 pb-4 border-b border-neutral-200">
+              <button
+                onClick={handleIntegrationClick}
+                className="flex items-center justify-between w-full px-3 py-2 hover:bg-neutral-100 rounded-lg transition-colors group"
+              >
+                <span className="text-sm text-neutral-600 group-hover:text-neutral-900">
+                  Link Integrations
+                </span>
+                <div className="flex items-center gap-1 border rounded-full p-1.5">
+                  <iconify-icon
+                    icon="simple-icons:linear"
+                    style={{ color: "#5E6AD2" }}
+                    className="text-base"
+                  ></iconify-icon>
+                  <iconify-icon
+                    icon="simple-icons:jira"
+                    style={{ color: "#0052CC" }}
+                    className="text-base"
+                  ></iconify-icon>
+                  <iconify-icon
+                    icon="simple-icons:asana"
+                    style={{ color: "#F06A6A" }}
+                    className="text-base"
+                  ></iconify-icon>
+                </div>
+              </button>
+            </div>
+
+            {/* Main Navigation */}
+            <nav className="space-y-1 mb-4">
+              <Link
+                href={`/dashboard/${workspaceSlug}`}
+                className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
+                  pathname === `/dashboard/${workspaceSlug}`
+                    ? "bg-neutral-100 text-neutral-900"
+                    : "text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900"
+                }`}
+              >
+                <iconify-icon
+                  icon="lucide:home"
+                  className="text-lg text-neutral-400"
+                ></iconify-icon>
+                <span className="text-sm font-medium">Home</span>
+              </Link>
+            </nav>
+
             {/* Projects section */}
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-3 px-3">
               <h3 className="text-xs font-medium text-neutral-500 uppercase tracking-wider">
                 Projects
               </h3>
               <button className="p-1 hover:bg-neutral-100 rounded transition-colors">
                 <iconify-icon
                   icon="lucide:plus"
-                  className="text-neutral-400"
+                  className="text-neutral-400 text-sm"
                 ></iconify-icon>
               </button>
             </div>
@@ -297,7 +359,7 @@ export default function DashboardLayout({
                         {project.name}
                       </span>
                     </div>
-                    <span className="text-xs text-neutral-400 bg-neutral-100 px-2 py-0.5 rounded-full">
+                    <span className="text-xs text-neutral-500 bg-neutral-100 px-2 py-0.5 rounded-full">
                       {project.annotationCount}
                     </span>
                   </Link>
@@ -308,20 +370,6 @@ export default function DashboardLayout({
             {/* Bottom section */}
             <div className="pt-4 border-t border-neutral-200 space-y-1">
               <Link
-                href={`/dashboard/${workspaceSlug}`}
-                className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
-                  pathname === `/dashboard/${workspaceSlug}`
-                    ? "bg-neutral-100 text-neutral-900"
-                    : "text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900"
-                }`}
-              >
-                <iconify-icon
-                  icon="lucide:layout-dashboard"
-                  className="text-neutral-400"
-                ></iconify-icon>
-                <span className="text-sm font-medium">All Annotations</span>
-              </Link>
-              <Link
                 href={`/dashboard/${workspaceSlug}/settings`}
                 className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
                   pathname === `/dashboard/${workspaceSlug}/settings`
@@ -331,13 +379,37 @@ export default function DashboardLayout({
               >
                 <iconify-icon
                   icon="lucide:settings"
-                  className="text-neutral-400"
+                  className="text-lg text-neutral-400"
                 ></iconify-icon>
                 <span className="text-sm font-medium">Settings</span>
               </Link>
             </div>
           </div>
         </aside>
+
+        {/* Integration Coming Soon Toast */}
+        {showIntegrationToast && (
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
+            <div className="bg-white text-neutral-900 px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 border border-neutral-200">
+              <iconify-icon
+                icon="lucide:sparkles"
+                className="text-accent"
+              ></iconify-icon>
+              <span className="text-sm">
+                Integrations with Linear, Jira, and Asana coming really soon!
+              </span>
+              <button
+                onClick={() => setShowIntegrationToast(false)}
+                className="p-1 hover:bg-neutral-100 rounded transition-colors"
+              >
+                <iconify-icon
+                  icon="lucide:x"
+                  className="text-neutral-400 text-sm"
+                ></iconify-icon>
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Mobile overlay */}
         {isMobile && sidebarOpen && (

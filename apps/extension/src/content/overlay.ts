@@ -16,6 +16,16 @@ import {
 export async function createOverlay(): Promise<void> {
   const state = getState();
 
+  // Inject Google Fonts link if not already present
+  if (!document.getElementById("nottto-google-fonts")) {
+    const fontLink = document.createElement("link");
+    fontLink.id = "nottto-google-fonts";
+    fontLink.rel = "stylesheet";
+    fontLink.href =
+      "https://fonts.googleapis.com/css2?family=Gochi+Hand&display=swap";
+    document.head.appendChild(fontLink);
+  }
+
   // Get current user for the header
   const user = await getUser();
 

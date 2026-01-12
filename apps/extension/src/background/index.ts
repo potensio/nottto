@@ -249,11 +249,21 @@ chrome.action.onClicked.addListener(async (tab) => {
       files: ["dist/overlay.css"],
     });
 
-    // Inject Fabric.js and content script sequentially
-    await chrome.scripting.executeScript({
+    // Check if Fabric.js is already loaded to prevent duplicate definitions
+    const [fabricCheck] = await chrome.scripting.executeScript({
       target: { tabId: tab.id! },
-      files: ["lib/fabric.min.js"],
+      func: () =>
+        typeof (window as unknown as { fabric?: unknown }).fabric !==
+        "undefined",
     });
+
+    // Only inject Fabric.js if not already loaded
+    if (!fabricCheck?.result) {
+      await chrome.scripting.executeScript({
+        target: { tabId: tab.id! },
+        files: ["lib/fabric.min.js"],
+      });
+    }
 
     await chrome.scripting.executeScript({
       target: { tabId: tab.id! },

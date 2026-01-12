@@ -243,7 +243,7 @@ export function addText(x: number, y: number, color: string): void {
   const text = new fabric.IText("Type here...", {
     left: x,
     top: y,
-    fontFamily: "Manrope, system-ui, sans-serif",
+    fontFamily: "Gochi Hand, cursive",
     fill: color,
     fontSize: fontSize,
     fontWeight: fontWeight,
