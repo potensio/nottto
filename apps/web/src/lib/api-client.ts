@@ -243,7 +243,13 @@ class ApiClient {
     data: { name?: string; slug?: string; icon?: string }
   ) {
     return this.fetch<{
-      workspace: { id: string; name: string; slug: string; icon: string };
+      workspace: {
+        id: string;
+        name: string;
+        slug: string;
+        icon: string;
+        ownerId: string;
+      };
     }>(`/workspaces/${id}`, {
       method: "PATCH",
       body: JSON.stringify(data),
