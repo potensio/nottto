@@ -4,17 +4,12 @@ import { config } from "../config";
 
 const WEB_URL = config.WEB_URL;
 
-type AuthMode = "login" | "register";
-
-let currentMode: AuthMode = "login";
-
 /**
  * Creates and displays the auth prompt overlay
  */
 export function showAuthPrompt(): void {
   // Remove existing prompt if any
   removeAuthPrompt();
-  currentMode = "login";
 
   const overlay = document.createElement("div");
   overlay.id = "nottto-auth-prompt";
@@ -36,6 +31,9 @@ export function showAuthPrompt(): void {
  * Returns the modal HTML structure
  */
 function getModalHTML(): string {
+  // Get the extension icon URL
+  const iconUrl = chrome.runtime.getURL("icons/icon48.png");
+
   return `
     <div class="nottto-auth-backdrop">
       <div class="nottto-auth-modal">
@@ -48,30 +46,16 @@ function getModalHTML(): string {
         
         <!-- Logo -->
         <div class="nottto-auth-logo">
-          <div class="nottto-auth-logo-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 19l7-7 3 3-7 7-3-3z"></path>
-              <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path>
-              <path d="M2 2l7.586 7.586"></path>
-              <circle cx="11" cy="11" r="2"></circle>
-            </svg>
-          </div>
-          <span class="nottto-auth-logo-text">Nott<span class="nottto-auth-logo-accent">to</span></span>
+          <img src="${iconUrl}" alt="Nottto" class="nottto-auth-logo-icon" />
         </div>
         
         <!-- Header -->
-        <h2 class="nottto-auth-title" id="nottto-auth-title">Welcome back</h2>
-        <p class="nottto-auth-description" id="nottto-auth-description">Sign in to save and sync your screenshots</p>
-        
-        <!-- Mode Toggle -->
-        <div class="nottto-auth-toggle">
-          <button type="button" id="nottto-mode-login" class="nottto-auth-toggle-btn active">Login</button>
-          <button type="button" id="nottto-mode-register" class="nottto-auth-toggle-btn">Register</button>
-        </div>
+        <h2 class="nottto-auth-title">Welcome to Nottto</h2>
+        <p class="nottto-auth-description">Sign in to save and sync your screenshots</p>
         
         <!-- Sign In Button -->
         <button id="nottto-auth-signin-btn" class="nottto-auth-button">
-          <span id="nottto-auth-btn-text">Sign in with Email</span>
+          <span>Login / Register</span>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="5" y1="12" x2="19" y2="12"></line>
             <polyline points="12 5 19 12 12 19"></polyline>
@@ -144,30 +128,14 @@ function getStyles(): string {
     .nottto-auth-logo {
       display: flex;
       align-items: center;
-      gap: 10px;
+      justify-content: center;
       margin-bottom: 24px;
     }
 
     .nottto-auth-logo-icon {
-      width: 36px;
-      height: 36px;
-      background: #171717;
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: white;
-    }
-
-    .nottto-auth-logo-text {
-      font-weight: 700;
-      font-size: 18px;
-      letter-spacing: -0.025em;
-      color: #171717;
-    }
-
-    .nottto-auth-logo-accent {
-      color: #ea580c;
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
     }
 
     .nottto-auth-title {
@@ -177,6 +145,7 @@ function getStyles(): string {
       color: #171717;
       margin: 0 0 8px;
       line-height: 1.2;
+      text-align: center;
     }
 
     .nottto-auth-description {
@@ -184,37 +153,7 @@ function getStyles(): string {
       color: #737373;
       margin: 0 0 24px;
       line-height: 1.5;
-    }
-
-    .nottto-auth-toggle {
-      display: flex;
-      background: #e5e5e5;
-      border-radius: 8px;
-      padding: 4px;
-      margin-bottom: 20px;
-    }
-
-    .nottto-auth-toggle-btn {
-      flex: 1;
-      padding: 8px 16px;
-      border: none;
-      border-radius: 6px;
-      font-size: 14px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.15s;
-      background: transparent;
-      color: #737373;
-    }
-
-    .nottto-auth-toggle-btn:hover {
-      color: #525252;
-    }
-
-    .nottto-auth-toggle-btn.active {
-      background: white;
-      color: #171717;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      text-align: center;
     }
 
     .nottto-auth-button {
@@ -263,12 +202,6 @@ function getStyles(): string {
 function initEventListeners(overlay: HTMLElement): void {
   const signInBtn = document.getElementById("nottto-auth-signin-btn");
   const closeBtn = document.getElementById("nottto-auth-close-btn");
-  const loginToggle = document.getElementById("nottto-mode-login");
-  const registerToggle = document.getElementById("nottto-mode-register");
-
-  // Mode toggle handlers
-  loginToggle?.addEventListener("click", () => switchMode("login"));
-  registerToggle?.addEventListener("click", () => switchMode("register"));
 
   // Sign in button
   signInBtn?.addEventListener("click", () => {
@@ -299,35 +232,6 @@ function initEventListeners(overlay: HTMLElement): void {
 }
 
 /**
- * Switch between login and register modes
- */
-function switchMode(mode: AuthMode): void {
-  currentMode = mode;
-
-  const title = document.getElementById("nottto-auth-title");
-  const description = document.getElementById("nottto-auth-description");
-  const btnText = document.getElementById("nottto-auth-btn-text");
-  const loginToggle = document.getElementById("nottto-mode-login");
-  const registerToggle = document.getElementById("nottto-mode-register");
-
-  if (mode === "login") {
-    if (title) title.textContent = "Welcome back";
-    if (description)
-      description.textContent = "Sign in to save and sync your screenshots";
-    if (btnText) btnText.textContent = "Sign in with Email";
-    loginToggle?.classList.add("active");
-    registerToggle?.classList.remove("active");
-  } else {
-    if (title) title.textContent = "Create your account";
-    if (description)
-      description.textContent = "Get started with Nottto in seconds";
-    if (btnText) btnText.textContent = "Create Account";
-    loginToggle?.classList.remove("active");
-    registerToggle?.classList.add("active");
-  }
-}
-
-/**
  * Removes the auth prompt overlay
  */
 export function removeAuthPrompt(): void {
@@ -341,6 +245,5 @@ export function removeAuthPrompt(): void {
  * Opens the web app auth page in a new tab
  */
 export function openAuthPage(): void {
-  const modeParam = currentMode === "register" ? "&mode=register" : "";
-  window.open(`${WEB_URL}/auth?source=extension${modeParam}`, "_blank");
+  window.open(`${WEB_URL}/auth?source=extension`, "_blank");
 }

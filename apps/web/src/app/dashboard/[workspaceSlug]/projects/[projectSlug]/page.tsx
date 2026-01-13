@@ -106,12 +106,9 @@ export default function ProjectDetailPage() {
         </div>
         <Link
           href={`/dashboard/${workspaceSlug}/projects/${projectSlug}/settings`}
-          className="flex items-center gap-2 px-4 py-2 text-sm text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded-lg transition-colors"
+          className="flex items-center font-medium gap-2 px-4 py-2 text-sm border border-neutral-300 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded-lg transition-colors"
         >
-          <iconify-icon
-            icon="lucide:webhook"
-            className="text-lg"
-          ></iconify-icon>
+          <iconify-icon icon="ph:plug" height={16}></iconify-icon>
           Integration
         </Link>
       </div>

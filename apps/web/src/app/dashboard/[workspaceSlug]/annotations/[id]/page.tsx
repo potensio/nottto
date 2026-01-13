@@ -1,7 +1,8 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useAnnotation } from "@/lib/hooks";
 import { EmptyState } from "@/components/dashboard";
@@ -14,6 +15,21 @@ export default function AnnotationDetailPage() {
   const annotationId = params.id as string;
   const [copied, setCopied] = useState(false);
   const [showLightbox, setShowLightbox] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Close lightbox on Escape key
+  useEffect(() => {
+    if (!showLightbox) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setShowLightbox(false);
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [showLightbox]);
 
   const { data: annotation, isLoading, error } = useAnnotation(annotationId);
 
@@ -248,26 +264,30 @@ export default function AnnotationDetailPage() {
         </div>
       </div>
 
-      {/* Lightbox */}
-      {showLightbox && annotation.screenshotAnnotated && (
-        <div
-          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-20"
-          onClick={() => setShowLightbox(false)}
-        >
-          <button
+      {/* Lightbox - rendered via portal to escape stacking context */}
+      {mounted &&
+        showLightbox &&
+        annotation.screenshotAnnotated &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[100000] bg-black/80 flex items-center justify-center p-20"
             onClick={() => setShowLightbox(false)}
-            className="absolute top-4 right-4 text-white/80 hover:text-white transition-colors"
           >
-            <iconify-icon icon="lucide:x" className="text-4xl"></iconify-icon>
-          </button>
-          <img
-            src={annotation.screenshotAnnotated}
-            alt={annotation.title}
-            className="max-w-full max-h-full object-contain rounded-lg"
-            onClick={(e) => e.stopPropagation()}
-          />
-        </div>
-      )}
+            <button
+              onClick={() => setShowLightbox(false)}
+              className="absolute top-5 right-5 text-white/90 hover:text-white transition-colors"
+            >
+              <iconify-icon icon="ph:x" height={24}></iconify-icon>
+            </button>
+            <img
+              src={annotation.screenshotAnnotated}
+              alt={annotation.title}
+              className="max-w-full max-h-full object-contain rounded-lg"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>,
+          document.body
+        )}
     </>
   );
 }
