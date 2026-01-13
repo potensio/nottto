@@ -16,6 +16,43 @@ export interface ApiError {
 }
 
 /**
+ * Makes an API request through the background script to avoid CORS issues
+ */
+async function apiRequestViaBackground<T>(
+  endpoint: string,
+  method: string = "GET",
+  body?: unknown,
+  headers?: Record<string, string>
+): Promise<T> {
+  return new Promise((resolve, reject) => {
+    chrome.runtime.sendMessage(
+      {
+        action: "apiRequest",
+        endpoint,
+        method,
+        body,
+        headers,
+      },
+      (response: { success: boolean; error?: string; data?: T }) => {
+        if (chrome.runtime.lastError) {
+          reject(new Error(chrome.runtime.lastError.message));
+          return;
+        }
+
+        if (response.success) {
+          resolve(response.data as T);
+        } else {
+          const error: ApiError = {
+            message: response.error || "API request failed",
+          };
+          reject(error);
+        }
+      }
+    );
+  });
+}
+
+/**
  * Attempts to refresh the access token using the stored refresh token.
  * Returns the new access token or null if refresh failed.
  */
@@ -47,14 +84,49 @@ async function refreshAccessToken(): Promise<string | null> {
 
 /**
  * Makes an authenticated API request with automatic token refresh on 401.
+ * Uses background script proxy to avoid CORS issues.
  */
 export async function apiRequest<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
-  let accessToken = await getAccessToken();
   console.log(
     "Nottto API: Making request to",
+    endpoint,
+    "via background script"
+  );
+
+  try {
+    // Try request via background script first (avoids CORS)
+    return await apiRequestViaBackground<T>(
+      endpoint,
+      options.method || "GET",
+      options.body ? JSON.parse(options.body as string) : undefined,
+      options.headers as Record<string, string>
+    );
+  } catch (error) {
+    console.error("Nottto API: Background request failed:", error);
+
+    // If background request fails due to auth, handle it
+    if (error instanceof Error && error.message === "AUTHENTICATION_REQUIRED") {
+      throw error;
+    }
+
+    // Fallback to direct request (for development or if background script fails)
+    return await directApiRequest<T>(endpoint, options);
+  }
+}
+
+/**
+ * Direct API request (fallback method)
+ */
+async function directApiRequest<T>(
+  endpoint: string,
+  options: RequestInit = {}
+): Promise<T> {
+  let accessToken = await getAccessToken();
+  console.log(
+    "Nottto API: Making direct request to",
     endpoint,
     "with token:",
     accessToken ? "present" : "missing"
@@ -70,10 +142,22 @@ export async function apiRequest<T>(
       (headers as Record<string, string>)["Authorization"] = `Bearer ${token}`;
     }
 
-    return fetch(`${API_BASE}${endpoint}`, {
-      ...options,
-      headers,
-    });
+    // Add timeout to prevent hanging requests
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
+    try {
+      const response = await fetch(`${API_BASE}${endpoint}`, {
+        ...options,
+        headers,
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      return response;
+    } catch (error) {
+      clearTimeout(timeoutId);
+      throw error;
+    }
   };
 
   let response = await makeRequest(accessToken);
@@ -88,7 +172,11 @@ export async function apiRequest<T>(
       response = await makeRequest(newToken);
       console.log("Nottto API: Retry response status:", response.status);
     } else {
-      console.log("Nottto API: Token refresh failed");
+      console.log(
+        "Nottto API: Token refresh failed - user needs to re-authenticate"
+      );
+      // Throw a specific error that the UI can handle
+      throw new Error("AUTHENTICATION_REQUIRED");
     }
   }
 

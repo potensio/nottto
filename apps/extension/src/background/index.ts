@@ -374,9 +374,17 @@ chrome.runtime.onMessage.addListener(
       saveAs?: boolean;
       mode?: string;
       user?: { id: string; email: string; name: string | null };
+      endpoint?: string;
+      method?: string;
+      body?: unknown;
+      headers?: Record<string, string>;
     },
     _sender: chrome.runtime.MessageSender,
-    sendResponse: (response: { success: boolean; error?: string }) => void
+    sendResponse: (response: {
+      success: boolean;
+      error?: string;
+      data?: unknown;
+    }) => void
   ) => {
     if (message.action === "download") {
       chrome.downloads
@@ -388,6 +396,21 @@ chrome.runtime.onMessage.addListener(
         .then(() => sendResponse({ success: true }))
         .catch((err: Error) =>
           sendResponse({ success: false, error: err.message })
+        );
+      return true;
+    }
+
+    if (message.action === "apiRequest") {
+      // Proxy API requests through background script to avoid CORS issues
+      handleApiRequest(
+        message.endpoint!,
+        message.method || "GET",
+        message.body,
+        message.headers
+      )
+        .then((data) => sendResponse({ success: true, data }))
+        .catch((error) =>
+          sendResponse({ success: false, error: error.message })
         );
       return true;
     }
@@ -416,3 +439,94 @@ chrome.runtime.onMessage.addListener(
     return false;
   }
 );
+
+/**
+ * Handle API requests through background script to avoid CORS issues
+ */
+async function handleApiRequest(
+  endpoint: string,
+  method: string = "GET",
+  body?: unknown,
+  additionalHeaders?: Record<string, string>
+): Promise<unknown> {
+  const { getAccessToken, getRefreshToken, updateAccessToken, clearAuthState } =
+    await import("../utils/auth-storage");
+
+  let accessToken = await getAccessToken();
+
+  const makeRequest = async (token: string | null) => {
+    const headers: HeadersInit = {
+      "Content-Type": "application/json",
+      ...(additionalHeaders || {}),
+    };
+
+    if (token) {
+      (headers as Record<string, string>)["Authorization"] = `Bearer ${token}`;
+    }
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+    try {
+      const response = await fetch(`${config.API_URL}${endpoint}`, {
+        method,
+        headers,
+        body: body ? JSON.stringify(body) : undefined,
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      return response;
+    } catch (error) {
+      clearTimeout(timeoutId);
+      throw error;
+    }
+  };
+
+  let response = await makeRequest(accessToken);
+
+  // Handle 401 - try to refresh token
+  if (response.status === 401 && accessToken) {
+    console.log("Nottto Background: Got 401, attempting token refresh...");
+    const refreshToken = await getRefreshToken();
+    if (refreshToken) {
+      try {
+        const refreshResponse = await fetch(`${config.API_URL}/auth/refresh`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ refreshToken }),
+        });
+
+        if (refreshResponse.ok) {
+          const data = await refreshResponse.json();
+          await updateAccessToken(data.accessToken);
+          console.log(
+            "Nottto Background: Token refreshed, retrying request..."
+          );
+          response = await makeRequest(data.accessToken);
+        } else {
+          await clearAuthState();
+          throw new Error("AUTHENTICATION_REQUIRED");
+        }
+      } catch {
+        await clearAuthState();
+        throw new Error("AUTHENTICATION_REQUIRED");
+      }
+    } else {
+      throw new Error("AUTHENTICATION_REQUIRED");
+    }
+  }
+
+  if (!response.ok) {
+    let errorMessage = `API request failed: ${response.statusText}`;
+    try {
+      const errorData = await response.json();
+      errorMessage =
+        errorData.message || errorData.error?.message || errorMessage;
+    } catch {
+      // Ignore JSON parse errors
+    }
+    throw new Error(errorMessage);
+  }
+
+  return response.json();
+}

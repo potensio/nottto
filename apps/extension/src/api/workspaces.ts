@@ -22,8 +22,15 @@ export interface UpdateWorkspaceData {
 }
 
 export async function listWorkspaces(): Promise<Workspace[]> {
-  const response = await get<{ workspaces: Workspace[] }>("/workspaces");
-  return response.workspaces;
+  try {
+    console.log("Nottto API: Requesting workspaces...");
+    const response = await get<{ workspaces: Workspace[] }>("/workspaces");
+    console.log("Nottto API: Workspaces response:", response);
+    return response.workspaces;
+  } catch (error) {
+    console.error("Nottto API: Failed to fetch workspaces:", error);
+    throw error;
+  }
 }
 
 export async function getWorkspace(id: string): Promise<Workspace> {

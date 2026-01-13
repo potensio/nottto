@@ -24,22 +24,25 @@ app.use(
       if (!origin) return "http://localhost:3000";
 
       // Allow localhost for development
-      if (origin === "http://localhost:3000") return origin;
+      if (
+        origin === "http://localhost:3000" ||
+        origin === "http://localhost:3001"
+      )
+        return origin;
 
       // Allow production web app
       if (origin === "https://nottto-web.vercel.app") return origin;
 
-      // Allow any Chrome extension
+      // Allow any Chrome extension (background script requests)
       if (origin.startsWith("chrome-extension://")) return origin;
 
-      // In development, allow any origin for content script requests
-      // Content scripts make requests with the page's origin, not the extension's
+      // In development, allow any origin for testing
       if (process.env.NODE_ENV !== "production") {
         return origin;
       }
 
-      // Default fallback
-      return "http://localhost:3000";
+      // Default: return null to reject other origins in production
+      return null;
     },
     credentials: true,
   })

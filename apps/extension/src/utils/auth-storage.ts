@@ -49,10 +49,15 @@ export async function getAuthState(): Promise<StoredAuthState> {
     STORAGE_KEYS.USER,
   ]);
 
+  const accessToken = result[STORAGE_KEYS.ACCESS_TOKEN];
+  const refreshToken = result[STORAGE_KEYS.REFRESH_TOKEN];
+  const user = result[STORAGE_KEYS.USER];
+
   return {
-    accessToken: result[STORAGE_KEYS.ACCESS_TOKEN] || null,
-    refreshToken: result[STORAGE_KEYS.REFRESH_TOKEN] || null,
-    user: result[STORAGE_KEYS.USER] || null,
+    accessToken: typeof accessToken === "string" ? accessToken : null,
+    refreshToken: typeof refreshToken === "string" ? refreshToken : null,
+    user:
+      user && typeof user === "object" && "id" in user ? (user as User) : null,
   };
 }
 
@@ -77,11 +82,33 @@ export async function clearAuthState(): Promise<void> {
 }
 
 /**
- * Checks if valid tokens are stored
+ * Checks if valid tokens are stored and not expired
  */
 export async function hasValidTokens(): Promise<boolean> {
   const { accessToken, refreshToken } = await getAuthState();
-  return !!(accessToken && refreshToken);
+
+  if (!accessToken || !refreshToken) {
+    console.log("Nottto Auth: Missing tokens");
+    return false;
+  }
+
+  // Basic JWT expiration check (without verification)
+  try {
+    const payload = JSON.parse(atob(accessToken.split(".")[1]));
+    const now = Math.floor(Date.now() / 1000);
+
+    if (payload.exp && payload.exp < now) {
+      console.log("Nottto Auth: Access token expired, will need refresh");
+      // Token is expired but we have refresh token, so still "valid"
+      return true;
+    }
+
+    console.log("Nottto Auth: Tokens appear valid");
+    return true;
+  } catch (error) {
+    console.error("Nottto Auth: Invalid token format:", error);
+    return false;
+  }
 }
 
 /**

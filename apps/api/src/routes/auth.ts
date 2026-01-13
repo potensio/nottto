@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
+import { setCookie, deleteCookie } from "hono/cookie";
 import {
   registerSchema,
   loginSchema,
@@ -13,6 +14,27 @@ import * as authService from "../services/auth";
 import * as magicLinkService from "../services/magic-link";
 
 export const authRoutes = new Hono();
+
+// Helper to set session cookie
+function setSessionCookie(c: any, sessionToken: string) {
+  setCookie(c, "session", sessionToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "Lax",
+    maxAge: 60 * 60 * 24 * 30, // 30 days
+    path: "/",
+  });
+}
+
+// Helper to clear session cookie
+function clearSessionCookie(c: any) {
+  deleteCookie(c, "session", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "Lax",
+    path: "/",
+  });
+}
 
 // POST /auth/magic-link - Request magic link
 authRoutes.post(
@@ -37,6 +59,15 @@ authRoutes.post(
   async (c) => {
     const { token } = c.req.valid("json");
     const result = await magicLinkService.verifyMagicLink(token);
+
+    // Create session and set cookie
+    const userAgent = c.req.header("user-agent");
+    const sessionToken = await authService.createSession(
+      result.user.id,
+      userAgent
+    );
+    setSessionCookie(c, sessionToken);
+
     return c.json(result);
   }
 );
@@ -45,6 +76,16 @@ authRoutes.post(
 authRoutes.post("/register", zValidator("json", registerSchema), async (c) => {
   const { email, password, name } = c.req.valid("json");
   const result = await authService.register(email, password, name);
+
+  // Create session and set cookie
+  const userAgent = c.req.header("user-agent");
+  const sessionToken = await authService.createSession(
+    result.user.id,
+    userAgent
+  );
+  setSessionCookie(c, sessionToken);
+
+  // Return user data (tokens for backward compatibility)
   return c.json(result, 201);
 });
 
@@ -52,6 +93,16 @@ authRoutes.post("/register", zValidator("json", registerSchema), async (c) => {
 authRoutes.post("/login", zValidator("json", loginSchema), async (c) => {
   const { email, password } = c.req.valid("json");
   const result = await authService.login(email, password);
+
+  // Create session and set cookie
+  const userAgent = c.req.header("user-agent");
+  const sessionToken = await authService.createSession(
+    result.user.id,
+    userAgent
+  );
+  setSessionCookie(c, sessionToken);
+
+  // Return user data (tokens for backward compatibility)
   return c.json(result);
 });
 
@@ -86,5 +137,19 @@ authRoutes.patch(
 authRoutes.delete("/me", authMiddleware, async (c) => {
   const userId = c.get("userId");
   await authService.deleteUser(userId);
+  clearSessionCookie(c);
   return c.json({ success: true, message: "Account deleted successfully" });
+});
+
+// POST /auth/logout - Logout (clear session)
+authRoutes.post("/logout", authMiddleware, async (c) => {
+  const userId = c.get("userId");
+
+  // Delete all user sessions
+  await authService.deleteAllUserSessions(userId);
+
+  // Clear cookie
+  clearSessionCookie(c);
+
+  return c.json({ success: true, message: "Logged out successfully" });
 });

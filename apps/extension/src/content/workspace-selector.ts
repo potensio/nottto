@@ -23,57 +23,88 @@ export async function initWorkspaceSelector(): Promise<void> {
 
   if (!trigger || !nameEl) return;
 
-  try {
-    // Show loading state
-    nameEl.textContent = "Loading...";
-    trigger.disabled = true;
+  const maxRetries = 3;
+  let retryCount = 0;
 
-    // Fetch workspaces from API
-    console.log("Nottto: Fetching workspaces...");
-    workspaces = await listWorkspaces();
-    console.log("Nottto: Workspaces fetched:", workspaces.length);
+  const attemptFetch = async (): Promise<void> => {
+    try {
+      // Show loading state
+      nameEl.textContent = retryCount > 0 ? "Retrying..." : "Loading...";
+      trigger.disabled = true;
 
-    if (workspaces.length === 0) {
-      renderNoWorkspacesState();
-      return;
-    }
-
-    // Populate dropdown list
-    renderWorkspaceList(workspaces);
-
-    // Try to restore previous selection or auto-select first workspace
-    const savedSelection = await loadSelection();
-    let workspaceToSelect: string | null = null;
-
-    if (savedSelection.workspaceId) {
-      const exists = workspaces.some(
-        (w) => w.id === savedSelection.workspaceId
+      // Fetch workspaces from API
+      console.log(
+        "Nottto: Fetching workspaces...",
+        retryCount > 0 ? `(retry ${retryCount})` : ""
       );
-      if (exists) {
-        workspaceToSelect = savedSelection.workspaceId;
+      workspaces = await listWorkspaces();
+      console.log("Nottto: Workspaces fetched:", workspaces.length);
+
+      if (workspaces.length === 0) {
+        renderNoWorkspacesState();
+        return;
+      }
+
+      // Populate dropdown list
+      renderWorkspaceList(workspaces);
+
+      // Try to restore previous selection or auto-select first workspace
+      const savedSelection = await loadSelection();
+      let workspaceToSelect: string | null = null;
+
+      if (savedSelection.workspaceId) {
+        const exists = workspaces.some(
+          (w) => w.id === savedSelection.workspaceId
+        );
+        if (exists) {
+          workspaceToSelect = savedSelection.workspaceId;
+        }
+      }
+
+      // If no valid saved selection, auto-select first workspace
+      if (!workspaceToSelect && workspaces.length > 0) {
+        workspaceToSelect = workspaces[0].id;
+        await saveWorkspaceSelection(workspaceToSelect);
+      }
+
+      // Apply the selection
+      if (workspaceToSelect) {
+        await selectWorkspace(workspaceToSelect, false);
+      }
+
+      // Enable the trigger
+      trigger.disabled = false;
+
+      // Setup event listeners
+      setupDropdownListeners();
+    } catch (error) {
+      console.error("Nottto: Failed to load workspaces", error);
+
+      // Check if it's an authentication error
+      if (
+        error instanceof Error &&
+        error.message === "AUTHENTICATION_REQUIRED"
+      ) {
+        renderAuthRequiredState();
+        return;
+      }
+
+      // Retry logic for network errors
+      if (retryCount < maxRetries) {
+        retryCount++;
+        console.log(
+          `Nottto: Retrying workspace fetch (${retryCount}/${maxRetries})...`
+        );
+        // Exponential backoff: 1s, 2s, 4s
+        const delay = Math.pow(2, retryCount - 1) * 1000;
+        setTimeout(attemptFetch, delay);
+      } else {
+        renderErrorState("Failed to load");
       }
     }
+  };
 
-    // If no valid saved selection, auto-select first workspace
-    if (!workspaceToSelect && workspaces.length > 0) {
-      workspaceToSelect = workspaces[0].id;
-      await saveWorkspaceSelection(workspaceToSelect);
-    }
-
-    // Apply the selection
-    if (workspaceToSelect) {
-      await selectWorkspace(workspaceToSelect, false);
-    }
-
-    // Enable the trigger
-    trigger.disabled = false;
-
-    // Setup event listeners
-    setupDropdownListeners();
-  } catch (error) {
-    console.error("Nottto: Failed to load workspaces", error);
-    renderErrorState("Failed to load");
-  }
+  await attemptFetch();
 }
 
 /**
@@ -248,14 +279,37 @@ function renderErrorState(message: string): void {
   trigger?.addEventListener(
     "click",
     () => {
-      if (nameEl) nameEl.textContent = "Loading...";
-      trigger.disabled = true;
       initWorkspaceSelector();
     },
     { once: true }
   );
 }
 
+/**
+ * Render authentication required state
+ */
+function renderAuthRequiredState(): void {
+  const nameEl = document.getElementById("bf-workspace-name");
+  const trigger = document.getElementById(
+    "bf-workspace-trigger"
+  ) as HTMLButtonElement;
+
+  if (nameEl) {
+    nameEl.textContent = "Sign in required";
+  }
+
+  if (trigger) {
+    trigger.disabled = false;
+    trigger.addEventListener(
+      "click",
+      () => {
+        // Trigger re-authentication
+        window.location.reload();
+      },
+      { once: true }
+    );
+  }
+}
 /**
  * Get the selected workspace ID
  */

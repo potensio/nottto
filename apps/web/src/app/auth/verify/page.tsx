@@ -14,8 +14,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
  * This allows the extension to receive the auth tokens via polling.
  */
 async function completeExtensionAuthSession(
-  sessionId: string,
-  accessToken: string
+  sessionId: string
 ): Promise<boolean> {
   try {
     const response = await fetch(
@@ -24,8 +23,8 @@ async function completeExtensionAuthSession(
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
         },
+        credentials: "include", // Send session cookie
         body: JSON.stringify({}),
       }
     );
@@ -64,14 +63,10 @@ function VerifyContent() {
         // Use the auth context's verifyMagicLink to properly set user state
         await verifyMagicLink(token);
 
-        // Get tokens from apiClient for extension notification
-        const accessToken = apiClient.getAccessToken();
-
         // If this is from the extension, complete the auth session
-        if (extensionSession && accessToken) {
+        if (extensionSession) {
           const completed = await completeExtensionAuthSession(
-            extensionSession,
-            accessToken
+            extensionSession
           );
           if (completed) {
             console.log("Extension auth session completed successfully");

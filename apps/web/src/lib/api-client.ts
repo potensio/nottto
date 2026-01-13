@@ -8,69 +8,6 @@ interface ApiError {
 }
 
 class ApiClient {
-  private accessToken: string | null = null;
-  private refreshToken: string | null = null;
-
-  constructor() {
-    // Load tokens from localStorage on init (client-side only)
-    if (typeof window !== "undefined") {
-      this.accessToken = localStorage.getItem("accessToken");
-      this.refreshToken = localStorage.getItem("refreshToken");
-    }
-  }
-
-  setTokens(accessToken: string, refreshToken: string) {
-    this.accessToken = accessToken;
-    this.refreshToken = refreshToken;
-    if (typeof window !== "undefined") {
-      localStorage.setItem("accessToken", accessToken);
-      localStorage.setItem("refreshToken", refreshToken);
-    }
-  }
-
-  clearTokens() {
-    this.accessToken = null;
-    this.refreshToken = null;
-    if (typeof window !== "undefined") {
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("refreshToken");
-    }
-  }
-
-  getAccessToken() {
-    return this.accessToken;
-  }
-
-  isAuthenticated() {
-    return !!this.accessToken;
-  }
-
-  private async refreshAccessToken(): Promise<boolean> {
-    if (!this.refreshToken) return false;
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ refreshToken: this.refreshToken }),
-      });
-
-      if (!response.ok) {
-        this.clearTokens();
-        return false;
-      }
-
-      const data = await response.json();
-      this.setTokens(data.accessToken, data.refreshToken);
-      return true;
-    } catch {
-      this.clearTokens();
-      return false;
-    }
-  }
-
   async fetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${API_BASE_URL}${endpoint}`;
 
@@ -79,31 +16,12 @@ class ApiClient {
       ...options.headers,
     };
 
-    if (this.accessToken) {
-      (headers as Record<string, string>)[
-        "Authorization"
-      ] = `Bearer ${this.accessToken}`;
-    }
-
-    let response = await fetch(url, {
+    // Include credentials to send cookies automatically
+    const response = await fetch(url, {
       ...options,
       headers,
+      credentials: "include", // Important: sends cookies with requests
     });
-
-    // Handle 401 - try to refresh token
-    if (response.status === 401 && this.refreshToken) {
-      const refreshed = await this.refreshAccessToken();
-      if (refreshed) {
-        // Retry the request with new token
-        (headers as Record<string, string>)[
-          "Authorization"
-        ] = `Bearer ${this.accessToken}`;
-        response = await fetch(url, {
-          ...options,
-          headers,
-        });
-      }
-    }
 
     // Handle errors
     if (!response.ok) {
@@ -134,27 +52,25 @@ class ApiClient {
   // Auth endpoints
   async login(email: string, password: string) {
     const data = await this.fetch<{
-      accessToken: string;
-      refreshToken: string;
       user: { id: string; email: string; name: string };
+      tokens: { accessToken: string; refreshToken: string };
     }>("/auth/login", {
       method: "POST",
       body: JSON.stringify({ email, password }),
     });
-    this.setTokens(data.accessToken, data.refreshToken);
+    // Cookie is set automatically by server
     return data;
   }
 
   async register(email: string, password: string, name: string) {
     const data = await this.fetch<{
-      accessToken: string;
-      refreshToken: string;
       user: { id: string; email: string; name: string };
+      tokens: { accessToken: string; refreshToken: string };
     }>("/auth/register", {
       method: "POST",
       body: JSON.stringify({ email, password, name }),
     });
-    this.setTokens(data.accessToken, data.refreshToken);
+    // Cookie is set automatically by server
     return data;
   }
 
@@ -188,7 +104,7 @@ class ApiClient {
       method: "POST",
       body: JSON.stringify({ token }),
     });
-    this.setTokens(data.tokens.accessToken, data.tokens.refreshToken);
+    // Cookie is set automatically by server
     return data;
   }
 
@@ -228,16 +144,11 @@ class ApiClient {
     formData.append("file", file);
 
     const url = `${API_BASE_URL}/upload/profile-picture`;
-    const headers: HeadersInit = {};
-
-    if (this.accessToken) {
-      headers["Authorization"] = `Bearer ${this.accessToken}`;
-    }
 
     const response = await fetch(url, {
       method: "POST",
-      headers,
       body: formData,
+      credentials: "include", // Send cookies
     });
 
     if (!response.ok) {
@@ -250,8 +161,16 @@ class ApiClient {
     return response.json() as Promise<{ url: string }>;
   }
 
-  logout() {
-    this.clearTokens();
+  async logout() {
+    try {
+      await this.fetch("/auth/logout", {
+        method: "POST",
+      });
+    } catch {
+      // Ignore errors during logout
+    }
+
+    // Redirect to auth page
     if (typeof window !== "undefined") {
       window.location.href = "/auth";
     }

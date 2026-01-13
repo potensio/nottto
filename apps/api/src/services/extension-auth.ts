@@ -1,4 +1,4 @@
-import { eq, and, gt } from "drizzle-orm";
+import { eq, and, gt, lt } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 import { db } from "../db";
 import { users, extensionAuthSessions } from "@nottto/shared/db";
@@ -169,9 +169,9 @@ export async function deleteAuthSession(sessionId: string): Promise<void> {
  * Cleanup expired sessions (can be called periodically).
  */
 export async function cleanupExpiredSessions(): Promise<number> {
-  const result = await db
+  await db
     .delete(extensionAuthSessions)
-    .where(gt(new Date(), extensionAuthSessions.expiresAt));
+    .where(lt(extensionAuthSessions.expiresAt, new Date()));
 
   return 0; // Drizzle doesn't return count easily, but cleanup is done
 }

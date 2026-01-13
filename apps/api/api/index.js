@@ -13,6 +13,7 @@ import { logger } from "hono/logger";
 // src/routes/auth.ts
 import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
+import { setCookie, deleteCookie } from "hono/cookie";
 
 // ../../packages/shared/src/schemas/index.ts
 import { z } from "zod";
@@ -96,36 +97,13 @@ var updateUserProfileSchema = z.object({
 });
 
 // src/middleware/auth.ts
-import { HTTPException } from "hono/http-exception";
-import { jwtVerify } from "jose";
-async function authMiddleware(c, next) {
-  const authHeader = c.req.header("Authorization");
-  if (!authHeader?.startsWith("Bearer ")) {
-    throw new HTTPException(401, {
-      message: "Missing or invalid authorization header"
-    });
-  }
-  const token = authHeader.slice(7);
-  try {
-    const secret = new TextEncoder().encode(process.env.JWT_SECRET);
-    const { payload } = await jwtVerify(token, secret);
-    if (!payload.sub || !payload.email) {
-      throw new HTTPException(401, { message: "Invalid token payload" });
-    }
-    c.set("userId", payload.sub);
-    c.set("userEmail", payload.email);
-    await next();
-  } catch (error) {
-    if (error instanceof HTTPException) {
-      throw error;
-    }
-    throw new HTTPException(401, { message: "Invalid or expired token" });
-  }
-}
+import { HTTPException as HTTPException2 } from "hono/http-exception";
+import { getCookie } from "hono/cookie";
+import { jwtVerify as jwtVerify2 } from "jose";
 
 // src/services/auth.ts
-import { eq } from "drizzle-orm";
-import { HTTPException as HTTPException2 } from "hono/http-exception";
+import { eq, lt } from "drizzle-orm";
+import { HTTPException } from "hono/http-exception";
 
 // ../../packages/shared/src/db/index.ts
 import { neon } from "@neondatabase/serverless";
@@ -141,6 +119,8 @@ __export(schema_exports, {
   projects: () => projects,
   projectsRelations: () => projectsRelations,
   rateLimitRecords: () => rateLimitRecords,
+  sessions: () => sessions,
+  sessionsRelations: () => sessionsRelations,
   users: () => users,
   usersRelations: () => usersRelations,
   webhookIntegrations: () => webhookIntegrations,
@@ -256,6 +236,23 @@ var webhookIntegrations = pgTable("webhook_integrations", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull()
 });
+var sessions = pgTable(
+  "sessions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+    sessionToken: varchar("session_token", { length: 255 }).unique().notNull(),
+    expiresAt: timestamp("expires_at").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    lastActiveAt: timestamp("last_active_at").defaultNow().notNull(),
+    userAgent: text("user_agent"),
+    ipAddress: varchar("ip_address", { length: 45 })
+  },
+  (table) => [
+    index("idx_sessions_user_id").on(table.userId),
+    index("idx_sessions_expires_at").on(table.expiresAt)
+  ]
+);
 var extensionAuthSessions = pgTable(
   "extension_auth_sessions",
   {
@@ -290,7 +287,14 @@ var annotations = pgTable("annotations", {
 var usersRelations = relations(users, ({ many }) => ({
   workspaces: many(workspaces),
   workspaceMembers: many(workspaceMembers),
-  annotations: many(annotations)
+  annotations: many(annotations),
+  sessions: many(sessions)
+}));
+var sessionsRelations = relations(sessions, ({ one }) => ({
+  user: one(users, {
+    fields: [sessions.userId],
+    references: [users.id]
+  })
 }));
 var workspacesRelations = relations(workspaces, ({ one, many }) => ({
   owner: one(users, {
@@ -355,9 +359,9 @@ var db = createDb(process.env.DATABASE_URL);
 
 // src/utils/auth.ts
 import bcrypt from "bcryptjs";
-import { SignJWT, jwtVerify as jwtVerify2 } from "jose";
+import { SignJWT, jwtVerify } from "jose";
 var SALT_ROUNDS = 10;
-var ACCESS_TOKEN_EXPIRY = "1h";
+var ACCESS_TOKEN_EXPIRY = "30d";
 var REFRESH_TOKEN_EXPIRY = "30d";
 async function hashPassword(password) {
   return bcrypt.hash(password, SALT_ROUNDS);
@@ -382,7 +386,7 @@ async function generateTokens(payload) {
 }
 async function verifyRefreshToken(token) {
   const secret = new TextEncoder().encode(process.env.JWT_REFRESH_SECRET);
-  const { payload } = await jwtVerify2(token, secret);
+  const { payload } = await jwtVerify(token, secret);
   return {
     sub: payload.sub,
     email: payload.email
@@ -408,10 +412,46 @@ function generateUniqueSlug(name, existingSlugs) {
 }
 
 // src/services/auth.ts
+import { nanoid } from "nanoid";
+var SESSION_EXPIRY_MS = 30 * 24 * 60 * 60 * 1e3;
+async function createSession(userId, userAgent, ipAddress) {
+  const sessionToken = nanoid(64);
+  const expiresAt = new Date(Date.now() + SESSION_EXPIRY_MS);
+  await db.insert(sessions).values({
+    userId,
+    sessionToken,
+    expiresAt,
+    userAgent: userAgent || null,
+    ipAddress: ipAddress || null
+  });
+  return sessionToken;
+}
+async function validateSession(sessionToken) {
+  const [session] = await db.select({
+    userId: sessions.userId,
+    expiresAt: sessions.expiresAt,
+    userEmail: users.email
+  }).from(sessions).innerJoin(users, eq(sessions.userId, users.id)).where(eq(sessions.sessionToken, sessionToken)).limit(1);
+  if (!session) {
+    return null;
+  }
+  if (/* @__PURE__ */ new Date() > session.expiresAt) {
+    await db.delete(sessions).where(eq(sessions.sessionToken, sessionToken));
+    return null;
+  }
+  await db.update(sessions).set({ lastActiveAt: /* @__PURE__ */ new Date() }).where(eq(sessions.sessionToken, sessionToken));
+  return {
+    userId: session.userId,
+    userEmail: session.userEmail
+  };
+}
+async function deleteAllUserSessions(userId) {
+  await db.delete(sessions).where(eq(sessions.userId, userId));
+}
 async function register(email, password, name) {
   const existingUser = await db.select().from(users).where(eq(users.email, email)).limit(1);
   if (existingUser.length > 0) {
-    throw new HTTPException2(409, { message: "Email already registered" });
+    throw new HTTPException(409, { message: "Email already registered" });
   }
   const passwordHash = await hashPassword(password);
   const [newUser] = await db.insert(users).values({
@@ -454,11 +494,16 @@ async function register(email, password, name) {
 async function login(email, password) {
   const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
   if (!user) {
-    throw new HTTPException2(401, { message: "Invalid email or password" });
+    throw new HTTPException(401, { message: "Invalid email or password" });
+  }
+  if (!user.passwordHash) {
+    throw new HTTPException(401, {
+      message: "This account uses magic link authentication. Please use the magic link option."
+    });
   }
   const isValid = await verifyPassword(password, user.passwordHash);
   if (!isValid) {
-    throw new HTTPException2(401, { message: "Invalid email or password" });
+    throw new HTTPException(401, { message: "Invalid email or password" });
   }
   const tokens = await generateTokens({
     sub: user.id,
@@ -479,7 +524,7 @@ async function refresh(refreshToken) {
     const payload = await verifyRefreshToken(refreshToken);
     const [user] = await db.select().from(users).where(eq(users.id, payload.sub)).limit(1);
     if (!user) {
-      throw new HTTPException2(401, { message: "User not found" });
+      throw new HTTPException(401, { message: "User not found" });
     }
     const accessToken = await generateAccessToken({
       sub: user.id,
@@ -487,10 +532,10 @@ async function refresh(refreshToken) {
     });
     return { accessToken };
   } catch (error) {
-    if (error instanceof HTTPException2) {
+    if (error instanceof HTTPException) {
       throw error;
     }
-    throw new HTTPException2(401, {
+    throw new HTTPException(401, {
       message: "Invalid or expired refresh token"
     });
   }
@@ -498,7 +543,7 @@ async function refresh(refreshToken) {
 async function getUser(userId) {
   const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
   if (!user) {
-    throw new HTTPException2(404, { message: "User not found" });
+    throw new HTTPException(404, { message: "User not found" });
   }
   return {
     id: user.id,
@@ -512,7 +557,7 @@ async function getUser(userId) {
 async function updateUser(userId, data) {
   const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
   if (!user) {
-    throw new HTTPException2(404, { message: "User not found" });
+    throw new HTTPException(404, { message: "User not found" });
   }
   const [updatedUser] = await db.update(users).set({
     ...data,
@@ -530,9 +575,46 @@ async function updateUser(userId, data) {
 async function deleteUser(userId) {
   const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
   if (!user) {
-    throw new HTTPException2(404, { message: "User not found" });
+    throw new HTTPException(404, { message: "User not found" });
   }
   await db.delete(users).where(eq(users.id, userId));
+}
+
+// src/middleware/auth.ts
+async function authMiddleware(c, next) {
+  const sessionCookie = getCookie(c, "session");
+  if (sessionCookie) {
+    const session = await validateSession(sessionCookie);
+    if (session) {
+      c.set("userId", session.userId);
+      c.set("userEmail", session.userEmail);
+      await next();
+      return;
+    }
+  }
+  const authHeader = c.req.header("Authorization");
+  if (authHeader?.startsWith("Bearer ")) {
+    const token = authHeader.slice(7);
+    try {
+      const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+      const { payload } = await jwtVerify2(token, secret);
+      if (!payload.sub || !payload.email) {
+        throw new HTTPException2(401, { message: "Invalid token payload" });
+      }
+      c.set("userId", payload.sub);
+      c.set("userEmail", payload.email);
+      await next();
+      return;
+    } catch (error) {
+      if (error instanceof HTTPException2) {
+        throw error;
+      }
+      throw new HTTPException2(401, { message: "Invalid or expired token" });
+    }
+  }
+  throw new HTTPException2(401, {
+    message: "Missing or invalid authentication"
+  });
 }
 
 // src/services/magic-link.ts
@@ -739,7 +821,7 @@ function maskEmailForLog(email) {
 }
 
 // src/services/rate-limiter.ts
-import { eq as eq2, and, gte, lt } from "drizzle-orm";
+import { eq as eq2, and, gte, lt as lt2 } from "drizzle-orm";
 var MAGIC_LINK_LIMIT = 5;
 var WINDOW_HOURS = 1;
 async function checkMagicLinkLimit(email) {
@@ -914,6 +996,24 @@ async function verifyMagicLink(token) {
 
 // src/routes/auth.ts
 var authRoutes = new Hono();
+function setSessionCookie(c, sessionToken) {
+  setCookie(c, "session", sessionToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "Lax",
+    maxAge: 60 * 60 * 24 * 30,
+    // 30 days
+    path: "/"
+  });
+}
+function clearSessionCookie(c) {
+  deleteCookie(c, "session", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "Lax",
+    path: "/"
+  });
+}
 authRoutes.post(
   "/magic-link",
   zValidator("json", magicLinkRequestSchema),
@@ -934,17 +1034,35 @@ authRoutes.post(
   async (c) => {
     const { token } = c.req.valid("json");
     const result = await verifyMagicLink(token);
+    const userAgent = c.req.header("user-agent");
+    const sessionToken = await createSession(
+      result.user.id,
+      userAgent
+    );
+    setSessionCookie(c, sessionToken);
     return c.json(result);
   }
 );
 authRoutes.post("/register", zValidator("json", registerSchema), async (c) => {
   const { email, password, name } = c.req.valid("json");
   const result = await register(email, password, name);
+  const userAgent = c.req.header("user-agent");
+  const sessionToken = await createSession(
+    result.user.id,
+    userAgent
+  );
+  setSessionCookie(c, sessionToken);
   return c.json(result, 201);
 });
 authRoutes.post("/login", zValidator("json", loginSchema), async (c) => {
   const { email, password } = c.req.valid("json");
   const result = await login(email, password);
+  const userAgent = c.req.header("user-agent");
+  const sessionToken = await createSession(
+    result.user.id,
+    userAgent
+  );
+  setSessionCookie(c, sessionToken);
   return c.json(result);
 });
 authRoutes.post("/refresh", zValidator("json", refreshSchema), async (c) => {
@@ -971,7 +1089,14 @@ authRoutes.patch(
 authRoutes.delete("/me", authMiddleware, async (c) => {
   const userId = c.get("userId");
   await deleteUser(userId);
+  clearSessionCookie(c);
   return c.json({ success: true, message: "Account deleted successfully" });
+});
+authRoutes.post("/logout", authMiddleware, async (c) => {
+  const userId = c.get("userId");
+  await deleteAllUserSessions(userId);
+  clearSessionCookie(c);
+  return c.json({ success: true, message: "Logged out successfully" });
 });
 
 // src/routes/extension-auth.ts
@@ -980,13 +1105,13 @@ import { zValidator as zValidator2 } from "@hono/zod-validator";
 import { z as z2 } from "zod";
 
 // src/services/extension-auth.ts
-import { eq as eq4, and as and3, gt } from "drizzle-orm";
+import { eq as eq4, and as and3, gt, lt as lt3 } from "drizzle-orm";
 import { HTTPException as HTTPException4 } from "hono/http-exception";
-import { nanoid } from "nanoid";
-var SESSION_EXPIRY_MS = 10 * 60 * 1e3;
+import { nanoid as nanoid2 } from "nanoid";
+var SESSION_EXPIRY_MS2 = 10 * 60 * 1e3;
 async function createAuthSession() {
-  const sessionId = nanoid(32);
-  const expiresAt = new Date(Date.now() + SESSION_EXPIRY_MS);
+  const sessionId = nanoid2(32);
+  const expiresAt = new Date(Date.now() + SESSION_EXPIRY_MS2);
   await db.insert(extensionAuthSessions).values({
     id: sessionId,
     status: "pending",
@@ -2393,13 +2518,14 @@ app.use(
   cors({
     origin: (origin) => {
       if (!origin) return "http://localhost:3000";
-      if (origin === "http://localhost:3000") return origin;
-      if (origin === "https://app.nottto.com") return origin;
+      if (origin === "http://localhost:3000" || origin === "http://localhost:3001")
+        return origin;
+      if (origin === "https://nottto-web.vercel.app") return origin;
       if (origin.startsWith("chrome-extension://")) return origin;
       if (process.env.NODE_ENV !== "production") {
         return origin;
       }
-      return "http://localhost:3000";
+      return null;
     },
     credentials: true
   })

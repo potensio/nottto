@@ -38,17 +38,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Check auth status on mount
   useEffect(() => {
     const checkAuth = async () => {
-      if (!apiClient.isAuthenticated()) {
-        setIsLoading(false);
-        return;
-      }
-
       try {
         const data = await apiClient.getMe();
         setUser(data.user);
       } catch {
-        // Token invalid, clear it
-        apiClient.clearTokens();
+        // Not authenticated or session expired
+        setUser(null);
       } finally {
         setIsLoading(false);
       }
@@ -76,9 +71,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(result.user);
   };
 
-  const logout = () => {
+  const logout = async () => {
     setUser(null);
-    apiClient.logout();
+    await apiClient.logout();
   };
 
   return (

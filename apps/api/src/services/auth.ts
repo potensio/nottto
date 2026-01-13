@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, lt } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 import { db } from "../db";
 import {
@@ -6,6 +6,7 @@ import {
   workspaces,
   workspaceMembers,
   projects,
+  sessions,
 } from "@nottto/shared/db";
 import {
   hashPassword,
@@ -15,7 +16,79 @@ import {
   generateAccessToken,
 } from "../utils/auth";
 import { generateSlug } from "../utils/slug";
+import { nanoid } from "nanoid";
 import type { User, AuthResponse, RefreshResponse } from "@nottto/shared";
+
+const SESSION_EXPIRY_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+
+// Session management functions
+export async function createSession(
+  userId: string,
+  userAgent?: string,
+  ipAddress?: string
+): Promise<string> {
+  const sessionToken = nanoid(64);
+  const expiresAt = new Date(Date.now() + SESSION_EXPIRY_MS);
+
+  await db.insert(sessions).values({
+    userId,
+    sessionToken,
+    expiresAt,
+    userAgent: userAgent || null,
+    ipAddress: ipAddress || null,
+  });
+
+  return sessionToken;
+}
+
+export async function validateSession(
+  sessionToken: string
+): Promise<{ userId: string; userEmail: string } | null> {
+  const [session] = await db
+    .select({
+      userId: sessions.userId,
+      expiresAt: sessions.expiresAt,
+      userEmail: users.email,
+    })
+    .from(sessions)
+    .innerJoin(users, eq(sessions.userId, users.id))
+    .where(eq(sessions.sessionToken, sessionToken))
+    .limit(1);
+
+  if (!session) {
+    return null;
+  }
+
+  // Check if expired
+  if (new Date() > session.expiresAt) {
+    // Clean up expired session
+    await db.delete(sessions).where(eq(sessions.sessionToken, sessionToken));
+    return null;
+  }
+
+  // Update last active time
+  await db
+    .update(sessions)
+    .set({ lastActiveAt: new Date() })
+    .where(eq(sessions.sessionToken, sessionToken));
+
+  return {
+    userId: session.userId,
+    userEmail: session.userEmail,
+  };
+}
+
+export async function deleteSession(sessionToken: string): Promise<void> {
+  await db.delete(sessions).where(eq(sessions.sessionToken, sessionToken));
+}
+
+export async function deleteAllUserSessions(userId: string): Promise<void> {
+  await db.delete(sessions).where(eq(sessions.userId, userId));
+}
+
+export async function cleanupExpiredSessions(): Promise<void> {
+  await db.delete(sessions).where(lt(sessions.expiresAt, new Date()));
+}
 
 export async function register(
   email: string,
@@ -104,6 +177,14 @@ export async function login(
 
   if (!user) {
     throw new HTTPException(401, { message: "Invalid email or password" });
+  }
+
+  // Check if user has a password (magic link users don't)
+  if (!user.passwordHash) {
+    throw new HTTPException(401, {
+      message:
+        "This account uses magic link authentication. Please use the magic link option.",
+    });
   }
 
   // Verify password

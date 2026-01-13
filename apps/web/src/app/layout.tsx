@@ -3,7 +3,7 @@ import "./globals.css";
 import { Providers } from "@/lib/providers";
 
 export const metadata: Metadata = {
-  title: "Annotate.QA - Visual Bug Reporting Tool",
+  title: "Nottto - Visual Bug Reporting Tool",
   description:
     "The fastest way to report visual bugs. Draw rectangles, arrows, and text directly on your build, then push to Linear instantly.",
   keywords: [
@@ -15,7 +15,7 @@ export const metadata: Metadata = {
     "chrome extension",
   ],
   openGraph: {
-    title: "Annotate.QA - Visual Bug Reporting Tool",
+    title: "Nottto - Visual Bug Reporting Tool",
     description:
       "The fastest way to report visual bugs. Draw rectangles, arrows, and text directly on your build, then push to Linear instantly.",
     type: "website",
