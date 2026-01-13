@@ -1,18 +1,38 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useState, useRef, useEffect } from "react";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { useWorkspaces, useProjects, useAnnotations } from "@/lib/hooks";
+import {
+  useWorkspaces,
+  useProjects,
+  useAnnotations,
+  useUpdateProject,
+} from "@/lib/hooks";
 import {
   AnnotationList,
   AnnotationListSkeleton,
   EmptyState,
 } from "@/components/dashboard";
 
+function generateSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-");
+}
+
 export default function ProjectDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const workspaceSlug = params.workspaceSlug as string;
   const projectSlug = params.projectSlug as string;
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // Get workspace by slug
   const { data: workspaces } = useWorkspaces();
@@ -25,6 +45,64 @@ export default function ProjectDetailPage() {
   const projectId = currentProject?.id || "";
 
   const { data: annotations, isLoading, error } = useAnnotations(projectId);
+  const updateProject = useUpdateProject(workspaceId);
+
+  const projectName =
+    currentProject?.name ||
+    projectSlug.replace(/-/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
+
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [isEditing]);
+
+  const handleStartEdit = () => {
+    setEditName(projectName);
+    setIsEditing(true);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setEditName("");
+  };
+
+  const handleSaveEdit = async () => {
+    const trimmedName = editName.trim();
+    if (!trimmedName || trimmedName === projectName || !currentProject) {
+      handleCancelEdit();
+      return;
+    }
+
+    const newSlug = generateSlug(trimmedName);
+
+    try {
+      await updateProject.mutateAsync({
+        id: currentProject.id,
+        name: trimmedName,
+        slug: newSlug,
+      });
+
+      setIsEditing(false);
+      setEditName("");
+
+      // Navigate to the new URL with updated slug
+      if (newSlug !== projectSlug) {
+        router.replace(`/dashboard/${workspaceSlug}/projects/${newSlug}`);
+      }
+    } catch (err) {
+      console.error("Failed to update project:", err);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      handleSaveEdit();
+    } else if (e.key === "Escape") {
+      handleCancelEdit();
+    }
+  };
 
   if (isLoading || !workspaces || !projects) {
     return (
@@ -72,10 +150,6 @@ export default function ProjectDetailPage() {
     );
   }
 
-  const projectName =
-    currentProject?.name ||
-    projectSlug.replace(/-/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
-
   return (
     <div className="p-8">
       {/* Breadcrumb */}
@@ -96,9 +170,45 @@ export default function ProjectDetailPage() {
       {/* Project header */}
       <div className="mb-8 flex items-start justify-between">
         <div>
-          <h1 className="text-3xl font-instrument-serif text-neutral-900 mb-2">
-            {projectName}
-          </h1>
+          <div className="flex items-center gap-2 mb-2">
+            {isEditing ? (
+              <div className="flex items-center gap-2">
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  onBlur={handleSaveEdit}
+                  className="text-3xl font-instrument-serif text-neutral-900 bg-transparent border-b-2 border-neutral-300 focus:border-neutral-900 outline-none px-1 py-0"
+                  disabled={updateProject.isPending}
+                />
+                {updateProject.isPending && (
+                  <iconify-icon
+                    icon="lucide:loader-2"
+                    className="text-neutral-400 animate-spin"
+                  ></iconify-icon>
+                )}
+              </div>
+            ) : (
+              <>
+                <h1 className="text-3xl font-instrument-serif text-neutral-900">
+                  {projectName}
+                </h1>
+                <button
+                  onClick={handleStartEdit}
+                  className="p-1.5 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 rounded-md transition-colors"
+                  title="Edit project name"
+                >
+                  <iconify-icon
+                    icon="lucide:pencil"
+                    width="18"
+                    height="18"
+                  ></iconify-icon>
+                </button>
+              </>
+            )}
+          </div>
           <p className="text-neutral-500">
             {annotations?.length || 0} annotation
             {annotations?.length !== 1 ? "s" : ""}

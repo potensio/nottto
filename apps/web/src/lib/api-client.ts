@@ -347,6 +347,18 @@ class ApiClient {
     });
   }
 
+  async updateProject(
+    id: string,
+    data: { name?: string; slug?: string; description?: string }
+  ) {
+    return this.fetch<{
+      project: { id: string; name: string; slug: string; description?: string };
+    }>(`/projects/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  }
+
   // Annotation endpoints
   async getAnnotations(projectId: string) {
     return this.fetch<{

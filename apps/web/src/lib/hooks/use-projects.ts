@@ -62,3 +62,31 @@ export function useCreateProject(workspaceId: string) {
     },
   });
 }
+
+export function useUpdateProject(workspaceId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      name,
+      slug,
+      description,
+    }: {
+      id: string;
+      name?: string;
+      slug?: string;
+      description?: string;
+    }) => {
+      const data = await apiClient.updateProject(id, {
+        name,
+        slug,
+        description,
+      });
+      return data.project;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["projects", workspaceId] });
+    },
+  });
+}
