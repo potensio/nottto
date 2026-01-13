@@ -27,7 +27,7 @@ app.use(
       if (origin === "http://localhost:3000") return origin;
 
       // Allow production web app
-      if (origin === "https://app.nottto.com") return origin;
+      if (origin === "https://nottto-web.vercel.app") return origin;
 
       // Allow any Chrome extension
       if (origin.startsWith("chrome-extension://")) return origin;
