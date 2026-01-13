@@ -94,14 +94,26 @@ export default function ProjectDetailPage() {
       </nav>
 
       {/* Project header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-instrument-serif text-neutral-900 mb-2">
-          {projectName}
-        </h1>
-        <p className="text-neutral-500">
-          {annotations?.length || 0} annotation
-          {annotations?.length !== 1 ? "s" : ""}
-        </p>
+      <div className="mb-8 flex items-start justify-between">
+        <div>
+          <h1 className="text-3xl font-instrument-serif text-neutral-900 mb-2">
+            {projectName}
+          </h1>
+          <p className="text-neutral-500">
+            {annotations?.length || 0} annotation
+            {annotations?.length !== 1 ? "s" : ""}
+          </p>
+        </div>
+        <Link
+          href={`/dashboard/${workspaceSlug}/projects/${projectSlug}/settings`}
+          className="flex items-center gap-2 px-4 py-2 text-sm text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded-lg transition-colors"
+        >
+          <iconify-icon
+            icon="lucide:webhook"
+            className="text-lg"
+          ></iconify-icon>
+          Integration
+        </Link>
       </div>
 
       {/* Empty state or annotations */}

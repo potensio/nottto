@@ -3,10 +3,12 @@ import { handle } from "hono/vercel";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { authRoutes } from "./routes/auth";
+import { extensionAuthRoutes } from "./routes/extension-auth";
 import { workspaceRoutes } from "./routes/workspaces";
 import { projectRoutes } from "./routes/projects";
 import { annotationRoutes } from "./routes/annotations";
 import { uploadRoutes } from "./routes/upload";
+import { integrationRoutes } from "./routes/integrations";
 import { errorHandler } from "./middleware/error-handler";
 
 // Create Hono app with /api base path
@@ -51,10 +53,12 @@ app.get("/", (c) => c.json({ status: "ok", service: "nottto-api" }));
 
 // Routes
 app.route("/auth", authRoutes);
+app.route("/extension-auth", extensionAuthRoutes);
 app.route("/workspaces", workspaceRoutes);
 app.route("/projects", projectRoutes);
 app.route("/annotations", annotationRoutes);
 app.route("/upload", uploadRoutes);
+app.route("/projects", integrationRoutes);
 
 // 404 handler
 app.notFound((c) =>

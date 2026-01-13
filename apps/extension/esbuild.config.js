@@ -30,12 +30,6 @@ async function build() {
       entryPoints: ["src/popup/index.ts"],
       outfile: "dist/popup.js",
     }),
-    // Auth listener (injected on web app pages)
-    esbuild.context({
-      ...commonOptions,
-      entryPoints: ["src/content/auth-listener-init.ts"],
-      outfile: "dist/auth-listener.js",
-    }),
   ]);
 
   if (isWatch) {

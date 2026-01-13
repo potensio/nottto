@@ -162,20 +162,26 @@ class ApiClient {
   async requestMagicLink(
     email: string,
     isRegister: boolean = false,
-    name?: string
+    name?: string,
+    extensionSession?: string
   ) {
     return this.fetch<{
       message: string;
       email: string;
     }>("/auth/magic-link", {
       method: "POST",
-      body: JSON.stringify({ email, isRegister, name }),
+      body: JSON.stringify({ email, isRegister, name, extensionSession }),
     });
   }
 
   async verifyMagicLink(token: string) {
     const data = await this.fetch<{
-      user: { id: string; email: string; name: string | null };
+      user: {
+        id: string;
+        email: string;
+        name: string | null;
+        profilePicture: string | null;
+      };
       tokens: { accessToken: string; refreshToken: string };
       isNewUser: boolean;
     }>("/auth/verify-magic-link", {
@@ -383,6 +389,77 @@ class ApiClient {
   async deleteAnnotation(id: string) {
     return this.fetch<{ success: boolean }>(`/annotations/${id}`, {
       method: "DELETE",
+    });
+  }
+
+  // Integration endpoints
+  async getIntegration(projectId: string) {
+    return this.fetch<{
+      integration: {
+        id: string;
+        projectId: string;
+        url: string;
+        headers: Record<string, string>;
+        bodyTemplate: string;
+        enabled: boolean;
+        locked: boolean;
+        createdAt: string;
+        updatedAt: string;
+      } | null;
+    }>(`/projects/${projectId}/integration`);
+  }
+
+  async saveIntegration(
+    projectId: string,
+    data: {
+      url: string;
+      headers: Record<string, string>;
+      bodyTemplate: string;
+      enabled: boolean;
+      locked: boolean;
+    }
+  ) {
+    return this.fetch<{
+      integration: {
+        id: string;
+        projectId: string;
+        url: string;
+        headers: Record<string, string>;
+        bodyTemplate: string;
+        enabled: boolean;
+        locked: boolean;
+        createdAt: string;
+        updatedAt: string;
+      };
+    }>(`/projects/${projectId}/integration`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteIntegration(projectId: string) {
+    return this.fetch<void>(`/projects/${projectId}/integration`, {
+      method: "DELETE",
+    });
+  }
+
+  async testIntegration(
+    projectId: string,
+    data: {
+      url: string;
+      headers: Record<string, string>;
+      bodyTemplate: string;
+      enabled: boolean;
+      locked: boolean;
+    }
+  ) {
+    return this.fetch<{
+      success: boolean;
+      statusCode?: number;
+      message: string;
+    }>(`/projects/${projectId}/integration/test`, {
+      method: "POST",
+      body: JSON.stringify(data),
     });
   }
 }

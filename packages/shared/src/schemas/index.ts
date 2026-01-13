@@ -22,6 +22,7 @@ export const magicLinkRequestSchema = z
     email: z.string().email("Invalid email format"),
     isRegister: z.boolean().default(false),
     name: z.string().min(1, "Full name is required").max(255).optional(),
+    extensionSession: z.string().max(64).optional(), // Extension auth session ID
   })
   .refine(
     (data) => !data.isRegister || (data.name && data.name.trim().length > 0),

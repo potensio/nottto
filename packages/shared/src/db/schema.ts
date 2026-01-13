@@ -110,6 +110,38 @@ export const projects = pgTable(
   ]
 );
 
+// Webhook Integrations table (one-to-one with projects)
+export const webhookIntegrations = pgTable("webhook_integrations", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  projectId: uuid("project_id")
+    .references(() => projects.id, { onDelete: "cascade" })
+    .unique()
+    .notNull(),
+  url: text("url").notNull(),
+  headers: jsonb("headers").default({}).notNull(),
+  bodyTemplate: text("body_template").default("").notNull(),
+  enabled: boolean("enabled").default(false).notNull(),
+  locked: boolean("locked").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Extension Auth Sessions table (for secure extension authentication)
+export const extensionAuthSessions = pgTable(
+  "extension_auth_sessions",
+  {
+    id: varchar("id", { length: 64 }).primaryKey(), // nanoid
+    status: varchar("status", { length: 20 }).default("pending").notNull(),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }),
+    expiresAt: timestamp("expires_at").notNull(),
+    completedAt: timestamp("completed_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("idx_extension_auth_sessions_expires_at").on(table.expiresAt),
+  ]
+);
+
 // Annotations table
 export const annotations = pgTable("annotations", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -166,7 +198,18 @@ export const projectsRelations = relations(projects, ({ one, many }) => ({
     references: [workspaces.id],
   }),
   annotations: many(annotations),
+  webhookIntegration: one(webhookIntegrations),
 }));
+
+export const webhookIntegrationsRelations = relations(
+  webhookIntegrations,
+  ({ one }) => ({
+    project: one(projects, {
+      fields: [webhookIntegrations.projectId],
+      references: [projects.id],
+    }),
+  })
+);
 
 export const annotationsRelations = relations(annotations, ({ one }) => ({
   project: one(projects, {
@@ -194,3 +237,10 @@ export type MagicLinkTokenRecord = typeof magicLinkTokens.$inferSelect;
 export type NewMagicLinkTokenRecord = typeof magicLinkTokens.$inferInsert;
 export type RateLimitRecord = typeof rateLimitRecords.$inferSelect;
 export type NewRateLimitRecord = typeof rateLimitRecords.$inferInsert;
+export type WebhookIntegrationRecord = typeof webhookIntegrations.$inferSelect;
+export type NewWebhookIntegrationRecord =
+  typeof webhookIntegrations.$inferInsert;
+export type ExtensionAuthSessionRecord =
+  typeof extensionAuthSessions.$inferSelect;
+export type NewExtensionAuthSessionRecord =
+  typeof extensionAuthSessions.$inferInsert;

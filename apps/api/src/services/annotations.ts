@@ -1,9 +1,10 @@
 import { eq } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 import { db } from "../db";
-import { annotations } from "@nottto/shared/db";
+import { annotations, users, projects } from "@nottto/shared/db";
 import { checkProjectAccess } from "./projects";
 import { uploadBase64Screenshot } from "./upload";
+import { fireWebhookIfEnabled } from "./webhook-executor";
 import type {
   Annotation,
   CreateAnnotationInput,
@@ -81,6 +82,9 @@ export async function create(
     })
     .returning();
 
+  // Fire webhook asynchronously (don't await - don't block annotation creation)
+  fireWebhookAsync(projectId, userId, newAnnotation);
+
   return {
     id: newAnnotation.id,
     projectId: newAnnotation.projectId,
@@ -97,6 +101,68 @@ export async function create(
     createdAt: newAnnotation.createdAt,
     updatedAt: newAnnotation.updatedAt,
   };
+}
+
+/**
+ * Fire webhook asynchronously after annotation creation
+ * This function doesn't block the main flow and catches all errors
+ */
+async function fireWebhookAsync(
+  projectId: string,
+  userId: string,
+  annotation: {
+    id: string;
+    title: string;
+    description: string | null;
+    pageUrl: string | null;
+    pageTitle: string | null;
+    screenshotAnnotated: string | null;
+    priority: string | null;
+    type: string | null;
+    createdAt: Date;
+  }
+): Promise<void> {
+  try {
+    // Get user and project info for webhook payload
+    const [user] = await db
+      .select({ name: users.name, email: users.email })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    const [project] = await db
+      .select({ name: projects.name })
+      .from(projects)
+      .where(eq(projects.id, projectId))
+      .limit(1);
+
+    if (!user || !project) {
+      console.error("Webhook: Could not find user or project info");
+      return;
+    }
+
+    await fireWebhookIfEnabled(projectId, {
+      id: annotation.id,
+      title: annotation.title,
+      description: annotation.description,
+      pageUrl: annotation.pageUrl,
+      pageTitle: annotation.pageTitle,
+      screenshotAnnotated: annotation.screenshotAnnotated,
+      priority: annotation.priority,
+      type: annotation.type,
+      createdBy: {
+        name: user.name || "Unknown",
+        email: user.email,
+      },
+      project: {
+        name: project.name,
+      },
+      createdAt: annotation.createdAt.toISOString(),
+    });
+  } catch (error) {
+    // Log error but don't throw - webhook failures shouldn't affect annotation creation
+    console.error("Webhook execution failed:", error);
+  }
 }
 
 export async function get(

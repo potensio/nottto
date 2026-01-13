@@ -251,14 +251,14 @@ export default function AnnotationDetailPage() {
       {/* Lightbox */}
       {showLightbox && annotation.screenshotAnnotated && (
         <div
-          className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-20"
           onClick={() => setShowLightbox(false)}
         >
           <button
             onClick={() => setShowLightbox(false)}
             className="absolute top-4 right-4 text-white/80 hover:text-white transition-colors"
           >
-            <iconify-icon icon="lucide:x" className="text-2xl"></iconify-icon>
+            <iconify-icon icon="lucide:x" className="text-4xl"></iconify-icon>
           </button>
           <img
             src={annotation.screenshotAnnotated}

@@ -5,7 +5,7 @@ var __export = (target, all) => {
 };
 
 // src/index.ts
-import { Hono as Hono6 } from "hono";
+import { Hono as Hono8 } from "hono";
 import { handle } from "hono/vercel";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
@@ -31,7 +31,9 @@ var refreshSchema = z.object({
 var magicLinkRequestSchema = z.object({
   email: z.string().email("Invalid email format"),
   isRegister: z.boolean().default(false),
-  name: z.string().min(1, "Full name is required").max(255).optional()
+  name: z.string().min(1, "Full name is required").max(255).optional(),
+  extensionSession: z.string().max(64).optional()
+  // Extension auth session ID
 }).refine(
   (data) => !data.isRegister || data.name && data.name.trim().length > 0,
   { message: "Full name is required for registration", path: ["name"] }
@@ -88,6 +90,10 @@ var updateAnnotationSchema = z.object({
   screenshotAnnotated: z.string().url("Invalid URL").optional().nullable(),
   canvasData: z.any().optional().nullable()
 });
+var updateUserProfileSchema = z.object({
+  name: z.string().min(1, "Name is required").max(255).optional(),
+  profilePicture: z.string().url("Invalid URL").optional().nullable()
+});
 
 // src/middleware/auth.ts
 import { HTTPException } from "hono/http-exception";
@@ -130,12 +136,15 @@ var schema_exports = {};
 __export(schema_exports, {
   annotations: () => annotations,
   annotationsRelations: () => annotationsRelations,
+  extensionAuthSessions: () => extensionAuthSessions,
   magicLinkTokens: () => magicLinkTokens,
   projects: () => projects,
   projectsRelations: () => projectsRelations,
   rateLimitRecords: () => rateLimitRecords,
   users: () => users,
   usersRelations: () => usersRelations,
+  webhookIntegrations: () => webhookIntegrations,
+  webhookIntegrationsRelations: () => webhookIntegrationsRelations,
   workspaceMembers: () => workspaceMembers,
   workspaceMembersRelations: () => workspaceMembersRelations,
   workspaces: () => workspaces,
@@ -159,6 +168,8 @@ var users = pgTable("users", {
   passwordHash: varchar("password_hash", { length: 255 }),
   // Nullable for magic link auth
   name: varchar("name", { length: 255 }),
+  profilePicture: text("profile_picture"),
+  // URL to profile picture
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull()
 });
@@ -234,6 +245,32 @@ var projects = pgTable(
     unique("workspace_project_slug_unique").on(table.workspaceId, table.slug)
   ]
 );
+var webhookIntegrations = pgTable("webhook_integrations", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  projectId: uuid("project_id").references(() => projects.id, { onDelete: "cascade" }).unique().notNull(),
+  url: text("url").notNull(),
+  headers: jsonb("headers").default({}).notNull(),
+  bodyTemplate: text("body_template").default("").notNull(),
+  enabled: boolean("enabled").default(false).notNull(),
+  locked: boolean("locked").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull()
+});
+var extensionAuthSessions = pgTable(
+  "extension_auth_sessions",
+  {
+    id: varchar("id", { length: 64 }).primaryKey(),
+    // nanoid
+    status: varchar("status", { length: 20 }).default("pending").notNull(),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }),
+    expiresAt: timestamp("expires_at").notNull(),
+    completedAt: timestamp("completed_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull()
+  },
+  (table) => [
+    index("idx_extension_auth_sessions_expires_at").on(table.expiresAt)
+  ]
+);
 var annotations = pgTable("annotations", {
   id: uuid("id").primaryKey().defaultRandom(),
   projectId: uuid("project_id").references(() => projects.id, { onDelete: "cascade" }).notNull(),
@@ -281,8 +318,18 @@ var projectsRelations = relations(projects, ({ one, many }) => ({
     fields: [projects.workspaceId],
     references: [workspaces.id]
   }),
-  annotations: many(annotations)
+  annotations: many(annotations),
+  webhookIntegration: one(webhookIntegrations)
 }));
+var webhookIntegrationsRelations = relations(
+  webhookIntegrations,
+  ({ one }) => ({
+    project: one(projects, {
+      fields: [webhookIntegrations.projectId],
+      references: [projects.id]
+    })
+  })
+);
 var annotationsRelations = relations(annotations, ({ one }) => ({
   project: one(projects, {
     fields: [annotations.projectId],
@@ -398,6 +445,7 @@ async function register(email, password, name) {
     id: newUser.id,
     email: newUser.email,
     name: newUser.name,
+    profilePicture: newUser.profilePicture,
     createdAt: newUser.createdAt,
     updatedAt: newUser.updatedAt
   };
@@ -420,6 +468,7 @@ async function login(email, password) {
     id: user.id,
     email: user.email,
     name: user.name,
+    profilePicture: user.profilePicture,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt
   };
@@ -455,9 +504,35 @@ async function getUser(userId) {
     id: user.id,
     email: user.email,
     name: user.name,
+    profilePicture: user.profilePicture,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt
   };
+}
+async function updateUser(userId, data) {
+  const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+  if (!user) {
+    throw new HTTPException2(404, { message: "User not found" });
+  }
+  const [updatedUser] = await db.update(users).set({
+    ...data,
+    updatedAt: /* @__PURE__ */ new Date()
+  }).where(eq(users.id, userId)).returning();
+  return {
+    id: updatedUser.id,
+    email: updatedUser.email,
+    name: updatedUser.name,
+    profilePicture: updatedUser.profilePicture,
+    createdAt: updatedUser.createdAt,
+    updatedAt: updatedUser.updatedAt
+  };
+}
+async function deleteUser(userId) {
+  const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+  if (!user) {
+    throw new HTTPException2(404, { message: "User not found" });
+  }
+  await db.delete(users).where(eq(users.id, userId));
 }
 
 // src/services/magic-link.ts
@@ -600,8 +675,14 @@ If you didn't request this email, you can safely ignore it.
 }
 
 // src/services/email.ts
-var resend = new Resend(process.env.RESEND_API_KEY);
-var EMAIL_FROM = process.env.EMAIL_FROM || "Nottto <noreply@nottto.com>";
+var resend = null;
+function getResendClient() {
+  if (!resend) {
+    resend = new Resend(process.env.RESEND_API_KEY);
+  }
+  return resend;
+}
+var EMAIL_FROM = process.env.EMAIL_FROM || "Hanif <noreply@nottto.com>";
 var EMAIL_MODE = process.env.EMAIL_MODE || "production";
 var MAGIC_LINK_EXPIRATION_MINUTES = 15;
 async function sendMagicLinkEmail(email, magicLinkUrl) {
@@ -615,7 +696,7 @@ async function sendMagicLinkEmail(email, magicLinkUrl) {
     return { success: true };
   }
   try {
-    const { error } = await resend.emails.send({
+    const { error } = await getResendClient().emails.send({
       from: EMAIL_FROM,
       to: email,
       subject: "Sign in to Nottto",
@@ -698,7 +779,7 @@ function getWindowStart() {
 
 // src/services/magic-link.ts
 var WEB_URL = process.env.WEB_URL || "http://localhost:3000";
-async function requestMagicLink(email, isRegister = false, name) {
+async function requestMagicLink(email, isRegister = false, name, extensionSession) {
   const normalizedEmail = email.toLowerCase().trim();
   const rateLimit = await checkMagicLinkLimit(normalizedEmail);
   if (!rateLimit.allowed) {
@@ -738,9 +819,12 @@ async function requestMagicLink(email, isRegister = false, name) {
     expiresAt
   });
   await recordMagicLinkRequest(normalizedEmail);
-  const magicLinkUrl = `${WEB_URL}/auth/verify?token=${encodeURIComponent(
+  let magicLinkUrl = `${WEB_URL}/auth/verify?token=${encodeURIComponent(
     token
   )}`;
+  if (extensionSession) {
+    magicLinkUrl += `&session=${encodeURIComponent(extensionSession)}`;
+  }
   const emailResult = await sendMagicLinkEmail(normalizedEmail, magicLinkUrl);
   if (!emailResult.success) {
     throw new HTTPException3(500, {
@@ -821,6 +905,7 @@ async function verifyMagicLink(token) {
     id: existingUser.id,
     email: existingUser.email,
     name: existingUser.name,
+    profilePicture: existingUser.profilePicture,
     createdAt: existingUser.createdAt,
     updatedAt: existingUser.updatedAt
   };
@@ -833,11 +918,12 @@ authRoutes.post(
   "/magic-link",
   zValidator("json", magicLinkRequestSchema),
   async (c) => {
-    const { email, isRegister, name } = c.req.valid("json");
+    const { email, isRegister, name, extensionSession } = c.req.valid("json");
     const result = await requestMagicLink(
       email,
       isRegister,
-      name
+      name,
+      extensionSession
     );
     return c.json(result);
   }
@@ -871,16 +957,151 @@ authRoutes.get("/me", authMiddleware, async (c) => {
   const user = await getUser(userId);
   return c.json({ user });
 });
+authRoutes.patch(
+  "/me",
+  authMiddleware,
+  zValidator("json", updateUserProfileSchema),
+  async (c) => {
+    const userId = c.get("userId");
+    const data = c.req.valid("json");
+    const user = await updateUser(userId, data);
+    return c.json({ user });
+  }
+);
+authRoutes.delete("/me", authMiddleware, async (c) => {
+  const userId = c.get("userId");
+  await deleteUser(userId);
+  return c.json({ success: true, message: "Account deleted successfully" });
+});
 
-// src/routes/workspaces.ts
+// src/routes/extension-auth.ts
 import { Hono as Hono2 } from "hono";
 import { zValidator as zValidator2 } from "@hono/zod-validator";
+import { z as z2 } from "zod";
+
+// src/services/extension-auth.ts
+import { eq as eq4, and as and3, gt } from "drizzle-orm";
+import { HTTPException as HTTPException4 } from "hono/http-exception";
+import { nanoid } from "nanoid";
+var SESSION_EXPIRY_MS = 10 * 60 * 1e3;
+async function createAuthSession() {
+  const sessionId = nanoid(32);
+  const expiresAt = new Date(Date.now() + SESSION_EXPIRY_MS);
+  await db.insert(extensionAuthSessions).values({
+    id: sessionId,
+    status: "pending",
+    expiresAt
+  });
+  return {
+    sessionId,
+    expiresAt: expiresAt.toISOString()
+  };
+}
+async function getAuthSession(sessionId) {
+  const [session] = await db.select().from(extensionAuthSessions).where(eq4(extensionAuthSessions.id, sessionId)).limit(1);
+  if (!session) {
+    throw new HTTPException4(404, { message: "Session not found" });
+  }
+  if (/* @__PURE__ */ new Date() > session.expiresAt) {
+    await db.delete(extensionAuthSessions).where(eq4(extensionAuthSessions.id, sessionId));
+    return { status: "expired" };
+  }
+  if (session.status === "pending") {
+    return { status: "pending" };
+  }
+  if (session.status === "completed" && session.userId) {
+    const [user] = await db.select().from(users).where(eq4(users.id, session.userId)).limit(1);
+    if (!user) {
+      throw new HTTPException4(404, { message: "User not found" });
+    }
+    const tokens = await generateTokens({
+      sub: user.id,
+      email: user.email
+    });
+    await db.delete(extensionAuthSessions).where(eq4(extensionAuthSessions.id, sessionId));
+    return {
+      status: "completed",
+      tokens,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name
+      }
+    };
+  }
+  return { status: "pending" };
+}
+async function completeAuthSession(sessionId, userId) {
+  const [session] = await db.select().from(extensionAuthSessions).where(
+    and3(
+      eq4(extensionAuthSessions.id, sessionId),
+      gt(extensionAuthSessions.expiresAt, /* @__PURE__ */ new Date())
+    )
+  ).limit(1);
+  if (!session) {
+    throw new HTTPException4(404, {
+      message: "Session not found or expired"
+    });
+  }
+  if (session.status === "completed") {
+    throw new HTTPException4(400, {
+      message: "Session already completed"
+    });
+  }
+  await db.update(extensionAuthSessions).set({
+    status: "completed",
+    userId,
+    completedAt: /* @__PURE__ */ new Date()
+  }).where(eq4(extensionAuthSessions.id, sessionId));
+  return { success: true };
+}
+async function deleteAuthSession(sessionId) {
+  await db.delete(extensionAuthSessions).where(eq4(extensionAuthSessions.id, sessionId));
+}
+
+// src/routes/extension-auth.ts
+var extensionAuthRoutes = new Hono2();
+extensionAuthRoutes.post("/session", async (c) => {
+  const result = await createAuthSession();
+  return c.json(result);
+});
+extensionAuthRoutes.get("/session/:sessionId", async (c) => {
+  const sessionId = c.req.param("sessionId");
+  const result = await getAuthSession(sessionId);
+  return c.json(result);
+});
+var completeSessionSchema = z2.object({
+  // No body needed - we get user from auth middleware
+});
+extensionAuthRoutes.post(
+  "/session/:sessionId/complete",
+  authMiddleware,
+  zValidator2("json", completeSessionSchema),
+  async (c) => {
+    const sessionId = c.req.param("sessionId");
+    const userId = c.get("userId");
+    const result = await completeAuthSession(
+      sessionId,
+      userId
+    );
+    return c.json(result);
+  }
+);
+extensionAuthRoutes.delete("/session/:sessionId", async (c) => {
+  const sessionId = c.req.param("sessionId");
+  await deleteAuthSession(sessionId);
+  return c.json({ success: true });
+});
+
+// src/routes/workspaces.ts
+import { Hono as Hono3 } from "hono";
+import { zValidator as zValidator3 } from "@hono/zod-validator";
 
 // src/services/workspaces.ts
-import { eq as eq4, and as and3 } from "drizzle-orm";
-import { HTTPException as HTTPException4 } from "hono/http-exception";
+import { eq as eq5, and as and4 } from "drizzle-orm";
+import { HTTPException as HTTPException5 } from "hono/http-exception";
 async function list(userId) {
-  const ownedWorkspaces = await db.select().from(workspaces).where(eq4(workspaces.ownerId, userId));
+  const ownedWorkspaces = await db.select().from(workspaces).where(eq5(workspaces.ownerId, userId));
   const memberWorkspaces = await db.select({
     id: workspaces.id,
     name: workspaces.name,
@@ -889,7 +1110,7 @@ async function list(userId) {
     ownerId: workspaces.ownerId,
     createdAt: workspaces.createdAt,
     updatedAt: workspaces.updatedAt
-  }).from(workspaceMembers).innerJoin(workspaces, eq4(workspaceMembers.workspaceId, workspaces.id)).where(eq4(workspaceMembers.userId, userId));
+  }).from(workspaceMembers).innerJoin(workspaces, eq5(workspaceMembers.workspaceId, workspaces.id)).where(eq5(workspaceMembers.userId, userId));
   const allWorkspaces = [...ownedWorkspaces];
   for (const ws of memberWorkspaces) {
     if (!allWorkspaces.find((w) => w.id === ws.id)) {
@@ -933,13 +1154,13 @@ async function create(userId, data) {
   };
 }
 async function get(workspaceId, userId) {
-  const [workspace] = await db.select().from(workspaces).where(eq4(workspaces.id, workspaceId)).limit(1);
+  const [workspace] = await db.select().from(workspaces).where(eq5(workspaces.id, workspaceId)).limit(1);
   if (!workspace) {
-    throw new HTTPException4(404, { message: "Workspace not found" });
+    throw new HTTPException5(404, { message: "Workspace not found" });
   }
   const hasAccess = await checkAccess(workspaceId, userId);
   if (!hasAccess) {
-    throw new HTTPException4(403, {
+    throw new HTTPException5(403, {
       message: "Access denied to this workspace"
     });
   }
@@ -954,13 +1175,13 @@ async function get(workspaceId, userId) {
   };
 }
 async function getBySlug(slug, userId) {
-  const [workspace] = await db.select().from(workspaces).where(eq4(workspaces.slug, slug)).limit(1);
+  const [workspace] = await db.select().from(workspaces).where(eq5(workspaces.slug, slug)).limit(1);
   if (!workspace) {
-    throw new HTTPException4(404, { message: "Workspace not found" });
+    throw new HTTPException5(404, { message: "Workspace not found" });
   }
   const hasAccess = await checkAccess(workspace.id, userId);
   if (!hasAccess) {
-    throw new HTTPException4(403, {
+    throw new HTTPException5(403, {
       message: "Access denied to this workspace"
     });
   }
@@ -975,25 +1196,25 @@ async function getBySlug(slug, userId) {
   };
 }
 async function update(workspaceId, userId, data) {
-  const [workspace] = await db.select().from(workspaces).where(eq4(workspaces.id, workspaceId)).limit(1);
+  const [workspace] = await db.select().from(workspaces).where(eq5(workspaces.id, workspaceId)).limit(1);
   if (!workspace) {
-    throw new HTTPException4(404, { message: "Workspace not found" });
+    throw new HTTPException5(404, { message: "Workspace not found" });
   }
   if (workspace.ownerId !== userId) {
-    throw new HTTPException4(403, {
+    throw new HTTPException5(403, {
       message: "Only the owner can update this workspace"
     });
   }
   if (data.slug && data.slug !== workspace.slug) {
-    const [existing] = await db.select().from(workspaces).where(eq4(workspaces.slug, data.slug)).limit(1);
+    const [existing] = await db.select().from(workspaces).where(eq5(workspaces.slug, data.slug)).limit(1);
     if (existing) {
-      throw new HTTPException4(409, { message: "Slug already in use" });
+      throw new HTTPException5(409, { message: "Slug already in use" });
     }
   }
   const [updated] = await db.update(workspaces).set({
     ...data,
     updatedAt: /* @__PURE__ */ new Date()
-  }).where(eq4(workspaces.id, workspaceId)).returning();
+  }).where(eq5(workspaces.id, workspaceId)).returning();
   return {
     id: updated.id,
     name: updated.name,
@@ -1005,42 +1226,42 @@ async function update(workspaceId, userId, data) {
   };
 }
 async function remove(workspaceId, userId) {
-  const [workspace] = await db.select().from(workspaces).where(eq4(workspaces.id, workspaceId)).limit(1);
+  const [workspace] = await db.select().from(workspaces).where(eq5(workspaces.id, workspaceId)).limit(1);
   if (!workspace) {
-    throw new HTTPException4(404, { message: "Workspace not found" });
+    throw new HTTPException5(404, { message: "Workspace not found" });
   }
   if (workspace.ownerId !== userId) {
-    throw new HTTPException4(403, {
+    throw new HTTPException5(403, {
       message: "Only the owner can delete this workspace"
     });
   }
-  await db.delete(workspaces).where(eq4(workspaces.id, workspaceId));
+  await db.delete(workspaces).where(eq5(workspaces.id, workspaceId));
 }
 async function checkAccess(workspaceId, userId) {
-  const [workspace] = await db.select().from(workspaces).where(and3(eq4(workspaces.id, workspaceId), eq4(workspaces.ownerId, userId))).limit(1);
+  const [workspace] = await db.select().from(workspaces).where(and4(eq5(workspaces.id, workspaceId), eq5(workspaces.ownerId, userId))).limit(1);
   if (workspace) {
     return true;
   }
   const [member] = await db.select().from(workspaceMembers).where(
-    and3(
-      eq4(workspaceMembers.workspaceId, workspaceId),
-      eq4(workspaceMembers.userId, userId)
+    and4(
+      eq5(workspaceMembers.workspaceId, workspaceId),
+      eq5(workspaceMembers.userId, userId)
     )
   ).limit(1);
   return !!member;
 }
 
 // src/services/projects.ts
-import { eq as eq5, and as and4 } from "drizzle-orm";
-import { HTTPException as HTTPException5 } from "hono/http-exception";
+import { eq as eq6, and as and5 } from "drizzle-orm";
+import { HTTPException as HTTPException6 } from "hono/http-exception";
 async function list2(workspaceId, userId) {
   const hasAccess = await checkAccess(workspaceId, userId);
   if (!hasAccess) {
-    throw new HTTPException5(403, {
+    throw new HTTPException6(403, {
       message: "Access denied to this workspace"
     });
   }
-  const projectList = await db.select().from(projects).where(eq5(projects.workspaceId, workspaceId));
+  const projectList = await db.select().from(projects).where(eq6(projects.workspaceId, workspaceId));
   return projectList.map((p) => ({
     id: p.id,
     workspaceId: p.workspaceId,
@@ -1054,11 +1275,11 @@ async function list2(workspaceId, userId) {
 async function create2(workspaceId, userId, data) {
   const hasAccess = await checkAccess(workspaceId, userId);
   if (!hasAccess) {
-    throw new HTTPException5(403, {
+    throw new HTTPException6(403, {
       message: "Access denied to this workspace"
     });
   }
-  const existingProjects = await db.select({ slug: projects.slug }).from(projects).where(eq5(projects.workspaceId, workspaceId));
+  const existingProjects = await db.select({ slug: projects.slug }).from(projects).where(eq6(projects.workspaceId, workspaceId));
   const existingSlugs = existingProjects.map((p) => p.slug);
   const slug = generateUniqueSlug(data.name, existingSlugs);
   const [newProject] = await db.insert(projects).values({
@@ -1078,13 +1299,13 @@ async function create2(workspaceId, userId, data) {
   };
 }
 async function get2(projectId, userId) {
-  const [project] = await db.select().from(projects).where(eq5(projects.id, projectId)).limit(1);
+  const [project] = await db.select().from(projects).where(eq6(projects.id, projectId)).limit(1);
   if (!project) {
-    throw new HTTPException5(404, { message: "Project not found" });
+    throw new HTTPException6(404, { message: "Project not found" });
   }
   const hasAccess = await checkAccess(project.workspaceId, userId);
   if (!hasAccess) {
-    throw new HTTPException5(403, { message: "Access denied to this project" });
+    throw new HTTPException6(403, { message: "Access denied to this project" });
   }
   return {
     id: project.id,
@@ -1097,23 +1318,23 @@ async function get2(projectId, userId) {
   };
 }
 async function update2(projectId, userId, data) {
-  const [project] = await db.select().from(projects).where(eq5(projects.id, projectId)).limit(1);
+  const [project] = await db.select().from(projects).where(eq6(projects.id, projectId)).limit(1);
   if (!project) {
-    throw new HTTPException5(404, { message: "Project not found" });
+    throw new HTTPException6(404, { message: "Project not found" });
   }
   const hasAccess = await checkAccess(project.workspaceId, userId);
   if (!hasAccess) {
-    throw new HTTPException5(403, { message: "Access denied to this project" });
+    throw new HTTPException6(403, { message: "Access denied to this project" });
   }
   if (data.slug && data.slug !== project.slug) {
     const [existing] = await db.select().from(projects).where(
-      and4(
-        eq5(projects.workspaceId, project.workspaceId),
-        eq5(projects.slug, data.slug)
+      and5(
+        eq6(projects.workspaceId, project.workspaceId),
+        eq6(projects.slug, data.slug)
       )
     ).limit(1);
     if (existing) {
-      throw new HTTPException5(409, {
+      throw new HTTPException6(409, {
         message: "Slug already in use in this workspace"
       });
     }
@@ -1121,7 +1342,7 @@ async function update2(projectId, userId, data) {
   const [updated] = await db.update(projects).set({
     ...data,
     updatedAt: /* @__PURE__ */ new Date()
-  }).where(eq5(projects.id, projectId)).returning();
+  }).where(eq6(projects.id, projectId)).returning();
   return {
     id: updated.id,
     workspaceId: updated.workspaceId,
@@ -1133,18 +1354,18 @@ async function update2(projectId, userId, data) {
   };
 }
 async function remove2(projectId, userId) {
-  const [project] = await db.select().from(projects).where(eq5(projects.id, projectId)).limit(1);
+  const [project] = await db.select().from(projects).where(eq6(projects.id, projectId)).limit(1);
   if (!project) {
-    throw new HTTPException5(404, { message: "Project not found" });
+    throw new HTTPException6(404, { message: "Project not found" });
   }
   const hasAccess = await checkAccess(project.workspaceId, userId);
   if (!hasAccess) {
-    throw new HTTPException5(403, { message: "Access denied to this project" });
+    throw new HTTPException6(403, { message: "Access denied to this project" });
   }
-  await db.delete(projects).where(eq5(projects.id, projectId));
+  await db.delete(projects).where(eq6(projects.id, projectId));
 }
 async function checkProjectAccess(projectId, userId) {
-  const [project] = await db.select().from(projects).where(eq5(projects.id, projectId)).limit(1);
+  const [project] = await db.select().from(projects).where(eq6(projects.id, projectId)).limit(1);
   if (!project) {
     return false;
   }
@@ -1152,7 +1373,7 @@ async function checkProjectAccess(projectId, userId) {
 }
 
 // src/routes/workspaces.ts
-var workspaceRoutes = new Hono2();
+var workspaceRoutes = new Hono3();
 workspaceRoutes.use("*", authMiddleware);
 workspaceRoutes.get("/", async (c) => {
   const userId = c.get("userId");
@@ -1161,7 +1382,7 @@ workspaceRoutes.get("/", async (c) => {
 });
 workspaceRoutes.post(
   "/",
-  zValidator2("json", createWorkspaceSchema),
+  zValidator3("json", createWorkspaceSchema),
   async (c) => {
     const userId = c.get("userId");
     const data = c.req.valid("json");
@@ -1183,7 +1404,7 @@ workspaceRoutes.get("/by-slug/:slug", async (c) => {
 });
 workspaceRoutes.patch(
   "/:id",
-  zValidator2("json", updateWorkspaceSchema),
+  zValidator3("json", updateWorkspaceSchema),
   async (c) => {
     const userId = c.get("userId");
     const workspaceId = c.req.param("id");
@@ -1206,7 +1427,7 @@ workspaceRoutes.get("/:workspaceId/projects", async (c) => {
 });
 workspaceRoutes.post(
   "/:workspaceId/projects",
-  zValidator2("json", createProjectSchema),
+  zValidator3("json", createProjectSchema),
   async (c) => {
     const userId = c.get("userId");
     const workspaceId = c.req.param("workspaceId");
@@ -1217,17 +1438,18 @@ workspaceRoutes.post(
 );
 
 // src/routes/projects.ts
-import { Hono as Hono3 } from "hono";
-import { zValidator as zValidator3 } from "@hono/zod-validator";
+import { Hono as Hono4 } from "hono";
+import { zValidator as zValidator4 } from "@hono/zod-validator";
 
 // src/services/annotations.ts
-import { eq as eq6 } from "drizzle-orm";
-import { HTTPException as HTTPException7 } from "hono/http-exception";
+import { eq as eq8 } from "drizzle-orm";
+import { HTTPException as HTTPException9 } from "hono/http-exception";
 
 // src/services/upload.ts
 import { put } from "@vercel/blob";
-import { HTTPException as HTTPException6 } from "hono/http-exception";
+import { HTTPException as HTTPException7 } from "hono/http-exception";
 var MAX_FILE_SIZE = 10 * 1024 * 1024;
+var MAX_PROFILE_PICTURE_SIZE = 5 * 1024 * 1024;
 var ALLOWED_TYPES = ["image/png", "image/jpeg", "image/gif", "image/webp"];
 var ALLOWED_MIME_EXTENSIONS = {
   png: "png",
@@ -1237,10 +1459,10 @@ var ALLOWED_MIME_EXTENSIONS = {
 };
 async function uploadScreenshot(file, userId) {
   if (file.size > MAX_FILE_SIZE) {
-    throw new HTTPException6(413, { message: "File size exceeds 10MB limit" });
+    throw new HTTPException7(413, { message: "File size exceeds 10MB limit" });
   }
   if (!ALLOWED_TYPES.includes(file.type)) {
-    throw new HTTPException6(400, {
+    throw new HTTPException7(400, {
       message: "Invalid file type. Only PNG, JPEG, GIF, and WebP are allowed"
     });
   }
@@ -1255,7 +1477,7 @@ async function uploadScreenshot(file, userId) {
     return { url: blob.url };
   } catch (error) {
     console.error("Upload error:", error);
-    throw new HTTPException6(500, { message: "Failed to upload file" });
+    throw new HTTPException7(500, { message: "Failed to upload file" });
   }
 }
 async function uploadBase64Screenshot(base64Data, userId) {
@@ -1263,7 +1485,7 @@ async function uploadBase64Screenshot(base64Data, userId) {
     /^data:image\/(png|jpeg|gif|webp);base64,(.+)$/
   );
   if (!matches) {
-    throw new HTTPException6(400, {
+    throw new HTTPException7(400, {
       message: "Invalid base64 image format. Expected data:image/(png|jpeg|gif|webp);base64,..."
     });
   }
@@ -1272,10 +1494,10 @@ async function uploadBase64Screenshot(base64Data, userId) {
   try {
     buffer = Buffer.from(base64Content, "base64");
   } catch {
-    throw new HTTPException6(400, { message: "Invalid base64 encoding" });
+    throw new HTTPException7(400, { message: "Invalid base64 encoding" });
   }
   if (buffer.length > MAX_FILE_SIZE) {
-    throw new HTTPException6(413, { message: "File size exceeds 10MB limit" });
+    throw new HTTPException7(413, { message: "File size exceeds 10MB limit" });
   }
   const timestamp2 = Date.now();
   const extension = ALLOWED_MIME_EXTENSIONS[mimeType] || "png";
@@ -1289,17 +1511,495 @@ async function uploadBase64Screenshot(base64Data, userId) {
     return { url: blob.url };
   } catch (error) {
     console.error("Upload error:", error);
-    throw new HTTPException6(500, { message: "Failed to upload file" });
+    throw new HTTPException7(500, { message: "Failed to upload file" });
   }
+}
+async function uploadProfilePicture(file, userId) {
+  if (file.size > MAX_PROFILE_PICTURE_SIZE) {
+    throw new HTTPException7(413, { message: "File size exceeds 5MB limit" });
+  }
+  if (!ALLOWED_TYPES.includes(file.type)) {
+    throw new HTTPException7(400, {
+      message: "Invalid file type. Only PNG, JPEG, GIF, and WebP are allowed"
+    });
+  }
+  const timestamp2 = Date.now();
+  const extension = file.name.split(".").pop() || "png";
+  const filename = `profile-pictures/${userId}/${timestamp2}.${extension}`;
+  try {
+    const blob = await put(filename, file, {
+      access: "public",
+      addRandomSuffix: true
+    });
+    return { url: blob.url };
+  } catch (error) {
+    console.error("Profile picture upload error:", error);
+    throw new HTTPException7(500, {
+      message: "Failed to upload profile picture"
+    });
+  }
+}
+
+// src/services/integrations.ts
+import { eq as eq7 } from "drizzle-orm";
+import { HTTPException as HTTPException8 } from "hono/http-exception";
+function validateWebhookUrl(url) {
+  if (!url || url.trim().length === 0) {
+    return { valid: false, error: "Webhook URL is required" };
+  }
+  const trimmedUrl = url.trim();
+  if (!trimmedUrl.startsWith("https://")) {
+    return { valid: false, error: "URL must be a valid HTTPS URL" };
+  }
+  try {
+    const parsed = new URL(trimmedUrl);
+    if (parsed.protocol !== "https:") {
+      return { valid: false, error: "URL must be a valid HTTPS URL" };
+    }
+  } catch {
+    return { valid: false, error: "URL must be a valid HTTPS URL" };
+  }
+  return { valid: true };
+}
+function validateJsonTemplate(template) {
+  if (!template || template.trim().length === 0) {
+    return { valid: true };
+  }
+  const trimmedTemplate = template.trim();
+  const placeholderRegex = /<[a-zA-Z_][a-zA-Z0-9_.]*>/g;
+  let sanitizedTemplate = trimmedTemplate.replace(
+    placeholderRegex,
+    "__PLACEHOLDER__"
+  );
+  sanitizedTemplate = escapeNewlinesInStrings(sanitizedTemplate);
+  try {
+    JSON.parse(sanitizedTemplate);
+    return { valid: true };
+  } catch (e) {
+    const error = e;
+    return { valid: false, error: `Invalid JSON: ${error.message}` };
+  }
+}
+function escapeNewlinesInStrings(json) {
+  let result = "";
+  let inString = false;
+  let escape = false;
+  for (let i = 0; i < json.length; i++) {
+    const char = json[i];
+    if (escape) {
+      result += char;
+      escape = false;
+      continue;
+    }
+    if (char === "\\") {
+      result += char;
+      escape = true;
+      continue;
+    }
+    if (char === '"') {
+      inString = !inString;
+      result += char;
+      continue;
+    }
+    if (inString) {
+      if (char === "\n") {
+        result += "\\n";
+      } else if (char === "\r") {
+        result += "\\r";
+      } else if (char === "	") {
+        result += "\\t";
+      } else {
+        result += char;
+      }
+    } else {
+      result += char;
+    }
+  }
+  return result;
+}
+async function get3(projectId, userId) {
+  const hasAccess = await checkProjectAccess(projectId, userId);
+  if (!hasAccess) {
+    throw new HTTPException8(403, { message: "Access denied to this project" });
+  }
+  const [integration] = await db.select().from(webhookIntegrations).where(eq7(webhookIntegrations.projectId, projectId)).limit(1);
+  if (!integration) {
+    return null;
+  }
+  return {
+    id: integration.id,
+    projectId: integration.projectId,
+    url: integration.url,
+    headers: integration.headers || {},
+    bodyTemplate: integration.bodyTemplate,
+    enabled: integration.enabled,
+    locked: integration.locked,
+    createdAt: integration.createdAt,
+    updatedAt: integration.updatedAt
+  };
+}
+async function upsert(projectId, userId, data) {
+  const hasAccess = await checkProjectAccess(projectId, userId);
+  if (!hasAccess) {
+    throw new HTTPException8(403, { message: "Access denied to this project" });
+  }
+  const urlValidation = validateWebhookUrl(data.url);
+  if (!urlValidation.valid) {
+    throw new HTTPException8(400, { message: urlValidation.error });
+  }
+  const templateValidation = validateJsonTemplate(data.bodyTemplate);
+  if (!templateValidation.valid) {
+    throw new HTTPException8(400, { message: templateValidation.error });
+  }
+  const [existing] = await db.select().from(webhookIntegrations).where(eq7(webhookIntegrations.projectId, projectId)).limit(1);
+  if (existing) {
+    if (existing.locked) {
+      const isOnlyLockChange = data.url === existing.url && JSON.stringify(data.headers) === JSON.stringify(existing.headers) && data.bodyTemplate === existing.bodyTemplate && data.enabled === existing.enabled;
+      if (!isOnlyLockChange) {
+        throw new HTTPException8(403, {
+          message: "Integration is locked and cannot be modified"
+        });
+      }
+    }
+    const [updated] = await db.update(webhookIntegrations).set({
+      url: data.url.trim(),
+      headers: data.headers,
+      bodyTemplate: data.bodyTemplate,
+      enabled: data.enabled,
+      locked: data.locked,
+      updatedAt: /* @__PURE__ */ new Date()
+    }).where(eq7(webhookIntegrations.projectId, projectId)).returning();
+    return {
+      id: updated.id,
+      projectId: updated.projectId,
+      url: updated.url,
+      headers: updated.headers || {},
+      bodyTemplate: updated.bodyTemplate,
+      enabled: updated.enabled,
+      locked: updated.locked,
+      createdAt: updated.createdAt,
+      updatedAt: updated.updatedAt
+    };
+  }
+  const [created] = await db.insert(webhookIntegrations).values({
+    projectId,
+    url: data.url.trim(),
+    headers: data.headers,
+    bodyTemplate: data.bodyTemplate,
+    enabled: data.enabled,
+    locked: data.locked
+  }).returning();
+  return {
+    id: created.id,
+    projectId: created.projectId,
+    url: created.url,
+    headers: created.headers || {},
+    bodyTemplate: created.bodyTemplate,
+    enabled: created.enabled,
+    locked: created.locked,
+    createdAt: created.createdAt,
+    updatedAt: created.updatedAt
+  };
+}
+async function remove3(projectId, userId) {
+  const hasAccess = await checkProjectAccess(projectId, userId);
+  if (!hasAccess) {
+    throw new HTTPException8(403, { message: "Access denied to this project" });
+  }
+  const [existing] = await db.select().from(webhookIntegrations).where(eq7(webhookIntegrations.projectId, projectId)).limit(1);
+  if (!existing) {
+    throw new HTTPException8(404, { message: "Integration not found" });
+  }
+  if (existing.locked) {
+    throw new HTTPException8(403, {
+      message: "Integration is locked and cannot be deleted"
+    });
+  }
+  await db.delete(webhookIntegrations).where(eq7(webhookIntegrations.projectId, projectId));
+}
+async function test(projectId, userId, data) {
+  const hasAccess = await checkProjectAccess(projectId, userId);
+  if (!hasAccess) {
+    throw new HTTPException8(403, { message: "Access denied to this project" });
+  }
+  const urlValidation = validateWebhookUrl(data.url);
+  if (!urlValidation.valid) {
+    throw new HTTPException8(400, { message: urlValidation.error });
+  }
+  const templateValidation = validateJsonTemplate(data.bodyTemplate);
+  if (!templateValidation.valid) {
+    throw new HTTPException8(400, { message: templateValidation.error });
+  }
+  const sampleData = {
+    title: "Sample Annotation",
+    description: "This is a test webhook payload",
+    url: "https://example.com/page",
+    screenshot_url: "https://cdn.example.com/screenshot.png",
+    page_title: "Example Page",
+    priority: "medium",
+    type: "bug",
+    created_by: {
+      name: "Test User",
+      email: "test@example.com"
+    },
+    project: {
+      name: "Test Project"
+    },
+    created_at: (/* @__PURE__ */ new Date()).toISOString()
+  };
+  let body = data.bodyTemplate || JSON.stringify(sampleData, null, 2);
+  if (data.bodyTemplate) {
+    const normalizedTemplate = escapeNewlinesInStrings(data.bodyTemplate);
+    body = substituteVariables(normalizedTemplate, sampleData);
+  }
+  const headers = {
+    "Content-Type": "application/json",
+    ...data.headers
+  };
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 1e4);
+    const response = await fetch(data.url, {
+      method: "POST",
+      headers,
+      body,
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+    if (response.ok) {
+      return {
+        success: true,
+        statusCode: response.status,
+        message: "Test webhook sent successfully!"
+      };
+    } else {
+      return {
+        success: false,
+        statusCode: response.status,
+        message: `Request failed with status ${response.status}`
+      };
+    }
+  } catch (error) {
+    if (error instanceof Error) {
+      if (error.name === "AbortError") {
+        return {
+          success: false,
+          message: "Request timed out after 10 seconds"
+        };
+      }
+      return {
+        success: false,
+        message: `Request failed: ${error.message}`
+      };
+    }
+    return {
+      success: false,
+      message: "Request failed with unknown error"
+    };
+  }
+}
+function substituteVariables(template, data) {
+  const variableMap = {
+    title: "title",
+    description: "description",
+    url: "url",
+    screenshot_url: "screenshot_url",
+    page_title: "page_title",
+    priority: "priority",
+    type: "type",
+    "created_by.name": "created_by.name",
+    "created_by.email": "created_by.email",
+    "project.name": "project.name",
+    created_at: "created_at"
+  };
+  return template.replace(/<([a-zA-Z_][a-zA-Z0-9_.]*)>/g, (match, variable) => {
+    const trimmedVar = variable.trim();
+    const path = variableMap[trimmedVar];
+    if (path) {
+      const value = getNestedValue(data, path);
+      return value !== void 0 && value !== null ? String(value) : "";
+    }
+    return match;
+  });
+}
+function getNestedValue(obj, path) {
+  const keys = path.split(".");
+  let value = obj;
+  for (const key of keys) {
+    if (value && typeof value === "object" && key in value) {
+      value = value[key];
+    } else {
+      return void 0;
+    }
+  }
+  return value;
+}
+async function getEnabledIntegration(projectId) {
+  const [integration] = await db.select().from(webhookIntegrations).where(eq7(webhookIntegrations.projectId, projectId)).limit(1);
+  if (!integration || !integration.enabled) {
+    return null;
+  }
+  return {
+    id: integration.id,
+    projectId: integration.projectId,
+    url: integration.url,
+    headers: integration.headers || {},
+    bodyTemplate: integration.bodyTemplate,
+    enabled: integration.enabled,
+    locked: integration.locked,
+    createdAt: integration.createdAt,
+    updatedAt: integration.updatedAt
+  };
+}
+
+// src/services/webhook-executor.ts
+function substituteVariables2(template, data) {
+  const variableMap = {
+    title: "title",
+    description: "description",
+    url: "pageUrl",
+    screenshot_url: "screenshotAnnotated",
+    page_title: "pageTitle",
+    priority: "priority",
+    type: "type",
+    "created_by.name": "createdBy.name",
+    "created_by.email": "createdBy.email",
+    "project.name": "project.name",
+    created_at: "createdAt"
+  };
+  return template.replace(/<([a-zA-Z_][a-zA-Z0-9_.]*)>/g, (match, variable) => {
+    const trimmedVar = variable.trim();
+    const path = variableMap[trimmedVar];
+    if (path) {
+      const value = getNestedValue2(
+        data,
+        path
+      );
+      return value !== void 0 && value !== null ? String(value) : "";
+    }
+    return match;
+  });
+}
+function getNestedValue2(obj, path) {
+  const keys = path.split(".");
+  let value = obj;
+  for (const key of keys) {
+    if (value && typeof value === "object" && key in value) {
+      value = value[key];
+    } else {
+      return void 0;
+    }
+  }
+  return value;
+}
+function escapeNewlinesInStrings2(json) {
+  let result = "";
+  let inString = false;
+  let escape = false;
+  for (let i = 0; i < json.length; i++) {
+    const char = json[i];
+    if (escape) {
+      result += char;
+      escape = false;
+      continue;
+    }
+    if (char === "\\") {
+      result += char;
+      escape = true;
+      continue;
+    }
+    if (char === '"') {
+      inString = !inString;
+      result += char;
+      continue;
+    }
+    if (inString) {
+      if (char === "\n") {
+        result += "\\n";
+      } else if (char === "\r") {
+        result += "\\r";
+      } else if (char === "	") {
+        result += "\\t";
+      } else {
+        result += char;
+      }
+    } else {
+      result += char;
+    }
+  }
+  return result;
+}
+async function executeWebhook(integration, annotationData) {
+  let body;
+  if (integration.bodyTemplate) {
+    const normalizedTemplate = escapeNewlinesInStrings2(
+      integration.bodyTemplate
+    );
+    body = substituteVariables2(normalizedTemplate, annotationData);
+  } else {
+    body = JSON.stringify({
+      event: "annotation.created",
+      data: {
+        id: annotationData.id,
+        title: annotationData.title,
+        description: annotationData.description,
+        url: annotationData.pageUrl,
+        screenshot_url: annotationData.screenshotAnnotated,
+        page_title: annotationData.pageTitle,
+        priority: annotationData.priority,
+        type: annotationData.type,
+        created_by: annotationData.createdBy,
+        project: annotationData.project,
+        created_at: annotationData.createdAt
+      }
+    });
+  }
+  const headers = {
+    "Content-Type": "application/json",
+    ...integration.headers
+  };
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 1e4);
+    const response = await fetch(integration.url, {
+      method: "POST",
+      headers,
+      body,
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+    if (!response.ok) {
+      console.error(
+        `Webhook failed for project ${integration.projectId}: Status ${response.status}`
+      );
+    }
+  } catch (error) {
+    if (error instanceof Error) {
+      console.error(
+        `Webhook failed for project ${integration.projectId}: ${error.message}`
+      );
+    } else {
+      console.error(
+        `Webhook failed for project ${integration.projectId}: Unknown error`
+      );
+    }
+  }
+}
+async function fireWebhookIfEnabled(projectId, annotationData) {
+  const integration = await getEnabledIntegration(projectId);
+  if (!integration) {
+    return;
+  }
+  await executeWebhook(integration, annotationData);
 }
 
 // src/services/annotations.ts
 async function list3(projectId, userId) {
   const hasAccess = await checkProjectAccess(projectId, userId);
   if (!hasAccess) {
-    throw new HTTPException7(403, { message: "Access denied to this project" });
+    throw new HTTPException9(403, { message: "Access denied to this project" });
   }
-  const annotationList = await db.select().from(annotations).where(eq6(annotations.projectId, projectId));
+  const annotationList = await db.select().from(annotations).where(eq8(annotations.projectId, projectId));
   return annotationList.map((a) => ({
     id: a.id,
     projectId: a.projectId,
@@ -1320,7 +2020,7 @@ async function list3(projectId, userId) {
 async function create3(projectId, userId, data) {
   const hasAccess = await checkProjectAccess(projectId, userId);
   if (!hasAccess) {
-    throw new HTTPException7(403, { message: "Access denied to this project" });
+    throw new HTTPException9(403, { message: "Access denied to this project" });
   }
   let screenshotAnnotatedUrl = data.screenshotAnnotated || null;
   if (data.screenshotAnnotatedBase64) {
@@ -1343,6 +2043,7 @@ async function create3(projectId, userId, data) {
     screenshotAnnotated: screenshotAnnotatedUrl,
     canvasData: data.canvasData || null
   }).returning();
+  fireWebhookAsync(projectId, userId, newAnnotation);
   return {
     id: newAnnotation.id,
     projectId: newAnnotation.projectId,
@@ -1360,14 +2061,44 @@ async function create3(projectId, userId, data) {
     updatedAt: newAnnotation.updatedAt
   };
 }
-async function get3(annotationId, userId) {
-  const [annotation] = await db.select().from(annotations).where(eq6(annotations.id, annotationId)).limit(1);
+async function fireWebhookAsync(projectId, userId, annotation) {
+  try {
+    const [user] = await db.select({ name: users.name, email: users.email }).from(users).where(eq8(users.id, userId)).limit(1);
+    const [project] = await db.select({ name: projects.name }).from(projects).where(eq8(projects.id, projectId)).limit(1);
+    if (!user || !project) {
+      console.error("Webhook: Could not find user or project info");
+      return;
+    }
+    await fireWebhookIfEnabled(projectId, {
+      id: annotation.id,
+      title: annotation.title,
+      description: annotation.description,
+      pageUrl: annotation.pageUrl,
+      pageTitle: annotation.pageTitle,
+      screenshotAnnotated: annotation.screenshotAnnotated,
+      priority: annotation.priority,
+      type: annotation.type,
+      createdBy: {
+        name: user.name || "Unknown",
+        email: user.email
+      },
+      project: {
+        name: project.name
+      },
+      createdAt: annotation.createdAt.toISOString()
+    });
+  } catch (error) {
+    console.error("Webhook execution failed:", error);
+  }
+}
+async function get4(annotationId, userId) {
+  const [annotation] = await db.select().from(annotations).where(eq8(annotations.id, annotationId)).limit(1);
   if (!annotation) {
-    throw new HTTPException7(404, { message: "Annotation not found" });
+    throw new HTTPException9(404, { message: "Annotation not found" });
   }
   const hasAccess = await checkProjectAccess(annotation.projectId, userId);
   if (!hasAccess) {
-    throw new HTTPException7(403, {
+    throw new HTTPException9(403, {
       message: "Access denied to this annotation"
     });
   }
@@ -1389,13 +2120,13 @@ async function get3(annotationId, userId) {
   };
 }
 async function update3(annotationId, userId, data) {
-  const [annotation] = await db.select().from(annotations).where(eq6(annotations.id, annotationId)).limit(1);
+  const [annotation] = await db.select().from(annotations).where(eq8(annotations.id, annotationId)).limit(1);
   if (!annotation) {
-    throw new HTTPException7(404, { message: "Annotation not found" });
+    throw new HTTPException9(404, { message: "Annotation not found" });
   }
   const hasAccess = await checkProjectAccess(annotation.projectId, userId);
   if (!hasAccess) {
-    throw new HTTPException7(403, {
+    throw new HTTPException9(403, {
       message: "Access denied to this annotation"
     });
   }
@@ -1411,7 +2142,7 @@ async function update3(annotationId, userId, data) {
   if (data.screenshotAnnotated !== void 0)
     updateData.screenshotAnnotated = data.screenshotAnnotated;
   if (data.canvasData !== void 0) updateData.canvasData = data.canvasData;
-  const [updated] = await db.update(annotations).set(updateData).where(eq6(annotations.id, annotationId)).returning();
+  const [updated] = await db.update(annotations).set(updateData).where(eq8(annotations.id, annotationId)).returning();
   return {
     id: updated.id,
     projectId: updated.projectId,
@@ -1429,22 +2160,22 @@ async function update3(annotationId, userId, data) {
     updatedAt: updated.updatedAt
   };
 }
-async function remove3(annotationId, userId) {
-  const [annotation] = await db.select().from(annotations).where(eq6(annotations.id, annotationId)).limit(1);
+async function remove4(annotationId, userId) {
+  const [annotation] = await db.select().from(annotations).where(eq8(annotations.id, annotationId)).limit(1);
   if (!annotation) {
-    throw new HTTPException7(404, { message: "Annotation not found" });
+    throw new HTTPException9(404, { message: "Annotation not found" });
   }
   const hasAccess = await checkProjectAccess(annotation.projectId, userId);
   if (!hasAccess) {
-    throw new HTTPException7(403, {
+    throw new HTTPException9(403, {
       message: "Access denied to this annotation"
     });
   }
-  await db.delete(annotations).where(eq6(annotations.id, annotationId));
+  await db.delete(annotations).where(eq8(annotations.id, annotationId));
 }
 
 // src/routes/projects.ts
-var projectRoutes = new Hono3();
+var projectRoutes = new Hono4();
 projectRoutes.use("*", authMiddleware);
 projectRoutes.get("/:id", async (c) => {
   const userId = c.get("userId");
@@ -1454,7 +2185,7 @@ projectRoutes.get("/:id", async (c) => {
 });
 projectRoutes.patch(
   "/:id",
-  zValidator3("json", updateProjectSchema),
+  zValidator4("json", updateProjectSchema),
   async (c) => {
     const userId = c.get("userId");
     const projectId = c.req.param("id");
@@ -1477,7 +2208,7 @@ projectRoutes.get("/:projectId/annotations", async (c) => {
 });
 projectRoutes.post(
   "/:projectId/annotations",
-  zValidator3("json", createAnnotationSchema),
+  zValidator4("json", createAnnotationSchema),
   async (c) => {
     const userId = c.get("userId");
     const projectId = c.req.param("projectId");
@@ -1488,19 +2219,19 @@ projectRoutes.post(
 );
 
 // src/routes/annotations.ts
-import { Hono as Hono4 } from "hono";
-import { zValidator as zValidator4 } from "@hono/zod-validator";
-var annotationRoutes = new Hono4();
+import { Hono as Hono5 } from "hono";
+import { zValidator as zValidator5 } from "@hono/zod-validator";
+var annotationRoutes = new Hono5();
 annotationRoutes.use("*", authMiddleware);
 annotationRoutes.get("/:id", async (c) => {
   const userId = c.get("userId");
   const annotationId = c.req.param("id");
-  const annotation = await get3(annotationId, userId);
+  const annotation = await get4(annotationId, userId);
   return c.json({ annotation });
 });
 annotationRoutes.patch(
   "/:id",
-  zValidator4("json", updateAnnotationSchema),
+  zValidator5("json", updateAnnotationSchema),
   async (c) => {
     const userId = c.get("userId");
     const annotationId = c.req.param("id");
@@ -1516,28 +2247,90 @@ annotationRoutes.patch(
 annotationRoutes.delete("/:id", async (c) => {
   const userId = c.get("userId");
   const annotationId = c.req.param("id");
-  await remove3(annotationId, userId);
+  await remove4(annotationId, userId);
   return c.body(null, 204);
 });
 
 // src/routes/upload.ts
-import { Hono as Hono5 } from "hono";
-import { HTTPException as HTTPException8 } from "hono/http-exception";
-var uploadRoutes = new Hono5();
+import { Hono as Hono6 } from "hono";
+import { HTTPException as HTTPException10 } from "hono/http-exception";
+var uploadRoutes = new Hono6();
 uploadRoutes.use("*", authMiddleware);
 uploadRoutes.post("/screenshot", async (c) => {
   const userId = c.get("userId");
   const body = await c.req.parseBody();
   const file = body["file"];
   if (!file || !(file instanceof File)) {
-    throw new HTTPException8(400, { message: "No file provided" });
+    throw new HTTPException10(400, { message: "No file provided" });
   }
   const result = await uploadScreenshot(file, userId);
   return c.json(result, 201);
 });
+uploadRoutes.post("/profile-picture", async (c) => {
+  const userId = c.get("userId");
+  const body = await c.req.parseBody();
+  const file = body["file"];
+  if (!file || !(file instanceof File)) {
+    throw new HTTPException10(400, { message: "No file provided" });
+  }
+  const result = await uploadProfilePicture(file, userId);
+  return c.json(result, 201);
+});
+
+// src/routes/integrations.ts
+import { Hono as Hono7 } from "hono";
+import { zValidator as zValidator6 } from "@hono/zod-validator";
+import { z as z3 } from "zod";
+var integrationRoutes = new Hono7();
+var webhookIntegrationSchema = z3.object({
+  url: z3.string().min(1, "URL is required"),
+  headers: z3.record(z3.string()).default({}),
+  bodyTemplate: z3.string().default(""),
+  enabled: z3.boolean().default(true),
+  locked: z3.boolean().default(false)
+});
+integrationRoutes.use("*", authMiddleware);
+integrationRoutes.get("/:projectId/integration", async (c) => {
+  const userId = c.get("userId");
+  const projectId = c.req.param("projectId");
+  const integration = await get3(projectId, userId);
+  return c.json({ integration });
+});
+integrationRoutes.put(
+  "/:projectId/integration",
+  zValidator6("json", webhookIntegrationSchema),
+  async (c) => {
+    const userId = c.get("userId");
+    const projectId = c.req.param("projectId");
+    const data = c.req.valid("json");
+    const integration = await upsert(
+      projectId,
+      userId,
+      data
+    );
+    return c.json({ integration });
+  }
+);
+integrationRoutes.delete("/:projectId/integration", async (c) => {
+  const userId = c.get("userId");
+  const projectId = c.req.param("projectId");
+  await remove3(projectId, userId);
+  return c.body(null, 204);
+});
+integrationRoutes.post(
+  "/:projectId/integration/test",
+  zValidator6("json", webhookIntegrationSchema),
+  async (c) => {
+    const userId = c.get("userId");
+    const projectId = c.req.param("projectId");
+    const data = c.req.valid("json");
+    const result = await test(projectId, userId, data);
+    return c.json(result);
+  }
+);
 
 // src/middleware/error-handler.ts
-import { HTTPException as HTTPException9 } from "hono/http-exception";
+import { HTTPException as HTTPException11 } from "hono/http-exception";
 import { ZodError } from "zod";
 function getErrorCode(status) {
   const codes = {
@@ -1563,7 +2356,7 @@ function formatZodErrors(error) {
   return details;
 }
 function errorHandler(err, c) {
-  if (err instanceof HTTPException9) {
+  if (err instanceof HTTPException11) {
     const response2 = {
       error: {
         code: getErrorCode(err.status),
@@ -1593,7 +2386,7 @@ function errorHandler(err, c) {
 }
 
 // src/index.ts
-var app = new Hono6().basePath("/api");
+var app = new Hono8().basePath("/api");
 app.use("*", logger());
 app.use(
   "*",
@@ -1614,10 +2407,12 @@ app.use(
 app.onError(errorHandler);
 app.get("/", (c) => c.json({ status: "ok", service: "nottto-api" }));
 app.route("/auth", authRoutes);
+app.route("/extension-auth", extensionAuthRoutes);
 app.route("/workspaces", workspaceRoutes);
 app.route("/projects", projectRoutes);
 app.route("/annotations", annotationRoutes);
 app.route("/upload", uploadRoutes);
+app.route("/projects", integrationRoutes);
 app.notFound(
   (c) => c.json({ error: { code: "NOT_FOUND", message: "Route not found" } }, 404)
 );

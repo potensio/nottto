@@ -36,11 +36,13 @@ export interface MagicLinkVerifyResult extends AuthResponse {
 /**
  * Requests a magic link to be sent to the provided email.
  * Distinguishes between login (existing users) and register (new users).
+ * Optionally includes extension session ID for extension auth flow.
  */
 export async function requestMagicLink(
   email: string,
   isRegister: boolean = false,
-  name?: string
+  name?: string,
+  extensionSession?: string
 ): Promise<MagicLinkRequestResult> {
   const normalizedEmail = email.toLowerCase().trim();
 
@@ -102,10 +104,13 @@ export async function requestMagicLink(
   // Record rate limit
   await recordMagicLinkRequest(normalizedEmail);
 
-  // Build magic link URL
-  const magicLinkUrl = `${WEB_URL}/auth/verify?token=${encodeURIComponent(
+  // Build magic link URL (include extension session if provided)
+  let magicLinkUrl = `${WEB_URL}/auth/verify?token=${encodeURIComponent(
     token
   )}`;
+  if (extensionSession) {
+    magicLinkUrl += `&session=${encodeURIComponent(extensionSession)}`;
+  }
 
   // Send email
   const emailResult = await sendMagicLinkEmail(normalizedEmail, magicLinkUrl);

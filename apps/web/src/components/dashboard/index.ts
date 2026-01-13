@@ -23,3 +23,9 @@ export {
   PageSkeleton,
   AnnotationDetailSkeleton,
 } from "./Skeletons";
+
+// Integration components
+export { IntegrationForm } from "./IntegrationForm";
+export { HeaderEditor } from "./HeaderEditor";
+export { BodyTemplateEditor } from "./BodyTemplateEditor";
+export { VariableReferencePanel } from "./VariableReferencePanel";

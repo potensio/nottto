@@ -7,6 +7,35 @@ import { useAuth } from "@/lib/auth-context";
 
 type VerifyStatus = "verifying" | "success" | "error";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
+
+/**
+ * Completes the extension auth session after successful login.
+ * This allows the extension to receive the auth tokens via polling.
+ */
+async function completeExtensionAuthSession(
+  sessionId: string,
+  accessToken: string
+): Promise<boolean> {
+  try {
+    const response = await fetch(
+      `${API_URL}/extension-auth/session/${sessionId}/complete`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({}),
+      }
+    );
+    return response.ok;
+  } catch (error) {
+    console.error("Failed to complete extension auth session:", error);
+    return false;
+  }
+}
+
 function VerifyContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -20,6 +49,7 @@ function VerifyContent() {
     if (verificationAttempted.current) return;
 
     const token = searchParams.get("token");
+    const extensionSession = searchParams.get("session");
 
     if (!token) {
       setStatus("error");
@@ -37,17 +67,15 @@ function VerifyContent() {
         // Get tokens from apiClient for extension notification
         const accessToken = apiClient.getAccessToken();
 
-        // Notify extension if it's listening
-        if (typeof window !== "undefined" && accessToken) {
-          window.postMessage(
-            {
-              type: "NOTTTO_AUTH_SUCCESS",
-              payload: {
-                accessToken,
-              },
-            },
-            "*"
+        // If this is from the extension, complete the auth session
+        if (extensionSession && accessToken) {
+          const completed = await completeExtensionAuthSession(
+            extensionSession,
+            accessToken
           );
+          if (completed) {
+            console.log("Extension auth session completed successfully");
+          }
         }
 
         setStatus("success");

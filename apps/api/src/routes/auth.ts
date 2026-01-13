@@ -19,11 +19,12 @@ authRoutes.post(
   "/magic-link",
   zValidator("json", magicLinkRequestSchema),
   async (c) => {
-    const { email, isRegister, name } = c.req.valid("json");
+    const { email, isRegister, name, extensionSession } = c.req.valid("json");
     const result = await magicLinkService.requestMagicLink(
       email,
       isRegister,
-      name
+      name,
+      extensionSession
     );
     return c.json(result);
   }

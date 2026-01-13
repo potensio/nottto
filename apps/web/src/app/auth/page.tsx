@@ -1,13 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { validateEmail } from "@/lib/validation";
 import { apiClient } from "@/lib/api-client";
 
 type AuthMode = "login" | "register";
 type AuthStep = "form" | "confirmation" | "error";
 
-export default function AuthPage() {
+function AuthPageContent() {
+  const searchParams = useSearchParams();
   const [mode, setMode] = useState<AuthMode>("login");
   const [step, setStep] = useState<AuthStep>("form");
   const [email, setEmail] = useState("");
@@ -19,6 +21,17 @@ export default function AuthPage() {
   const [maskedEmail, setMaskedEmail] = useState("");
   const [canResend, setCanResend] = useState(false);
   const [resendCountdown, setResendCountdown] = useState(60);
+
+  // Set initial mode from URL query parameter
+  useEffect(() => {
+    const modeParam = searchParams.get("mode");
+    if (modeParam === "register") {
+      setMode("register");
+    }
+  }, [searchParams]);
+
+  // Get extension session from URL if present
+  const extensionSession = searchParams.get("session");
 
   // Countdown timer for resend button
   useEffect(() => {
@@ -86,7 +99,8 @@ export default function AuthPage() {
       const result = await apiClient.requestMagicLink(
         email,
         mode === "register",
-        mode === "register" ? name.trim() : undefined
+        mode === "register" ? name.trim() : undefined,
+        extensionSession || undefined
       );
       setMaskedEmail(result.email);
       setStep("confirmation");
@@ -126,7 +140,8 @@ export default function AuthPage() {
       const result = await apiClient.requestMagicLink(
         email,
         mode === "register",
-        mode === "register" ? name.trim() : undefined
+        mode === "register" ? name.trim() : undefined,
+        extensionSession || undefined
       );
       setMaskedEmail(result.email);
     } catch (err: unknown) {
@@ -515,6 +530,22 @@ export default function AuthPage() {
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+export default function AuthPage() {
+  return (
+    <Suspense fallback={<AuthPageLoading />}>
+      <AuthPageContent />
+    </Suspense>
+  );
+}
+
+function AuthPageLoading() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-neutral-50">
+      <div className="animate-pulse text-neutral-400">Loading...</div>
     </div>
   );
 }

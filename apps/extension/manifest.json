@@ -1,10 +1,13 @@
 {
   "manifest_version": 3,
   "name": "Nottto - Screenshot Annotator",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "Capture screenshots and annotate with arrows, boxes, and text in full-screen mode",
   "permissions": ["activeTab", "downloads", "scripting", "storage"],
-  "host_permissions": ["http://localhost:3001/*", "https://api.nottto.com/*"],
+  "host_permissions": [
+    "http://localhost:3001/*",
+    "https://nottto-api.vercel.app/*"
+  ],
 
   "action": {
     "default_icon": {
@@ -16,18 +19,6 @@
   "background": {
     "service_worker": "dist/background.js"
   },
-  "content_scripts": [
-    {
-      "matches": [
-        "http://localhost:3000/*",
-        "https://nottto.com/*",
-        "https://www.nottto.com/*",
-        "https://app.nottto.com/*"
-      ],
-      "js": ["dist/auth-listener.js"],
-      "run_at": "document_start"
-    }
-  ],
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
