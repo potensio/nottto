@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useState, Suspense, useRef } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
-import { apiClient } from "@/lib/api-client";
+import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 
 type VerifyStatus = "verifying" | "success" | "error";
@@ -37,7 +36,6 @@ async function completeExtensionAuthSession(
 
 function VerifyContent() {
   const searchParams = useSearchParams();
-  const router = useRouter();
   const { verifyMagicLink } = useAuth();
   const [status, setStatus] = useState<VerifyStatus>("verifying");
   const [error, setError] = useState<string | null>(null);
@@ -75,10 +73,10 @@ function VerifyContent() {
 
         setStatus("success");
 
-        // Redirect to dashboard after short delay
+        // Use hard navigation to ensure cookies are properly sent
         setTimeout(() => {
-          router.push("/dashboard");
-        }, 1500);
+          window.location.href = "/dashboard";
+        }, 2000);
       } catch (err) {
         setStatus("error");
         if (err && typeof err === "object" && "message" in err) {
@@ -90,7 +88,7 @@ function VerifyContent() {
     };
 
     verifyToken();
-  }, [searchParams, router, verifyMagicLink]);
+  }, [searchParams, verifyMagicLink]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-neutral-50 p-8">

@@ -56,7 +56,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const verifyMutation = useMutation({
     mutationFn: (token: string) => apiClient.verifyMagicLink(token),
     onSuccess: (data) => {
+      // Set the user data immediately in cache
       queryClient.setQueryData(AUTH_QUERY_KEY, data.user);
+      // Also invalidate to ensure any stale data is cleared
+      queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY });
     },
   });
 
