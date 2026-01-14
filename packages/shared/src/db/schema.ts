@@ -126,6 +126,27 @@ export const webhookIntegrations = pgTable("webhook_integrations", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// Sessions table (for HTTP-only cookie authentication)
+export const sessions = pgTable(
+  "sessions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    sessionToken: varchar("session_token", { length: 255 }).unique().notNull(),
+    expiresAt: timestamp("expires_at").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    lastActiveAt: timestamp("last_active_at").defaultNow().notNull(),
+    userAgent: text("user_agent"),
+    ipAddress: varchar("ip_address", { length: 45 }),
+  },
+  (table) => [
+    index("idx_sessions_user_id").on(table.userId),
+    index("idx_sessions_expires_at").on(table.expiresAt),
+  ]
+);
+
 // Extension Auth Sessions table (for secure extension authentication)
 export const extensionAuthSessions = pgTable(
   "extension_auth_sessions",
@@ -167,6 +188,14 @@ export const usersRelations = relations(users, ({ many }) => ({
   workspaces: many(workspaces),
   workspaceMembers: many(workspaceMembers),
   annotations: many(annotations),
+  sessions: many(sessions),
+}));
+
+export const sessionsRelations = relations(sessions, ({ one }) => ({
+  user: one(users, {
+    fields: [sessions.userId],
+    references: [users.id],
+  }),
 }));
 
 export const workspacesRelations = relations(workspaces, ({ one, many }) => ({
@@ -244,3 +273,5 @@ export type ExtensionAuthSessionRecord =
   typeof extensionAuthSessions.$inferSelect;
 export type NewExtensionAuthSessionRecord =
   typeof extensionAuthSessions.$inferInsert;
+export type SessionRecord = typeof sessions.$inferSelect;
+export type NewSessionRecord = typeof sessions.$inferInsert;
