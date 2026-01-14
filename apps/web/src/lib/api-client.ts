@@ -38,9 +38,12 @@ class ApiClient {
         // Ignore JSON parse errors
       }
 
-      // Redirect to auth on 401
+      // Redirect to auth on 401 (but not if already on auth page)
       if (response.status === 401 && typeof window !== "undefined") {
-        window.location.href = "/auth";
+        const isAuthPage = window.location.pathname.startsWith("/auth");
+        if (!isAuthPage) {
+          window.location.href = "/auth";
+        }
       }
 
       throw error;
