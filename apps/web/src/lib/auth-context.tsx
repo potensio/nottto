@@ -1,12 +1,7 @@
 "use client";
 
-import {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  ReactNode,
-} from "react";
+import { createContext, useContext, ReactNode, useCallback } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "./api-client";
 
 interface User {
@@ -31,50 +26,67 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const AUTH_QUERY_KEY = ["auth", "me"] as const;
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const queryClient = useQueryClient();
 
-  // Check auth status on mount
-  useEffect(() => {
-    const checkAuth = async () => {
+  // Use TanStack Query for auth state
+  const { data, isLoading } = useQuery({
+    queryKey: AUTH_QUERY_KEY,
+    queryFn: async () => {
       try {
-        const data = await apiClient.getMe();
-        setUser(data.user);
+        const result = await apiClient.getMe();
+        return result.user;
       } catch {
-        // Not authenticated or session expired
-        setUser(null);
-      } finally {
-        setIsLoading(false);
+        return null;
       }
-    };
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: false,
+  });
 
-    checkAuth();
-  }, []);
+  const user = data ?? null;
 
-  const requestMagicLink = async (email: string) => {
+  const requestMagicLink = useCallback(async (email: string) => {
     const result = await apiClient.requestMagicLink(email);
     return { email: result.email };
-  };
+  }, []);
 
-  const verifyMagicLink = async (token: string) => {
-    const result = await apiClient.verifyMagicLink(token);
-    setUser(result.user);
-    return { isNewUser: result.isNewUser };
-  };
+  const verifyMutation = useMutation({
+    mutationFn: (token: string) => apiClient.verifyMagicLink(token),
+    onSuccess: (data) => {
+      queryClient.setQueryData(AUTH_QUERY_KEY, data.user);
+    },
+  });
 
-  const updateUser = async (data: {
-    name?: string;
-    profilePicture?: string | null;
-  }) => {
-    const result = await apiClient.updateMe(data);
-    setUser(result.user);
-  };
+  const verifyMagicLink = useCallback(
+    async (token: string) => {
+      const result = await verifyMutation.mutateAsync(token);
+      return { isNewUser: result.isNewUser };
+    },
+    [verifyMutation]
+  );
 
-  const logout = async () => {
-    setUser(null);
+  const updateMutation = useMutation({
+    mutationFn: (data: { name?: string; profilePicture?: string | null }) =>
+      apiClient.updateMe(data),
+    onSuccess: (data) => {
+      queryClient.setQueryData(AUTH_QUERY_KEY, data.user);
+    },
+  });
+
+  const updateUser = useCallback(
+    async (data: { name?: string; profilePicture?: string | null }) => {
+      await updateMutation.mutateAsync(data);
+    },
+    [updateMutation]
+  );
+
+  const logout = useCallback(async () => {
+    queryClient.setQueryData(AUTH_QUERY_KEY, null);
     await apiClient.logout();
-  };
+  }, [queryClient]);
 
   return (
     <AuthContext.Provider

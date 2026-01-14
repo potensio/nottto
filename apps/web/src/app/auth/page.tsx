@@ -22,13 +22,14 @@ function AuthPageContent() {
   const [canResend, setCanResend] = useState(false);
   const [resendCountdown, setResendCountdown] = useState(60);
 
-  // Set initial mode from URL query parameter
+  // Set initial mode from URL query parameter (only once)
   useEffect(() => {
     const modeParam = searchParams.get("mode");
     if (modeParam === "register") {
       setMode("register");
     }
-  }, [searchParams]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Get extension session from URL if present
   const extensionSession = searchParams.get("session");
