@@ -361,6 +361,28 @@ class ApiClient {
     });
   }
 
+  async updateAnnotationStatus(id: string, status: "open" | "done") {
+    return this.fetch<{
+      annotation: {
+        id: string;
+        title: string;
+        description?: string;
+        priority?: string;
+        type?: string;
+        status: string;
+        pageUrl?: string;
+        pageTitle?: string;
+        screenshotOriginal?: string;
+        screenshotAnnotated?: string;
+        createdAt: string;
+        updatedAt: string;
+      };
+    }>(`/annotations/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    });
+  }
+
   // Integration endpoints
   async getIntegration(projectId: string) {
     return this.fetch<{

@@ -15,6 +15,7 @@ export interface AnnotationSummary {
   description?: string;
   priority?: "low" | "medium" | "high";
   type?: string;
+  status?: "open" | "done";
   pageUrl?: string;
   pageTitle?: string;
   screenshotAnnotated?: string;
@@ -34,6 +35,7 @@ export interface AnnotationDetail {
   description?: string;
   priority?: "low" | "medium" | "high";
   type?: string;
+  status?: "open" | "done";
   pageUrl?: string;
   pageTitle?: string;
   screenshotOriginal?: string;
@@ -63,14 +65,14 @@ export function useAnnotations(projectId: string) {
         // Sort by createdAt descending (newest first)
         return [...annotations].sort(
           (a, b) =>
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
         ) as AnnotationSummary[];
       }
       const data = await apiClient.getAnnotations(projectId);
       // Sort by createdAt descending (newest first)
       return data.annotations.sort(
         (a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
       ) as AnnotationSummary[];
     },
     enabled: !!projectId,
@@ -106,10 +108,35 @@ export function useDeleteAnnotation() {
   });
 }
 
+export function useUpdateAnnotationStatus() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      status,
+    }: {
+      id: string;
+      status: "open" | "done";
+    }) => {
+      const data = await apiClient.updateAnnotationStatus(id, status);
+      return data.annotation;
+    },
+    onSuccess: (annotation) => {
+      // Invalidate both the single annotation and the list
+      queryClient.invalidateQueries({
+        queryKey: ["annotation", annotation.id],
+      });
+      queryClient.invalidateQueries({ queryKey: ["annotations"] });
+      queryClient.invalidateQueries({ queryKey: ["workspace-annotations"] });
+    },
+  });
+}
+
 // Hook to get all annotations for a workspace (across all projects)
 export function useWorkspaceAnnotations(
   workspaceId: string,
-  projectIds: string[]
+  projectIds: string[],
 ) {
   return useQuery({
     queryKey: ["workspace-annotations", workspaceId, projectIds],
@@ -120,14 +147,14 @@ export function useWorkspaceAnnotations(
       }
       // Fetch annotations from all projects in parallel
       const results = await Promise.all(
-        projectIds.map((projectId) => apiClient.getAnnotations(projectId))
+        projectIds.map((projectId) => apiClient.getAnnotations(projectId)),
       );
 
       // Flatten and sort by createdAt descending
       const allAnnotations = results.flatMap((r) => r.annotations);
       return allAnnotations.sort(
         (a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
       ) as AnnotationSummary[];
     },
     enabled: !!workspaceId && (USE_MOCK_DATA || projectIds.length > 0),

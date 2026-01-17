@@ -4,7 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import { useAnnotation } from "@/lib/hooks";
+import { useAnnotation, useUpdateAnnotationStatus } from "@/lib/hooks";
 import { EmptyState } from "@/components/dashboard";
 import { formatDate } from "@/components/dashboard/AnnotationCard";
 
@@ -32,6 +32,16 @@ export default function AnnotationDetailPage() {
   }, [showLightbox]);
 
   const { data: annotation, isLoading, error } = useAnnotation(annotationId);
+  const updateStatus = useUpdateAnnotationStatus();
+  const isDone = annotation?.status === "done";
+
+  const handleStatusToggle = () => {
+    if (!annotation) return;
+    updateStatus.mutate({
+      id: annotation.id,
+      status: isDone ? "open" : "done",
+    });
+  };
 
   const handleCopyLink = async () => {
     const url = window.location.href;
@@ -121,8 +131,8 @@ export default function AnnotationDetailPage() {
                 annotation.priority === "high"
                   ? "bg-red-100 text-red-700"
                   : annotation.priority === "medium"
-                  ? "bg-yellow-100 text-yellow-700"
-                  : "bg-neutral-100 text-neutral-600"
+                    ? "bg-yellow-100 text-yellow-700"
+                    : "bg-neutral-100 text-neutral-600"
               }`}
             >
               {annotation.priority} priority
@@ -253,6 +263,19 @@ export default function AnnotationDetailPage() {
         {/* Actions */}
         <div className="flex gap-3">
           <button
+            onClick={handleStatusToggle}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              isDone
+                ? "bg-green-100 hover:bg-green-200 text-green-700"
+                : "bg-accent hover:bg-accent/90 text-white"
+            }`}
+          >
+            <iconify-icon
+              icon={isDone ? "lucide:check-circle" : "lucide:circle"}
+            ></iconify-icon>
+            {isDone ? "Mark as Open" : "Mark as Done"}
+          </button>
+          <button
             onClick={handleCopyLink}
             className="flex items-center gap-2 px-4 py-2 bg-neutral-100 hover:bg-neutral-200 rounded-lg text-sm font-medium text-neutral-700 transition-colors"
           >
@@ -286,7 +309,7 @@ export default function AnnotationDetailPage() {
               onClick={(e) => e.stopPropagation()}
             />
           </div>,
-          document.body
+          document.body,
         )}
     </>
   );

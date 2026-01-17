@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useUpdateAnnotationStatus } from "@/lib/hooks";
 
 export interface AnnotationCardProps {
   annotation: {
@@ -9,6 +10,7 @@ export interface AnnotationCardProps {
     description?: string;
     priority?: "low" | "medium" | "high";
     type?: string;
+    status?: "open" | "done";
     pageUrl?: string;
     pageTitle?: string;
     screenshotAnnotated?: string;
@@ -60,6 +62,17 @@ export function AnnotationCard({
   onClick,
 }: AnnotationCardProps) {
   const href = `/dashboard/${workspaceSlug}/annotations/${annotation.id}`;
+  const updateStatus = useUpdateAnnotationStatus();
+  const isDone = annotation.status === "done";
+
+  const handleStatusToggle = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    updateStatus.mutate({
+      id: annotation.id,
+      status: isDone ? "open" : "done",
+    });
+  };
 
   const content = (
     <>
@@ -69,24 +82,47 @@ export function AnnotationCard({
           <img
             src={annotation.screenshotAnnotated}
             alt={annotation.title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 ${
+              isDone ? "opacity-50" : ""
+            }`}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
             <iconify-icon
               icon="lucide:image"
-              className="text-4xl text-neutral-300"
+              className={`text-4xl ${
+                isDone ? "text-neutral-200" : "text-neutral-300"
+              }`}
             ></iconify-icon>
           </div>
         )}
+
+        {/* Status checkbox - positioned in top-left corner */}
+        <button
+          onClick={handleStatusToggle}
+          className="absolute top-2 left-2 w-6 h-6 rounded-full border-2 bg-white flex items-center justify-center hover:scale-110 transition-transform z-10"
+          style={{
+            borderColor: isDone ? "#10b981" : "#d4d4d8",
+          }}
+          title={isDone ? "Mark as open" : "Mark as done"}
+        >
+          {isDone && (
+            <iconify-icon
+              icon="lucide:check"
+              className="text-sm text-green-500"
+            ></iconify-icon>
+          )}
+        </button>
       </div>
 
       {/* Content */}
-      <div className="p-4">
+      <div className={`p-4 ${isDone ? "opacity-60" : ""}`}>
         {/* Title and priority */}
         <div className="flex items-start justify-between gap-2 mb-2">
           <h3
-            className="font-medium text-neutral-900 line-clamp-1"
+            className={`font-medium line-clamp-1 ${
+              isDone ? "text-neutral-500 line-through" : "text-neutral-900"
+            }`}
             title={annotation.title}
           >
             {annotation.title}
@@ -94,7 +130,7 @@ export function AnnotationCard({
           {annotation.priority && (
             <span
               className={`text-xs px-2 py-0.5 rounded font-medium shrink-0 ${getPriorityStyles(
-                annotation.priority
+                annotation.priority,
               )}`}
             >
               {annotation.priority}
