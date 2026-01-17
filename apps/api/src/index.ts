@@ -45,7 +45,10 @@ app.use(
       return null;
     },
     credentials: true,
-  })
+    allowHeaders: ["Content-Type", "Authorization"],
+    allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    exposeHeaders: ["Set-Cookie"],
+  }),
 );
 
 // Error handler
@@ -65,7 +68,7 @@ app.route("/projects", integrationRoutes);
 
 // 404 handler
 app.notFound((c) =>
-  c.json({ error: { code: "NOT_FOUND", message: "Route not found" } }, 404)
+  c.json({ error: { code: "NOT_FOUND", message: "Route not found" } }, 404),
 );
 
 // Vercel serverless exports

@@ -8,19 +8,48 @@ interface ApiError {
 }
 
 class ApiClient {
+  private getAccessToken(): string | null {
+    if (typeof window === "undefined") return null;
+    return localStorage.getItem("accessToken");
+  }
+
+  private setAccessToken(token: string): void {
+    if (typeof window === "undefined") return;
+    localStorage.setItem("accessToken", token);
+  }
+
+  private clearAccessToken(): void {
+    if (typeof window === "undefined") return;
+    localStorage.removeItem("accessToken");
+  }
+
   async fetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${API_BASE_URL}${endpoint}`;
 
-    const headers: HeadersInit = {
+    const headers: Record<string, string> = {
       "Content-Type": "application/json",
-      ...options.headers,
     };
 
-    // Include credentials to send cookies automatically
+    // Add Bearer token if available
+    const token = this.getAccessToken();
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
+    // Merge with any additional headers from options
+    if (options.headers) {
+      Object.entries(options.headers).forEach(([key, value]) => {
+        if (typeof value === "string") {
+          headers[key] = value;
+        }
+      });
+    }
+
+    // Include credentials to send cookies automatically (fallback)
     const response = await fetch(url, {
       ...options,
       headers,
-      credentials: "include", // Important: sends cookies with requests
+      credentials: "include",
     });
 
     // Handle errors
@@ -61,7 +90,8 @@ class ApiClient {
       method: "POST",
       body: JSON.stringify({ email, password }),
     });
-    // Cookie is set automatically by server
+    // Store token
+    this.setAccessToken(data.tokens.accessToken);
     return data;
   }
 
@@ -73,7 +103,8 @@ class ApiClient {
       method: "POST",
       body: JSON.stringify({ email, password, name }),
     });
-    // Cookie is set automatically by server
+    // Store token
+    this.setAccessToken(data.tokens.accessToken);
     return data;
   }
 
@@ -82,7 +113,7 @@ class ApiClient {
     email: string,
     isRegister: boolean = false,
     name?: string,
-    extensionSession?: string
+    extensionSession?: string,
   ) {
     return this.fetch<{
       message: string;
@@ -107,7 +138,8 @@ class ApiClient {
       method: "POST",
       body: JSON.stringify({ token }),
     });
-    // Cookie is set automatically by server
+    // Store token
+    this.setAccessToken(data.tokens.accessToken);
     return data;
   }
 
@@ -173,6 +205,9 @@ class ApiClient {
       // Ignore errors during logout
     }
 
+    // Clear token
+    this.clearAccessToken();
+
     // Redirect to auth page
     if (typeof window !== "undefined") {
       window.location.href = "/auth";
@@ -220,7 +255,7 @@ class ApiClient {
 
   async updateWorkspace(
     id: string,
-    data: { name?: string; slug?: string; icon?: string }
+    data: { name?: string; slug?: string; icon?: string },
   ) {
     return this.fetch<{
       workspace: {
@@ -271,7 +306,7 @@ class ApiClient {
 
   async updateProject(
     id: string,
-    data: { name?: string; slug?: string; description?: string }
+    data: { name?: string; slug?: string; description?: string },
   ) {
     return this.fetch<{
       project: { id: string; name: string; slug: string; description?: string };
@@ -351,7 +386,7 @@ class ApiClient {
       bodyTemplate: string;
       enabled: boolean;
       locked: boolean;
-    }
+    },
   ) {
     return this.fetch<{
       integration: {
@@ -385,7 +420,7 @@ class ApiClient {
       bodyTemplate: string;
       enabled: boolean;
       locked: boolean;
-    }
+    },
   ) {
     return this.fetch<{
       success: boolean;

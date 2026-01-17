@@ -20,7 +20,7 @@ function setSessionCookie(c: any, sessionToken: string) {
   setCookie(c, "session", sessionToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "Lax",
+    sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax", // None required for cross-site cookies
     maxAge: 60 * 60 * 24 * 30, // 30 days
     path: "/",
   });
@@ -31,7 +31,7 @@ function clearSessionCookie(c: any) {
   deleteCookie(c, "session", {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "Lax",
+    sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
     path: "/",
   });
 }
@@ -46,10 +46,10 @@ authRoutes.post(
       email,
       isRegister,
       name,
-      extensionSession
+      extensionSession,
     );
     return c.json(result);
-  }
+  },
 );
 
 // POST /auth/verify-magic-link - Verify magic link token
@@ -64,12 +64,12 @@ authRoutes.post(
     const userAgent = c.req.header("user-agent");
     const sessionToken = await authService.createSession(
       result.user.id,
-      userAgent
+      userAgent,
     );
     setSessionCookie(c, sessionToken);
 
     return c.json(result);
-  }
+  },
 );
 
 // POST /auth/register - Create account (legacy, kept for compatibility)
@@ -81,7 +81,7 @@ authRoutes.post("/register", zValidator("json", registerSchema), async (c) => {
   const userAgent = c.req.header("user-agent");
   const sessionToken = await authService.createSession(
     result.user.id,
-    userAgent
+    userAgent,
   );
   setSessionCookie(c, sessionToken);
 
@@ -98,7 +98,7 @@ authRoutes.post("/login", zValidator("json", loginSchema), async (c) => {
   const userAgent = c.req.header("user-agent");
   const sessionToken = await authService.createSession(
     result.user.id,
-    userAgent
+    userAgent,
   );
   setSessionCookie(c, sessionToken);
 
@@ -130,7 +130,7 @@ authRoutes.patch(
     const data = c.req.valid("json");
     const user = await authService.updateUser(userId, data);
     return c.json({ user });
-  }
+  },
 );
 
 // DELETE /auth/me - Delete current user account (protected)
