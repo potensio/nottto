@@ -1,9 +1,3 @@
-var __defProp = Object.defineProperty;
-var __export = (target, all) => {
-  for (var name in all)
-    __defProp(target, name, { get: all[name], enumerable: true });
-};
-
 // src/index.ts
 import { Hono as Hono8 } from "hono";
 import { handle } from "hono/vercel";
@@ -14,89 +8,14 @@ import { logger } from "hono/logger";
 import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { setCookie, deleteCookie } from "hono/cookie";
-
-// ../../packages/shared/src/schemas/index.ts
-import { z } from "zod";
-var registerSchema = z.object({
-  email: z.string().email("Invalid email format"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
-  name: z.string().min(1).max(255).optional()
-});
-var loginSchema = z.object({
-  email: z.string().email("Invalid email format"),
-  password: z.string().min(1, "Password is required")
-});
-var refreshSchema = z.object({
-  refreshToken: z.string().min(1, "Refresh token is required")
-});
-var magicLinkRequestSchema = z.object({
-  email: z.string().email("Invalid email format"),
-  isRegister: z.boolean().default(false),
-  name: z.string().min(1, "Full name is required").max(255).optional(),
-  extensionSession: z.string().max(64).optional()
-  // Extension auth session ID
-}).refine(
-  (data) => !data.isRegister || data.name && data.name.trim().length > 0,
-  { message: "Full name is required for registration", path: ["name"] }
-);
-var magicLinkVerifySchema = z.object({
-  token: z.string().min(1, "Token is required")
-});
-var createWorkspaceSchema = z.object({
-  name: z.string().min(1, "Name is required").max(255)
-});
-var updateWorkspaceSchema = z.object({
-  name: z.string().min(1).max(255).optional(),
-  slug: z.string().min(1).max(255).regex(/^[a-z0-9-]+$/, "Slug must be lowercase alphanumeric with hyphens").optional(),
-  icon: z.string().min(1).max(50).optional()
-});
-var createProjectSchema = z.object({
-  name: z.string().min(1, "Name is required").max(255),
-  description: z.string().max(1e3).optional()
-});
-var updateProjectSchema = z.object({
-  name: z.string().min(1).max(255).optional(),
-  slug: z.string().min(1).max(255).regex(/^[a-z0-9-]+$/, "Slug must be lowercase alphanumeric with hyphens").optional(),
-  description: z.string().max(1e3).optional()
-});
-var annotationTypeSchema = z.enum(["bug", "improvement", "question"]);
-var annotationPrioritySchema = z.enum([
-  "urgent",
-  "high",
-  "medium",
-  "low"
-]);
-var annotationStatusSchema = z.enum(["open", "done"]);
-var createAnnotationSchema = z.object({
-  title: z.string().min(1, "Title is required").max(255),
-  description: z.string().max(5e3).optional(),
-  type: annotationTypeSchema.optional(),
-  priority: annotationPrioritySchema.optional(),
-  pageUrl: z.string().max(2048).optional(),
-  // Allow any string for page URLs (some may not be valid URLs)
-  pageTitle: z.string().max(255).optional(),
-  screenshotOriginal: z.string().url("Invalid URL").optional(),
-  screenshotAnnotated: z.string().url("Invalid URL").optional(),
-  screenshotAnnotatedBase64: z.string().optional(),
-  // Base64 data URL from extension
-  canvasData: z.any().optional()
-});
-var updateAnnotationSchema = z.object({
-  title: z.string().min(1).max(255).optional(),
-  description: z.string().max(5e3).optional(),
-  type: annotationTypeSchema.optional().nullable(),
-  priority: annotationPrioritySchema.optional().nullable(),
-  status: annotationStatusSchema.optional(),
-  pageUrl: z.string().url("Invalid URL").optional().nullable(),
-  pageTitle: z.string().max(255).optional().nullable(),
-  screenshotOriginal: z.string().url("Invalid URL").optional().nullable(),
-  screenshotAnnotated: z.string().url("Invalid URL").optional().nullable(),
-  canvasData: z.any().optional().nullable()
-});
-var updateUserProfileSchema = z.object({
-  name: z.string().min(1, "Name is required").max(255).optional(),
-  profilePicture: z.string().url("Invalid URL").optional().nullable()
-});
+import {
+  registerSchema,
+  loginSchema,
+  refreshSchema,
+  magicLinkRequestSchema,
+  magicLinkVerifySchema,
+  updateUserProfileSchema
+} from "@notto/shared";
 
 // src/middleware/auth.ts
 import { HTTPException as HTTPException2 } from "hono/http-exception";
@@ -107,258 +26,21 @@ import { jwtVerify as jwtVerify2 } from "jose";
 import { eq, lt } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 
-// ../../packages/shared/src/db/index.ts
-import { neon } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-http";
-
-// ../../packages/shared/src/db/schema.ts
-var schema_exports = {};
-__export(schema_exports, {
-  annotations: () => annotations,
-  annotationsRelations: () => annotationsRelations,
-  extensionAuthSessions: () => extensionAuthSessions,
-  magicLinkTokens: () => magicLinkTokens,
-  projects: () => projects,
-  projectsRelations: () => projectsRelations,
-  rateLimitRecords: () => rateLimitRecords,
-  sessions: () => sessions,
-  sessionsRelations: () => sessionsRelations,
-  users: () => users,
-  usersRelations: () => usersRelations,
-  webhookIntegrations: () => webhookIntegrations,
-  webhookIntegrationsRelations: () => webhookIntegrationsRelations,
-  workspaceMembers: () => workspaceMembers,
-  workspaceMembersRelations: () => workspaceMembersRelations,
-  workspaces: () => workspaces,
-  workspacesRelations: () => workspacesRelations
-});
-import {
-  pgTable,
-  uuid,
-  varchar,
-  text,
-  timestamp,
-  jsonb,
-  unique,
-  index,
-  boolean
-} from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
-var users = pgTable("users", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  email: varchar("email", { length: 255 }).unique().notNull(),
-  passwordHash: varchar("password_hash", { length: 255 }),
-  // Nullable for magic link auth
-  name: varchar("name", { length: 255 }),
-  profilePicture: text("profile_picture"),
-  // URL to profile picture
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull()
-});
-var magicLinkTokens = pgTable(
-  "magic_link_tokens",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    email: varchar("email", { length: 255 }).notNull(),
-    tokenHash: varchar("token_hash", { length: 255 }).notNull(),
-    name: varchar("name", { length: 255 }),
-    // For registration - stores user's full name
-    isRegister: boolean("is_register").default(false).notNull(),
-    // Distinguishes login vs register
-    expiresAt: timestamp("expires_at").notNull(),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    usedAt: timestamp("used_at")
-  },
-  (table) => [
-    index("idx_magic_link_tokens_email").on(table.email),
-    index("idx_magic_link_tokens_expires_at").on(table.expiresAt)
-  ]
-);
-var rateLimitRecords = pgTable(
-  "rate_limit_records",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    identifier: varchar("identifier", { length: 255 }).notNull(),
-    action: varchar("action", { length: 50 }).notNull(),
-    createdAt: timestamp("created_at").defaultNow().notNull()
-  },
-  (table) => [
-    index("idx_rate_limit_identifier_action").on(
-      table.identifier,
-      table.action,
-      table.createdAt
-    )
-  ]
-);
-var workspaces = pgTable("workspaces", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  name: varchar("name", { length: 255 }).notNull(),
-  slug: varchar("slug", { length: 255 }).unique().notNull(),
-  icon: varchar("icon", { length: 50 }).default("\u{1F4C1}").notNull(),
-  ownerId: uuid("owner_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull()
-});
-var workspaceMembers = pgTable(
-  "workspace_members",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    workspaceId: uuid("workspace_id").references(() => workspaces.id, { onDelete: "cascade" }).notNull(),
-    userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
-    role: varchar("role", { length: 50 }).default("member").notNull(),
-    createdAt: timestamp("created_at").defaultNow().notNull()
-  },
-  (table) => [
-    unique("workspace_user_unique").on(table.workspaceId, table.userId)
-  ]
-);
-var projects = pgTable(
-  "projects",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    workspaceId: uuid("workspace_id").references(() => workspaces.id, { onDelete: "cascade" }).notNull(),
-    name: varchar("name", { length: 255 }).notNull(),
-    slug: varchar("slug", { length: 255 }).notNull(),
-    description: text("description"),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at").defaultNow().notNull()
-  },
-  (table) => [
-    unique("workspace_project_slug_unique").on(table.workspaceId, table.slug)
-  ]
-);
-var webhookIntegrations = pgTable("webhook_integrations", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  projectId: uuid("project_id").references(() => projects.id, { onDelete: "cascade" }).unique().notNull(),
-  url: text("url").notNull(),
-  headers: jsonb("headers").default({}).notNull(),
-  bodyTemplate: text("body_template").default("").notNull(),
-  enabled: boolean("enabled").default(false).notNull(),
-  locked: boolean("locked").default(false).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull()
-});
-var sessions = pgTable(
-  "sessions",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
-    sessionToken: varchar("session_token", { length: 255 }).unique().notNull(),
-    expiresAt: timestamp("expires_at").notNull(),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    lastActiveAt: timestamp("last_active_at").defaultNow().notNull(),
-    userAgent: text("user_agent"),
-    ipAddress: varchar("ip_address", { length: 45 })
-  },
-  (table) => [
-    index("idx_sessions_user_id").on(table.userId),
-    index("idx_sessions_expires_at").on(table.expiresAt)
-  ]
-);
-var extensionAuthSessions = pgTable(
-  "extension_auth_sessions",
-  {
-    id: varchar("id", { length: 64 }).primaryKey(),
-    // nanoid
-    status: varchar("status", { length: 20 }).default("pending").notNull(),
-    userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }),
-    expiresAt: timestamp("expires_at").notNull(),
-    completedAt: timestamp("completed_at"),
-    createdAt: timestamp("created_at").defaultNow().notNull()
-  },
-  (table) => [
-    index("idx_extension_auth_sessions_expires_at").on(table.expiresAt)
-  ]
-);
-var annotations = pgTable("annotations", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  projectId: uuid("project_id").references(() => projects.id, { onDelete: "cascade" }).notNull(),
-  userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
-  title: varchar("title", { length: 255 }).notNull(),
-  description: text("description"),
-  type: varchar("type", { length: 50 }),
-  priority: varchar("priority", { length: 50 }),
-  status: varchar("status", { length: 20 }).default("open").notNull(),
-  pageUrl: text("page_url"),
-  pageTitle: varchar("page_title", { length: 255 }),
-  screenshotOriginal: text("screenshot_original"),
-  screenshotAnnotated: text("screenshot_annotated"),
-  canvasData: jsonb("canvas_data"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull()
-});
-var usersRelations = relations(users, ({ many }) => ({
-  workspaces: many(workspaces),
-  workspaceMembers: many(workspaceMembers),
-  annotations: many(annotations),
-  sessions: many(sessions)
-}));
-var sessionsRelations = relations(sessions, ({ one }) => ({
-  user: one(users, {
-    fields: [sessions.userId],
-    references: [users.id]
-  })
-}));
-var workspacesRelations = relations(workspaces, ({ one, many }) => ({
-  owner: one(users, {
-    fields: [workspaces.ownerId],
-    references: [users.id]
-  }),
-  members: many(workspaceMembers),
-  projects: many(projects)
-}));
-var workspaceMembersRelations = relations(
-  workspaceMembers,
-  ({ one }) => ({
-    workspace: one(workspaces, {
-      fields: [workspaceMembers.workspaceId],
-      references: [workspaces.id]
-    }),
-    user: one(users, {
-      fields: [workspaceMembers.userId],
-      references: [users.id]
-    })
-  })
-);
-var projectsRelations = relations(projects, ({ one, many }) => ({
-  workspace: one(workspaces, {
-    fields: [projects.workspaceId],
-    references: [workspaces.id]
-  }),
-  annotations: many(annotations),
-  webhookIntegration: one(webhookIntegrations)
-}));
-var webhookIntegrationsRelations = relations(
-  webhookIntegrations,
-  ({ one }) => ({
-    project: one(projects, {
-      fields: [webhookIntegrations.projectId],
-      references: [projects.id]
-    })
-  })
-);
-var annotationsRelations = relations(annotations, ({ one }) => ({
-  project: one(projects, {
-    fields: [annotations.projectId],
-    references: [projects.id]
-  }),
-  user: one(users, {
-    fields: [annotations.userId],
-    references: [users.id]
-  })
-}));
-
-// ../../packages/shared/src/db/index.ts
-function createDb(databaseUrl) {
-  const sql = neon(databaseUrl);
-  return drizzle(sql, { schema: schema_exports });
-}
-
 // src/db.ts
+import { createDb } from "@notto/shared/db";
 if (!process.env.DATABASE_URL) {
   throw new Error("DATABASE_URL environment variable is required");
 }
 var db = createDb(process.env.DATABASE_URL);
+
+// src/services/auth.ts
+import {
+  users,
+  workspaces,
+  workspaceMembers,
+  projects,
+  sessions
+} from "@notto/shared/db";
 
 // src/utils/auth.ts
 import bcrypt from "bcryptjs";
@@ -623,6 +305,13 @@ async function authMiddleware(c, next) {
 // src/services/magic-link.ts
 import { eq as eq3, and as and2, isNull } from "drizzle-orm";
 import { HTTPException as HTTPException3 } from "hono/http-exception";
+import {
+  users as users2,
+  magicLinkTokens,
+  workspaces as workspaces2,
+  workspaceMembers as workspaceMembers2,
+  projects as projects2
+} from "@notto/shared/db";
 
 // src/utils/magic-link.ts
 import { randomBytes, createHash, timingSafeEqual } from "crypto";
@@ -664,7 +353,7 @@ function getMagicLinkEmailHtml({
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sign in to Nottto</title>
+  <title>Sign in to Notto</title>
 </head>
 <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
   <table role="presentation" style="width: 100%; border-collapse: collapse;">
@@ -674,7 +363,7 @@ function getMagicLinkEmailHtml({
           <!-- Header -->
           <tr>
             <td style="padding: 40px 40px 24px 40px; text-align: center;">
-              <img src="https://nottto.com/nottto-logo.png" alt="Nottto" style="height: 32px; width: auto;" />
+              <img src="https://notto.site/notto-logo.png" alt="Notto" style="height: 32px; width: auto;" />
             </td>
           </tr>
           
@@ -682,7 +371,7 @@ function getMagicLinkEmailHtml({
           <tr>
             <td style="padding: 0 40px 32px 40px;">
               <h1 style="margin: 0 0 16px 0; font-size: 24px; font-weight: 600; color: #171717; text-align: center;">
-                Sign in to Nottto
+                Sign in to Notto
               </h1>
               <p style="margin: 0 0 24px 0; font-size: 16px; line-height: 24px; color: #525252; text-align: center;">
                 Click the button below to securely sign in to your account. This link will expire in ${expirationMinutes} minutes.
@@ -693,7 +382,7 @@ function getMagicLinkEmailHtml({
                 <tr>
                   <td align="center">
                     <a href="${magicLinkUrl}" style="display: inline-block; padding: 14px 32px; background-color: #171717; color: #ffffff; text-decoration: none; font-size: 16px; font-weight: 500; border-radius: 8px;">
-                      Sign in to Nottto
+                      Sign in to Notto
                     </a>
                   </td>
                 </tr>
@@ -730,7 +419,7 @@ function getMagicLinkEmailHtml({
           <tr>
             <td style="padding: 24px 20px; text-align: center;">
               <p style="margin: 0; font-size: 12px; color: #a3a3a3;">
-                \xA9 ${(/* @__PURE__ */ new Date()).getFullYear()} Nottto. All rights reserved.
+                \xA9 ${(/* @__PURE__ */ new Date()).getFullYear()} Notto. All rights reserved.
               </p>
             </td>
           </tr>
@@ -747,7 +436,7 @@ function getMagicLinkEmailText({
   expirationMinutes
 }) {
   return `
-Sign in to Nottto
+Sign in to Notto
 
 Click the link below to securely sign in to your account. This link will expire in ${expirationMinutes} minutes.
 
@@ -755,7 +444,7 @@ ${magicLinkUrl}
 
 If you didn't request this email, you can safely ignore it.
 
-\xA9 ${(/* @__PURE__ */ new Date()).getFullYear()} Nottto. All rights reserved.
+\xA9 ${(/* @__PURE__ */ new Date()).getFullYear()} Notto. All rights reserved.
   `.trim();
 }
 
@@ -767,7 +456,7 @@ function getResendClient() {
   }
   return resend;
 }
-var EMAIL_FROM = process.env.EMAIL_FROM || "Hanif <noreply@nottto.com>";
+var EMAIL_FROM = process.env.EMAIL_FROM || "Hanif <noreply@notto.site>";
 var EMAIL_MODE = process.env.EMAIL_MODE || "production";
 var MAGIC_LINK_EXPIRATION_MINUTES = 15;
 async function sendMagicLinkEmail(email, magicLinkUrl) {
@@ -784,7 +473,7 @@ async function sendMagicLinkEmail(email, magicLinkUrl) {
     const { error } = await getResendClient().emails.send({
       from: EMAIL_FROM,
       to: email,
-      subject: "Sign in to Nottto",
+      subject: "Sign in to Notto",
       html: getMagicLinkEmailHtml({
         magicLinkUrl,
         expirationMinutes: MAGIC_LINK_EXPIRATION_MINUTES
@@ -825,6 +514,7 @@ function maskEmailForLog(email) {
 
 // src/services/rate-limiter.ts
 import { eq as eq2, and, gte, lt as lt2 } from "drizzle-orm";
+import { rateLimitRecords } from "@notto/shared/db";
 var MAGIC_LINK_LIMIT = 5;
 var WINDOW_HOURS = 1;
 async function checkMagicLinkLimit(email) {
@@ -874,7 +564,7 @@ async function requestMagicLink(email, isRegister = false, name, extensionSessio
       retryAfter: rateLimit.retryAfter
     });
   }
-  const [existingUser] = await db.select().from(users).where(eq3(users.email, normalizedEmail)).limit(1);
+  const [existingUser] = await db.select().from(users2).where(eq3(users2.email, normalizedEmail)).limit(1);
   if (isRegister) {
     if (existingUser) {
       throw new HTTPException3(409, {
@@ -941,11 +631,11 @@ async function verifyMagicLink(token) {
     });
   }
   await db.update(magicLinkTokens).set({ usedAt: /* @__PURE__ */ new Date() }).where(eq3(magicLinkTokens.id, tokenRecord.id));
-  let [existingUser] = await db.select().from(users).where(eq3(users.email, tokenRecord.email)).limit(1);
+  let [existingUser] = await db.select().from(users2).where(eq3(users2.email, tokenRecord.email)).limit(1);
   let isNewUser = false;
   if (!existingUser) {
     isNewUser = true;
-    const [newUser] = await db.insert(users).values({
+    const [newUser] = await db.insert(users2).values({
       email: tokenRecord.email,
       name: tokenRecord.name || null,
       // Use name from registration token
@@ -953,29 +643,29 @@ async function verifyMagicLink(token) {
       // Passwordless user
     }).returning();
     existingUser = newUser;
-    const existingWorkspaces = await db.select({ slug: workspaces.slug }).from(workspaces);
+    const existingWorkspaces = await db.select({ slug: workspaces2.slug }).from(workspaces2);
     const existingSlugs = existingWorkspaces.map((w) => w.slug);
     const workspaceName = tokenRecord.name || "Personal";
     const workspaceSlug = generateUniqueSlug(workspaceName, existingSlugs);
-    const [newWorkspace] = await db.insert(workspaces).values({
+    const [newWorkspace] = await db.insert(workspaces2).values({
       name: workspaceName,
       slug: workspaceSlug,
       icon: "\u{1F4C1}",
       // Default icon
       ownerId: newUser.id
     }).returning();
-    await db.insert(workspaceMembers).values({
+    await db.insert(workspaceMembers2).values({
       workspaceId: newWorkspace.id,
       userId: newUser.id,
       role: "owner"
     });
-    const existingProjects = await db.select({ slug: projects.slug }).from(projects).where(eq3(projects.workspaceId, newWorkspace.id));
+    const existingProjects = await db.select({ slug: projects2.slug }).from(projects2).where(eq3(projects2.workspaceId, newWorkspace.id));
     const existingProjectSlugs = existingProjects.map((p) => p.slug);
     const projectSlug = generateUniqueSlug(
       "My First Project",
       existingProjectSlugs
     );
-    await db.insert(projects).values({
+    await db.insert(projects2).values({
       workspaceId: newWorkspace.id,
       name: "My First Project",
       slug: projectSlug,
@@ -1106,11 +796,12 @@ authRoutes.post("/logout", authMiddleware, async (c) => {
 // src/routes/extension-auth.ts
 import { Hono as Hono2 } from "hono";
 import { zValidator as zValidator2 } from "@hono/zod-validator";
-import { z as z2 } from "zod";
+import { z } from "zod";
 
 // src/services/extension-auth.ts
 import { eq as eq4, and as and3, gt, lt as lt3 } from "drizzle-orm";
 import { HTTPException as HTTPException4 } from "hono/http-exception";
+import { users as users3, extensionAuthSessions } from "@notto/shared/db";
 import { nanoid as nanoid2 } from "nanoid";
 var SESSION_EXPIRY_MS2 = 10 * 60 * 1e3;
 async function createAuthSession() {
@@ -1139,7 +830,7 @@ async function getAuthSession(sessionId) {
     return { status: "pending" };
   }
   if (session.status === "completed" && session.userId) {
-    const [user] = await db.select().from(users).where(eq4(users.id, session.userId)).limit(1);
+    const [user] = await db.select().from(users3).where(eq4(users3.id, session.userId)).limit(1);
     if (!user) {
       throw new HTTPException4(404, { message: "User not found" });
     }
@@ -1199,7 +890,7 @@ extensionAuthRoutes.get("/session/:sessionId", async (c) => {
   const result = await getAuthSession(sessionId);
   return c.json(result);
 });
-var completeSessionSchema = z2.object({
+var completeSessionSchema = z.object({
   // No body needed - we get user from auth middleware
 });
 extensionAuthRoutes.post(
@@ -1225,21 +916,30 @@ extensionAuthRoutes.delete("/session/:sessionId", async (c) => {
 // src/routes/workspaces.ts
 import { Hono as Hono3 } from "hono";
 import { zValidator as zValidator3 } from "@hono/zod-validator";
+import {
+  createWorkspaceSchema,
+  updateWorkspaceSchema,
+  createProjectSchema
+} from "@notto/shared";
 
 // src/services/workspaces.ts
 import { eq as eq5, and as and4 } from "drizzle-orm";
 import { HTTPException as HTTPException5 } from "hono/http-exception";
+import {
+  workspaces as workspaces3,
+  workspaceMembers as workspaceMembers3
+} from "@notto/shared/db";
 async function list(userId) {
-  const ownedWorkspaces = await db.select().from(workspaces).where(eq5(workspaces.ownerId, userId));
+  const ownedWorkspaces = await db.select().from(workspaces3).where(eq5(workspaces3.ownerId, userId));
   const memberWorkspaces = await db.select({
-    id: workspaces.id,
-    name: workspaces.name,
-    slug: workspaces.slug,
-    icon: workspaces.icon,
-    ownerId: workspaces.ownerId,
-    createdAt: workspaces.createdAt,
-    updatedAt: workspaces.updatedAt
-  }).from(workspaceMembers).innerJoin(workspaces, eq5(workspaceMembers.workspaceId, workspaces.id)).where(eq5(workspaceMembers.userId, userId));
+    id: workspaces3.id,
+    name: workspaces3.name,
+    slug: workspaces3.slug,
+    icon: workspaces3.icon,
+    ownerId: workspaces3.ownerId,
+    createdAt: workspaces3.createdAt,
+    updatedAt: workspaces3.updatedAt
+  }).from(workspaceMembers3).innerJoin(workspaces3, eq5(workspaceMembers3.workspaceId, workspaces3.id)).where(eq5(workspaceMembers3.userId, userId));
   const allWorkspaces = [...ownedWorkspaces];
   for (const ws of memberWorkspaces) {
     if (!allWorkspaces.find((w) => w.id === ws.id)) {
@@ -1257,17 +957,17 @@ async function list(userId) {
   }));
 }
 async function create(userId, data) {
-  const existingWorkspaces = await db.select({ slug: workspaces.slug }).from(workspaces);
+  const existingWorkspaces = await db.select({ slug: workspaces3.slug }).from(workspaces3);
   const existingSlugs = existingWorkspaces.map((w) => w.slug);
   const slug = generateUniqueSlug(data.name, existingSlugs);
-  const [newWorkspace] = await db.insert(workspaces).values({
+  const [newWorkspace] = await db.insert(workspaces3).values({
     name: data.name,
     slug,
     icon: "\u{1F4C1}",
     // Default icon
     ownerId: userId
   }).returning();
-  await db.insert(workspaceMembers).values({
+  await db.insert(workspaceMembers3).values({
     workspaceId: newWorkspace.id,
     userId,
     role: "owner"
@@ -1283,7 +983,7 @@ async function create(userId, data) {
   };
 }
 async function get(workspaceId, userId) {
-  const [workspace] = await db.select().from(workspaces).where(eq5(workspaces.id, workspaceId)).limit(1);
+  const [workspace] = await db.select().from(workspaces3).where(eq5(workspaces3.id, workspaceId)).limit(1);
   if (!workspace) {
     throw new HTTPException5(404, { message: "Workspace not found" });
   }
@@ -1304,7 +1004,7 @@ async function get(workspaceId, userId) {
   };
 }
 async function getBySlug(slug, userId) {
-  const [workspace] = await db.select().from(workspaces).where(eq5(workspaces.slug, slug)).limit(1);
+  const [workspace] = await db.select().from(workspaces3).where(eq5(workspaces3.slug, slug)).limit(1);
   if (!workspace) {
     throw new HTTPException5(404, { message: "Workspace not found" });
   }
@@ -1325,7 +1025,7 @@ async function getBySlug(slug, userId) {
   };
 }
 async function update(workspaceId, userId, data) {
-  const [workspace] = await db.select().from(workspaces).where(eq5(workspaces.id, workspaceId)).limit(1);
+  const [workspace] = await db.select().from(workspaces3).where(eq5(workspaces3.id, workspaceId)).limit(1);
   if (!workspace) {
     throw new HTTPException5(404, { message: "Workspace not found" });
   }
@@ -1335,15 +1035,15 @@ async function update(workspaceId, userId, data) {
     });
   }
   if (data.slug && data.slug !== workspace.slug) {
-    const [existing] = await db.select().from(workspaces).where(eq5(workspaces.slug, data.slug)).limit(1);
+    const [existing] = await db.select().from(workspaces3).where(eq5(workspaces3.slug, data.slug)).limit(1);
     if (existing) {
       throw new HTTPException5(409, { message: "Slug already in use" });
     }
   }
-  const [updated] = await db.update(workspaces).set({
+  const [updated] = await db.update(workspaces3).set({
     ...data,
     updatedAt: /* @__PURE__ */ new Date()
-  }).where(eq5(workspaces.id, workspaceId)).returning();
+  }).where(eq5(workspaces3.id, workspaceId)).returning();
   return {
     id: updated.id,
     name: updated.name,
@@ -1355,7 +1055,7 @@ async function update(workspaceId, userId, data) {
   };
 }
 async function remove(workspaceId, userId) {
-  const [workspace] = await db.select().from(workspaces).where(eq5(workspaces.id, workspaceId)).limit(1);
+  const [workspace] = await db.select().from(workspaces3).where(eq5(workspaces3.id, workspaceId)).limit(1);
   if (!workspace) {
     throw new HTTPException5(404, { message: "Workspace not found" });
   }
@@ -1364,17 +1064,17 @@ async function remove(workspaceId, userId) {
       message: "Only the owner can delete this workspace"
     });
   }
-  await db.delete(workspaces).where(eq5(workspaces.id, workspaceId));
+  await db.delete(workspaces3).where(eq5(workspaces3.id, workspaceId));
 }
 async function checkAccess(workspaceId, userId) {
-  const [workspace] = await db.select().from(workspaces).where(and4(eq5(workspaces.id, workspaceId), eq5(workspaces.ownerId, userId))).limit(1);
+  const [workspace] = await db.select().from(workspaces3).where(and4(eq5(workspaces3.id, workspaceId), eq5(workspaces3.ownerId, userId))).limit(1);
   if (workspace) {
     return true;
   }
-  const [member] = await db.select().from(workspaceMembers).where(
+  const [member] = await db.select().from(workspaceMembers3).where(
     and4(
-      eq5(workspaceMembers.workspaceId, workspaceId),
-      eq5(workspaceMembers.userId, userId)
+      eq5(workspaceMembers3.workspaceId, workspaceId),
+      eq5(workspaceMembers3.userId, userId)
     )
   ).limit(1);
   return !!member;
@@ -1383,6 +1083,7 @@ async function checkAccess(workspaceId, userId) {
 // src/services/projects.ts
 import { eq as eq6, and as and5 } from "drizzle-orm";
 import { HTTPException as HTTPException6 } from "hono/http-exception";
+import { projects as projects4 } from "@notto/shared/db";
 async function list2(workspaceId, userId) {
   const hasAccess = await checkAccess(workspaceId, userId);
   if (!hasAccess) {
@@ -1390,7 +1091,7 @@ async function list2(workspaceId, userId) {
       message: "Access denied to this workspace"
     });
   }
-  const projectList = await db.select().from(projects).where(eq6(projects.workspaceId, workspaceId));
+  const projectList = await db.select().from(projects4).where(eq6(projects4.workspaceId, workspaceId));
   return projectList.map((p) => ({
     id: p.id,
     workspaceId: p.workspaceId,
@@ -1408,10 +1109,10 @@ async function create2(workspaceId, userId, data) {
       message: "Access denied to this workspace"
     });
   }
-  const existingProjects = await db.select({ slug: projects.slug }).from(projects).where(eq6(projects.workspaceId, workspaceId));
+  const existingProjects = await db.select({ slug: projects4.slug }).from(projects4).where(eq6(projects4.workspaceId, workspaceId));
   const existingSlugs = existingProjects.map((p) => p.slug);
   const slug = generateUniqueSlug(data.name, existingSlugs);
-  const [newProject] = await db.insert(projects).values({
+  const [newProject] = await db.insert(projects4).values({
     workspaceId,
     name: data.name,
     slug,
@@ -1428,7 +1129,7 @@ async function create2(workspaceId, userId, data) {
   };
 }
 async function get2(projectId, userId) {
-  const [project] = await db.select().from(projects).where(eq6(projects.id, projectId)).limit(1);
+  const [project] = await db.select().from(projects4).where(eq6(projects4.id, projectId)).limit(1);
   if (!project) {
     throw new HTTPException6(404, { message: "Project not found" });
   }
@@ -1447,7 +1148,7 @@ async function get2(projectId, userId) {
   };
 }
 async function update2(projectId, userId, data) {
-  const [project] = await db.select().from(projects).where(eq6(projects.id, projectId)).limit(1);
+  const [project] = await db.select().from(projects4).where(eq6(projects4.id, projectId)).limit(1);
   if (!project) {
     throw new HTTPException6(404, { message: "Project not found" });
   }
@@ -1456,10 +1157,10 @@ async function update2(projectId, userId, data) {
     throw new HTTPException6(403, { message: "Access denied to this project" });
   }
   if (data.slug && data.slug !== project.slug) {
-    const [existing] = await db.select().from(projects).where(
+    const [existing] = await db.select().from(projects4).where(
       and5(
-        eq6(projects.workspaceId, project.workspaceId),
-        eq6(projects.slug, data.slug)
+        eq6(projects4.workspaceId, project.workspaceId),
+        eq6(projects4.slug, data.slug)
       )
     ).limit(1);
     if (existing) {
@@ -1468,10 +1169,10 @@ async function update2(projectId, userId, data) {
       });
     }
   }
-  const [updated] = await db.update(projects).set({
+  const [updated] = await db.update(projects4).set({
     ...data,
     updatedAt: /* @__PURE__ */ new Date()
-  }).where(eq6(projects.id, projectId)).returning();
+  }).where(eq6(projects4.id, projectId)).returning();
   return {
     id: updated.id,
     workspaceId: updated.workspaceId,
@@ -1483,7 +1184,7 @@ async function update2(projectId, userId, data) {
   };
 }
 async function remove2(projectId, userId) {
-  const [project] = await db.select().from(projects).where(eq6(projects.id, projectId)).limit(1);
+  const [project] = await db.select().from(projects4).where(eq6(projects4.id, projectId)).limit(1);
   if (!project) {
     throw new HTTPException6(404, { message: "Project not found" });
   }
@@ -1491,10 +1192,10 @@ async function remove2(projectId, userId) {
   if (!hasAccess) {
     throw new HTTPException6(403, { message: "Access denied to this project" });
   }
-  await db.delete(projects).where(eq6(projects.id, projectId));
+  await db.delete(projects4).where(eq6(projects4.id, projectId));
 }
 async function checkProjectAccess(projectId, userId) {
-  const [project] = await db.select().from(projects).where(eq6(projects.id, projectId)).limit(1);
+  const [project] = await db.select().from(projects4).where(eq6(projects4.id, projectId)).limit(1);
   if (!project) {
     return false;
   }
@@ -1506,8 +1207,8 @@ var workspaceRoutes = new Hono3();
 workspaceRoutes.use("*", authMiddleware);
 workspaceRoutes.get("/", async (c) => {
   const userId = c.get("userId");
-  const workspaces3 = await list(userId);
-  return c.json({ workspaces: workspaces3 });
+  const workspaces5 = await list(userId);
+  return c.json({ workspaces: workspaces5 });
 });
 workspaceRoutes.post(
   "/",
@@ -1551,8 +1252,8 @@ workspaceRoutes.delete("/:id", async (c) => {
 workspaceRoutes.get("/:workspaceId/projects", async (c) => {
   const userId = c.get("userId");
   const workspaceId = c.req.param("workspaceId");
-  const projects3 = await list2(workspaceId, userId);
-  return c.json({ projects: projects3 });
+  const projects6 = await list2(workspaceId, userId);
+  return c.json({ projects: projects6 });
 });
 workspaceRoutes.post(
   "/:workspaceId/projects",
@@ -1569,10 +1270,12 @@ workspaceRoutes.post(
 // src/routes/projects.ts
 import { Hono as Hono4 } from "hono";
 import { zValidator as zValidator4 } from "@hono/zod-validator";
+import { updateProjectSchema, createAnnotationSchema } from "@notto/shared";
 
 // src/services/annotations.ts
 import { eq as eq8 } from "drizzle-orm";
 import { HTTPException as HTTPException9 } from "hono/http-exception";
+import { annotations as annotations2, users as users4, projects as projects5 } from "@notto/shared/db";
 
 // src/services/upload.ts
 import { put } from "@vercel/blob";
@@ -1595,9 +1298,9 @@ async function uploadScreenshot(file, userId) {
       message: "Invalid file type. Only PNG, JPEG, GIF, and WebP are allowed"
     });
   }
-  const timestamp2 = Date.now();
+  const timestamp = Date.now();
   const extension = file.name.split(".").pop() || "png";
-  const filename = `screenshots/${userId}/${timestamp2}.${extension}`;
+  const filename = `screenshots/${userId}/${timestamp}.${extension}`;
   try {
     const blob = await put(filename, file, {
       access: "public",
@@ -1628,9 +1331,9 @@ async function uploadBase64Screenshot(base64Data, userId) {
   if (buffer.length > MAX_FILE_SIZE) {
     throw new HTTPException7(413, { message: "File size exceeds 10MB limit" });
   }
-  const timestamp2 = Date.now();
+  const timestamp = Date.now();
   const extension = ALLOWED_MIME_EXTENSIONS[mimeType] || "png";
-  const filename = `screenshots/${userId}/${timestamp2}.${extension}`;
+  const filename = `screenshots/${userId}/${timestamp}.${extension}`;
   try {
     const blob = await put(filename, buffer, {
       access: "public",
@@ -1652,9 +1355,9 @@ async function uploadProfilePicture(file, userId) {
       message: "Invalid file type. Only PNG, JPEG, GIF, and WebP are allowed"
     });
   }
-  const timestamp2 = Date.now();
+  const timestamp = Date.now();
   const extension = file.name.split(".").pop() || "png";
-  const filename = `profile-pictures/${userId}/${timestamp2}.${extension}`;
+  const filename = `profile-pictures/${userId}/${timestamp}.${extension}`;
   try {
     const blob = await put(filename, file, {
       access: "public",
@@ -1672,6 +1375,7 @@ async function uploadProfilePicture(file, userId) {
 // src/services/integrations.ts
 import { eq as eq7 } from "drizzle-orm";
 import { HTTPException as HTTPException8 } from "hono/http-exception";
+import { webhookIntegrations } from "@notto/shared/db";
 function validateWebhookUrl(url) {
   if (!url || url.trim().length === 0) {
     return { valid: false, error: "Webhook URL is required" };
@@ -2128,7 +1832,7 @@ async function list3(projectId, userId) {
   if (!hasAccess) {
     throw new HTTPException9(403, { message: "Access denied to this project" });
   }
-  const annotationList = await db.select().from(annotations).where(eq8(annotations.projectId, projectId));
+  const annotationList = await db.select().from(annotations2).where(eq8(annotations2.projectId, projectId));
   return annotationList.map((a) => ({
     id: a.id,
     projectId: a.projectId,
@@ -2160,7 +1864,7 @@ async function create3(projectId, userId, data) {
     );
     screenshotAnnotatedUrl = uploadResult.url;
   }
-  const [newAnnotation] = await db.insert(annotations).values({
+  const [newAnnotation] = await db.insert(annotations2).values({
     projectId,
     userId,
     title: data.title,
@@ -2194,8 +1898,8 @@ async function create3(projectId, userId, data) {
 }
 async function fireWebhookAsync(projectId, userId, annotation) {
   try {
-    const [user] = await db.select({ name: users.name, email: users.email }).from(users).where(eq8(users.id, userId)).limit(1);
-    const [project] = await db.select({ name: projects.name }).from(projects).where(eq8(projects.id, projectId)).limit(1);
+    const [user] = await db.select({ name: users4.name, email: users4.email }).from(users4).where(eq8(users4.id, userId)).limit(1);
+    const [project] = await db.select({ name: projects5.name }).from(projects5).where(eq8(projects5.id, projectId)).limit(1);
     if (!user || !project) {
       console.error("Webhook: Could not find user or project info");
       return;
@@ -2223,7 +1927,7 @@ async function fireWebhookAsync(projectId, userId, annotation) {
   }
 }
 async function get4(annotationId, userId) {
-  const [annotation] = await db.select().from(annotations).where(eq8(annotations.id, annotationId)).limit(1);
+  const [annotation] = await db.select().from(annotations2).where(eq8(annotations2.id, annotationId)).limit(1);
   if (!annotation) {
     throw new HTTPException9(404, { message: "Annotation not found" });
   }
@@ -2252,7 +1956,7 @@ async function get4(annotationId, userId) {
   };
 }
 async function update3(annotationId, userId, data) {
-  const [annotation] = await db.select().from(annotations).where(eq8(annotations.id, annotationId)).limit(1);
+  const [annotation] = await db.select().from(annotations2).where(eq8(annotations2.id, annotationId)).limit(1);
   if (!annotation) {
     throw new HTTPException9(404, { message: "Annotation not found" });
   }
@@ -2275,7 +1979,7 @@ async function update3(annotationId, userId, data) {
   if (data.screenshotAnnotated !== void 0)
     updateData.screenshotAnnotated = data.screenshotAnnotated;
   if (data.canvasData !== void 0) updateData.canvasData = data.canvasData;
-  const [updated] = await db.update(annotations).set(updateData).where(eq8(annotations.id, annotationId)).returning();
+  const [updated] = await db.update(annotations2).set(updateData).where(eq8(annotations2.id, annotationId)).returning();
   return {
     id: updated.id,
     projectId: updated.projectId,
@@ -2295,7 +1999,7 @@ async function update3(annotationId, userId, data) {
   };
 }
 async function remove4(annotationId, userId) {
-  const [annotation] = await db.select().from(annotations).where(eq8(annotations.id, annotationId)).limit(1);
+  const [annotation] = await db.select().from(annotations2).where(eq8(annotations2.id, annotationId)).limit(1);
   if (!annotation) {
     throw new HTTPException9(404, { message: "Annotation not found" });
   }
@@ -2305,7 +2009,7 @@ async function remove4(annotationId, userId) {
       message: "Access denied to this annotation"
     });
   }
-  await db.delete(annotations).where(eq8(annotations.id, annotationId));
+  await db.delete(annotations2).where(eq8(annotations2.id, annotationId));
 }
 
 // src/routes/projects.ts
@@ -2355,6 +2059,7 @@ projectRoutes.post(
 // src/routes/annotations.ts
 import { Hono as Hono5 } from "hono";
 import { zValidator as zValidator5 } from "@hono/zod-validator";
+import { updateAnnotationSchema } from "@notto/shared";
 var annotationRoutes = new Hono5();
 annotationRoutes.use("*", authMiddleware);
 annotationRoutes.get("/:id", async (c) => {
@@ -2414,14 +2119,14 @@ uploadRoutes.post("/profile-picture", async (c) => {
 // src/routes/integrations.ts
 import { Hono as Hono7 } from "hono";
 import { zValidator as zValidator6 } from "@hono/zod-validator";
-import { z as z3 } from "zod";
+import { z as z2 } from "zod";
 var integrationRoutes = new Hono7();
-var webhookIntegrationSchema = z3.object({
-  url: z3.string().min(1, "URL is required"),
-  headers: z3.record(z3.string()).default({}),
-  bodyTemplate: z3.string().default(""),
-  enabled: z3.boolean().default(true),
-  locked: z3.boolean().default(false)
+var webhookIntegrationSchema = z2.object({
+  url: z2.string().min(1, "URL is required"),
+  headers: z2.record(z2.string()).default({}),
+  bodyTemplate: z2.string().default(""),
+  enabled: z2.boolean().default(true),
+  locked: z2.boolean().default(false)
 });
 integrationRoutes.use("*", authMiddleware);
 integrationRoutes.get("/:projectId/integration", async (c) => {
@@ -2529,7 +2234,7 @@ app.use(
       if (!origin) return "http://localhost:3000";
       if (origin === "http://localhost:3000" || origin === "http://localhost:3001")
         return origin;
-      if (origin === "https://nottto-web.vercel.app") return origin;
+      if (origin === "https://notto-web.vercel.app") return origin;
       if (origin.startsWith("chrome-extension://")) return origin;
       if (process.env.NODE_ENV !== "production") {
         return origin;
@@ -2543,7 +2248,7 @@ app.use(
   })
 );
 app.onError(errorHandler);
-app.get("/", (c) => c.json({ status: "ok", service: "nottto-api" }));
+app.get("/", (c) => c.json({ status: "ok", service: "notto-api" }));
 app.route("/auth", authRoutes);
 app.route("/extension-auth", extensionAuthRoutes);
 app.route("/workspaces", workspaceRoutes);

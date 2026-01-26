@@ -20,7 +20,7 @@ importers:
       '@neondatabase/serverless':
         specifier: ^0.10.4
         version: 0.10.4
-      '@nottto/shared':
+      '@notto/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       '@vercel/blob':
@@ -78,7 +78,7 @@ importers:
 
   apps/extension:
     dependencies:
-      '@nottto/shared':
+      '@notto/shared':
         specifier: workspace:*
         version: link:../../packages/shared
     devDependencies:
