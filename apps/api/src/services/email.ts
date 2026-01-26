@@ -14,7 +14,7 @@ function getResendClient(): Resend {
   return resend;
 }
 
-const EMAIL_FROM = process.env.EMAIL_FROM || "Hanif <noreply@nottto.com>";
+const EMAIL_FROM = process.env.EMAIL_FROM || "Hanif <noreply@notto.site>";
 const EMAIL_MODE = process.env.EMAIL_MODE || "production";
 const MAGIC_LINK_EXPIRATION_MINUTES = 15;
 
@@ -30,7 +30,7 @@ export interface SendMagicLinkEmailResult {
  */
 export async function sendMagicLinkEmail(
   email: string,
-  magicLinkUrl: string
+  magicLinkUrl: string,
 ): Promise<SendMagicLinkEmailResult> {
   // Development mode: log magic link to console
   if (EMAIL_MODE === "development") {
@@ -48,7 +48,7 @@ export async function sendMagicLinkEmail(
     const { error } = await getResendClient().emails.send({
       from: EMAIL_FROM,
       to: email,
-      subject: "Sign in to Nottto",
+      subject: "Sign in to Notto",
       html: getMagicLinkEmailHtml({
         magicLinkUrl,
         expirationMinutes: MAGIC_LINK_EXPIRATION_MINUTES,

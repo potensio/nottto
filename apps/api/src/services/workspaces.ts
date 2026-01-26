@@ -6,13 +6,13 @@ import {
   workspaceMembers,
   projects,
   annotations,
-} from "@nottto/shared/db";
+} from "@notto/shared/db";
 import { generateSlug, generateUniqueSlug } from "../utils/slug";
 import type {
   Workspace,
   CreateWorkspaceInput,
   UpdateWorkspaceInput,
-} from "@nottto/shared";
+} from "@notto/shared";
 
 export async function list(userId: string): Promise<Workspace[]> {
   // Get workspaces where user is owner or member
@@ -56,7 +56,7 @@ export async function list(userId: string): Promise<Workspace[]> {
 
 export async function create(
   userId: string,
-  data: CreateWorkspaceInput
+  data: CreateWorkspaceInput,
 ): Promise<Workspace> {
   // Get existing slugs to ensure uniqueness
   const existingWorkspaces = await db
@@ -96,7 +96,7 @@ export async function create(
 
 export async function get(
   workspaceId: string,
-  userId: string
+  userId: string,
 ): Promise<Workspace> {
   const [workspace] = await db
     .select()
@@ -129,7 +129,7 @@ export async function get(
 
 export async function getBySlug(
   slug: string,
-  userId: string
+  userId: string,
 ): Promise<Workspace> {
   const [workspace] = await db
     .select()
@@ -163,7 +163,7 @@ export async function getBySlug(
 export async function update(
   workspaceId: string,
   userId: string,
-  data: UpdateWorkspaceInput
+  data: UpdateWorkspaceInput,
 ): Promise<Workspace> {
   const [workspace] = await db
     .select()
@@ -217,7 +217,7 @@ export async function update(
 
 export async function remove(
   workspaceId: string,
-  userId: string
+  userId: string,
 ): Promise<void> {
   const [workspace] = await db
     .select()
@@ -243,7 +243,7 @@ export async function remove(
 // Helper function to check if user has access to workspace
 export async function checkAccess(
   workspaceId: string,
-  userId: string
+  userId: string,
 ): Promise<boolean> {
   // Check if owner
   const [workspace] = await db
@@ -263,8 +263,8 @@ export async function checkAccess(
     .where(
       and(
         eq(workspaceMembers.workspaceId, workspaceId),
-        eq(workspaceMembers.userId, userId)
-      )
+        eq(workspaceMembers.userId, userId),
+      ),
     )
     .limit(1);
 

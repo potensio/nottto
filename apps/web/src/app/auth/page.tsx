@@ -101,7 +101,7 @@ function AuthPageContent() {
         email,
         mode === "register",
         mode === "register" ? name.trim() : undefined,
-        extensionSession || undefined
+        extensionSession || undefined,
       );
       setMaskedEmail(result.email);
       setStep("confirmation");
@@ -116,7 +116,7 @@ function AuthPageContent() {
       if (errorObj.status === 409) {
         // Account exists - suggest login
         setError(
-          "An account with this email already exists. Please login instead."
+          "An account with this email already exists. Please login instead.",
         );
       } else if (errorObj.status === 404) {
         // No account - suggest register
@@ -142,7 +142,7 @@ function AuthPageContent() {
         email,
         mode === "register",
         mode === "register" ? name.trim() : undefined,
-        extensionSession || undefined
+        extensionSession || undefined,
       );
       setMaskedEmail(result.email);
     } catch (err: unknown) {
@@ -183,8 +183,8 @@ function AuthPageContent() {
           {/* Logo */}
           <a href="/" className="flex h-6 hover:opacity-80 transition-opacity">
             <img
-              src="/nottto-logo-negative.png"
-              alt="Nottto"
+              src="/notto-logo-negative.png"
+              alt="Notto"
               className="h-full"
             />
           </a>
@@ -234,7 +234,7 @@ function AuthPageContent() {
 
           {/* Bottom */}
           <div className="text-xs text-neutral-500">
-            © 2025 Nottto. All rights reserved.
+            © 2025 Notto. All rights reserved.
           </div>
         </div>
       </div>

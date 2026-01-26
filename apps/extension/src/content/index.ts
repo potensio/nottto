@@ -1,4 +1,4 @@
-// Nottto Content Script - Full Page Overlay Annotation
+// Notto Content Script - Full Page Overlay Annotation
 // Modular TypeScript implementation
 
 import { getState } from "./state";
@@ -7,14 +7,14 @@ import { initCanvas } from "./canvas";
 import type { InitOverlayMessage } from "../types";
 
 // Register message listener only once
-if (!window.notttoListenerRegistered) {
-  window.notttoListenerRegistered = true;
+if (!window.nottoListenerRegistered) {
+  window.nottoListenerRegistered = true;
 
   chrome.runtime.onMessage.addListener(
     (
       message: InitOverlayMessage,
       _sender: chrome.runtime.MessageSender,
-      sendResponse: (response: { success: boolean }) => void
+      sendResponse: (response: { success: boolean }) => void,
     ) => {
       if (message.action === "initOverlay") {
         // Clean up any existing overlay first
@@ -35,6 +35,6 @@ if (!window.notttoListenerRegistered) {
         return true;
       }
       return true;
-    }
+    },
   );
 }

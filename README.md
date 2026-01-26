@@ -1,11 +1,11 @@
-# Nottto
+# Notto
 
 A screenshot annotation tool with a Chrome extension and backend API for capturing, annotating, and managing bug reports.
 
 ## Project Structure
 
 ```
-nottto/
+notto/
 ├── apps/
 │   ├── api/              # Hono backend API
 │   └── extension/        # Chrome extension
@@ -149,7 +149,7 @@ Shared code used by both the extension and API:
 ### API (`apps/api/.env`)
 
 ```env
-DATABASE_URL=postgresql://...@neon.tech/nottto
+DATABASE_URL=postgresql://...@neon.tech/notto
 JWT_SECRET=your-jwt-secret
 JWT_REFRESH_SECRET=your-refresh-secret
 BLOB_READ_WRITE_TOKEN=vercel_blob_...

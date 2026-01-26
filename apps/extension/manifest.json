@@ -1,12 +1,12 @@
 {
   "manifest_version": 3,
-  "name": "Nottto - Screenshot Annotator",
+  "name": "Notto - Screenshot Annotator",
   "version": "2.2.0",
   "description": "Capture screenshots and annotate with arrows, boxes, and text in full-screen mode",
   "permissions": ["activeTab", "downloads", "scripting", "storage"],
   "host_permissions": [
     "http://localhost:3001/*",
-    "https://nottto-api.vercel.app/*"
+    "https://notto-api.vercel.app/*"
   ],
 
   "action": {

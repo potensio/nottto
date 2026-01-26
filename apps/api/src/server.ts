@@ -4,7 +4,7 @@ import app from "./index";
 
 const port = parseInt(process.env.PORT || "3001", 10);
 
-console.log(`🚀 Nottto API running at http://localhost:${port}`);
+console.log(`🚀 Notto API running at http://localhost:${port}`);
 
 serve({
   fetch: app.fetch,

@@ -1,6 +1,6 @@
-import type { NotttoState, Tool } from "../types";
+import type { NottoState, Tool } from "../types";
 
-export function createInitialState(): NotttoState {
+export function createInitialState(): NottoState {
   return {
     fabricCanvas: null,
     overlay: null,
@@ -18,11 +18,11 @@ export function createInitialState(): NotttoState {
   };
 }
 
-export function getState(): NotttoState {
-  if (!window.notttoState) {
-    window.notttoState = createInitialState();
+export function getState(): NottoState {
+  if (!window.nottoState) {
+    window.nottoState = createInitialState();
   }
-  return window.notttoState;
+  return window.nottoState;
 }
 
 export function resetState(): void {

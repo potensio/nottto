@@ -66,6 +66,7 @@ var annotationPrioritySchema = z.enum([
   "medium",
   "low"
 ]);
+var annotationStatusSchema = z.enum(["open", "done"]);
 var createAnnotationSchema = z.object({
   title: z.string().min(1, "Title is required").max(255),
   description: z.string().max(5e3).optional(),
@@ -85,6 +86,7 @@ var updateAnnotationSchema = z.object({
   description: z.string().max(5e3).optional(),
   type: annotationTypeSchema.optional().nullable(),
   priority: annotationPrioritySchema.optional().nullable(),
+  status: annotationStatusSchema.optional(),
   pageUrl: z.string().url("Invalid URL").optional().nullable(),
   pageTitle: z.string().max(255).optional().nullable(),
   screenshotOriginal: z.string().url("Invalid URL").optional().nullable(),
@@ -276,6 +278,7 @@ var annotations = pgTable("annotations", {
   description: text("description"),
   type: varchar("type", { length: 50 }),
   priority: varchar("priority", { length: 50 }),
+  status: varchar("status", { length: 20 }).default("open").notNull(),
   pageUrl: text("page_url"),
   pageTitle: varchar("page_title", { length: 255 }),
   screenshotOriginal: text("screenshot_original"),
@@ -1000,7 +1003,8 @@ function setSessionCookie(c, sessionToken) {
   setCookie(c, "session", sessionToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "Lax",
+    sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
+    // None required for cross-site cookies
     maxAge: 60 * 60 * 24 * 30,
     // 30 days
     path: "/"
@@ -1010,7 +1014,7 @@ function clearSessionCookie(c) {
   deleteCookie(c, "session", {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "Lax",
+    sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
     path: "/"
   });
 }
@@ -2133,6 +2137,7 @@ async function list3(projectId, userId) {
     description: a.description,
     type: a.type,
     priority: a.priority,
+    status: a.status,
     pageUrl: a.pageUrl,
     pageTitle: a.pageTitle,
     screenshotOriginal: a.screenshotOriginal,
@@ -2177,6 +2182,7 @@ async function create3(projectId, userId, data) {
     description: newAnnotation.description,
     type: newAnnotation.type,
     priority: newAnnotation.priority,
+    status: newAnnotation.status,
     pageUrl: newAnnotation.pageUrl,
     pageTitle: newAnnotation.pageTitle,
     screenshotOriginal: newAnnotation.screenshotOriginal,
@@ -2235,6 +2241,7 @@ async function get4(annotationId, userId) {
     description: annotation.description,
     type: annotation.type,
     priority: annotation.priority,
+    status: annotation.status,
     pageUrl: annotation.pageUrl,
     pageTitle: annotation.pageTitle,
     screenshotOriginal: annotation.screenshotOriginal,
@@ -2260,6 +2267,7 @@ async function update3(annotationId, userId, data) {
   if (data.description !== void 0) updateData.description = data.description;
   if (data.type !== void 0) updateData.type = data.type;
   if (data.priority !== void 0) updateData.priority = data.priority;
+  if (data.status !== void 0) updateData.status = data.status;
   if (data.pageUrl !== void 0) updateData.pageUrl = data.pageUrl;
   if (data.pageTitle !== void 0) updateData.pageTitle = data.pageTitle;
   if (data.screenshotOriginal !== void 0)
@@ -2276,6 +2284,7 @@ async function update3(annotationId, userId, data) {
     description: updated.description,
     type: updated.type,
     priority: updated.priority,
+    status: updated.status,
     pageUrl: updated.pageUrl,
     pageTitle: updated.pageTitle,
     screenshotOriginal: updated.screenshotOriginal,
@@ -2527,7 +2536,10 @@ app.use(
       }
       return null;
     },
-    credentials: true
+    credentials: true,
+    allowHeaders: ["Content-Type", "Authorization"],
+    allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    exposeHeaders: ["Set-Cookie"]
   })
 );
 app.onError(errorHandler);

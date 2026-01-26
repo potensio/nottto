@@ -1,4 +1,4 @@
-// Auth API stubs for Nottto backend integration
+// Auth API stubs for Notto backend integration
 // Implement when backend is ready
 
 import { post, setAuthToken, clearAuthToken } from "./client";
@@ -23,7 +23,7 @@ export interface RegisterData {
 
 export async function login(
   email: string,
-  password: string
+  password: string,
 ): Promise<LoginResponse> {
   const response = await post<LoginResponse>("/auth/login", {
     email,

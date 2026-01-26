@@ -43,6 +43,7 @@ export interface Project {
 // Annotation types
 export type AnnotationType = "bug" | "improvement" | "question";
 export type AnnotationPriority = "urgent" | "high" | "medium" | "low";
+export type AnnotationStatus = "open" | "done";
 
 export interface Annotation {
   id: string;
@@ -52,6 +53,7 @@ export interface Annotation {
   description: string | null;
   type: AnnotationType | null;
   priority: AnnotationPriority | null;
+  status: AnnotationStatus;
   pageUrl: string | null;
   pageTitle: string | null;
   screenshotOriginal: string | null;

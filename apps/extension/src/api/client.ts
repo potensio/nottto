@@ -1,4 +1,4 @@
-// Base API client for Nottto backend integration
+// Base API client for Notto backend integration
 import {
   getAccessToken,
   getRefreshToken,
@@ -22,7 +22,7 @@ async function apiRequestViaBackground<T>(
   endpoint: string,
   method: string = "GET",
   body?: unknown,
-  headers?: Record<string, string>
+  headers?: Record<string, string>,
 ): Promise<T> {
   return new Promise((resolve, reject) => {
     chrome.runtime.sendMessage(
@@ -47,7 +47,7 @@ async function apiRequestViaBackground<T>(
           };
           reject(error);
         }
-      }
+      },
     );
   });
 }
@@ -88,12 +88,12 @@ async function refreshAccessToken(): Promise<string | null> {
  */
 export async function apiRequest<T>(
   endpoint: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
 ): Promise<T> {
   console.log(
-    "Nottto API: Making request to",
+    "Notto API: Making request to",
     endpoint,
-    "via background script"
+    "via background script",
   );
 
   try {
@@ -102,10 +102,10 @@ export async function apiRequest<T>(
       endpoint,
       options.method || "GET",
       options.body ? JSON.parse(options.body as string) : undefined,
-      options.headers as Record<string, string>
+      options.headers as Record<string, string>,
     );
   } catch (error) {
-    console.error("Nottto API: Background request failed:", error);
+    console.error("Notto API: Background request failed:", error);
 
     // If background request fails due to auth, handle it
     if (error instanceof Error && error.message === "AUTHENTICATION_REQUIRED") {
@@ -122,14 +122,14 @@ export async function apiRequest<T>(
  */
 async function directApiRequest<T>(
   endpoint: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
 ): Promise<T> {
   let accessToken = await getAccessToken();
   console.log(
-    "Nottto API: Making direct request to",
+    "Notto API: Making direct request to",
     endpoint,
     "with token:",
-    accessToken ? "present" : "missing"
+    accessToken ? "present" : "missing",
   );
 
   const makeRequest = async (token: string | null) => {
@@ -161,19 +161,19 @@ async function directApiRequest<T>(
   };
 
   let response = await makeRequest(accessToken);
-  console.log("Nottto API: Response status:", response.status);
+  console.log("Notto API: Response status:", response.status);
 
   // Handle 401 - try to refresh token
   if (response.status === 401 && accessToken) {
-    console.log("Nottto API: Got 401, attempting token refresh...");
+    console.log("Notto API: Got 401, attempting token refresh...");
     const newToken = await refreshAccessToken();
     if (newToken) {
-      console.log("Nottto API: Token refreshed, retrying request...");
+      console.log("Notto API: Token refreshed, retrying request...");
       response = await makeRequest(newToken);
-      console.log("Nottto API: Retry response status:", response.status);
+      console.log("Notto API: Retry response status:", response.status);
     } else {
       console.log(
-        "Nottto API: Token refresh failed - user needs to re-authenticate"
+        "Notto API: Token refresh failed - user needs to re-authenticate",
       );
       // Throw a specific error that the UI can handle
       throw new Error("AUTHENTICATION_REQUIRED");
@@ -186,7 +186,7 @@ async function directApiRequest<T>(
       const errorData = await response.json();
       errorMessage =
         errorData.message || errorData.error?.message || errorMessage;
-      console.log("Nottto API: Error response:", errorData);
+      console.log("Notto API: Error response:", errorData);
     } catch {
       // Ignore JSON parse errors
     }

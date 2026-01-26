@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 import { db } from "../db";
-import { webhookIntegrations } from "@nottto/shared/db";
+import { webhookIntegrations } from "@notto/shared/db";
 import { checkProjectAccess } from "./projects";
 
 export interface WebhookIntegration {
@@ -76,7 +76,7 @@ export function validateJsonTemplate(template: string): {
   const placeholderRegex = /<[a-zA-Z_][a-zA-Z0-9_.]*>/g;
   let sanitizedTemplate = trimmedTemplate.replace(
     placeholderRegex,
-    "__PLACEHOLDER__"
+    "__PLACEHOLDER__",
   );
 
   // Escape literal newlines only inside JSON string values
@@ -144,7 +144,7 @@ function escapeNewlinesInStrings(json: string): string {
  */
 export async function get(
   projectId: string,
-  userId: string
+  userId: string,
 ): Promise<WebhookIntegration | null> {
   const hasAccess = await checkProjectAccess(projectId, userId);
   if (!hasAccess) {
@@ -180,7 +180,7 @@ export async function get(
 export async function upsert(
   projectId: string,
   userId: string,
-  data: WebhookIntegrationInput
+  data: WebhookIntegrationInput,
 ): Promise<WebhookIntegration> {
   const hasAccess = await checkProjectAccess(projectId, userId);
   if (!hasAccess) {
@@ -311,7 +311,7 @@ export async function remove(projectId: string, userId: string): Promise<void> {
 export async function test(
   projectId: string,
   userId: string,
-  data: WebhookIntegrationInput
+  data: WebhookIntegrationInput,
 ): Promise<TestResult> {
   const hasAccess = await checkProjectAccess(projectId, userId);
   if (!hasAccess) {
@@ -414,7 +414,7 @@ export async function test(
  */
 function substituteVariables(
   template: string,
-  data: Record<string, unknown>
+  data: Record<string, unknown>,
 ): string {
   const variableMap: Record<string, string> = {
     title: "title",
@@ -462,7 +462,7 @@ function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
  * Get enabled integration for a project (used by webhook executor)
  */
 export async function getEnabledIntegration(
-  projectId: string
+  projectId: string,
 ): Promise<WebhookIntegration | null> {
   const [integration] = await db
     .select()

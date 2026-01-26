@@ -4,7 +4,7 @@ import {
   createWorkspaceSchema,
   updateWorkspaceSchema,
   createProjectSchema,
-} from "@nottto/shared";
+} from "@notto/shared";
 import { authMiddleware } from "../middleware/auth";
 import * as workspaceService from "../services/workspaces";
 import * as projectService from "../services/projects";
@@ -30,7 +30,7 @@ workspaceRoutes.post(
     const data = c.req.valid("json");
     const workspace = await workspaceService.create(userId, data);
     return c.json({ workspace }, 201);
-  }
+  },
 );
 
 // GET /workspaces/:id - Get workspace details
@@ -59,7 +59,7 @@ workspaceRoutes.patch(
     const data = c.req.valid("json");
     const workspace = await workspaceService.update(workspaceId, userId, data);
     return c.json({ workspace });
-  }
+  },
 );
 
 // DELETE /workspaces/:id - Delete workspace
@@ -88,5 +88,5 @@ workspaceRoutes.post(
     const data = c.req.valid("json");
     const project = await projectService.create(workspaceId, userId, data);
     return c.json({ project }, 201);
-  }
+  },
 );

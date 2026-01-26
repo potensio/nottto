@@ -37,7 +37,7 @@ export async function copyCanvasToClipboard(): Promise<boolean> {
 
     return true;
   } catch (error) {
-    console.error("Nottto: Failed to copy canvas to clipboard", error);
+    console.error("Notto: Failed to copy canvas to clipboard", error);
     return false;
   }
 }
@@ -60,13 +60,13 @@ export function downloadCanvas(): boolean {
     const pageTitle =
       state.pageTitle?.replace(/[^a-z0-9]/gi, "_").slice(0, 30) || "screenshot";
 
-    link.download = `nottto_${pageTitle}_${timestamp}.png`;
+    link.download = `notto_${pageTitle}_${timestamp}.png`;
     link.href = dataUrl;
     link.click();
 
     return true;
   } catch (error) {
-    console.error("Nottto: Failed to download canvas", error);
+    console.error("Notto: Failed to download canvas", error);
     return false;
   }
 }

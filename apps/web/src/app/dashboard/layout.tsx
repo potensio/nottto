@@ -86,7 +86,7 @@ export default function DashboardLayout({
 
     try {
       const workspace = await createWorkspace.mutateAsync(
-        newWorkspaceName.trim()
+        newWorkspaceName.trim(),
       );
       setShowCreateWorkspaceModal(false);
       setNewWorkspaceName("");
@@ -139,7 +139,7 @@ export default function DashboardLayout({
 
               {/* Logo */}
               <Link href="/dashboard" className="flex items-center h-6">
-                <img src="/nottto-logo.png" alt="Nottto" className="h-full" />
+                <img src="/notto-logo.png" alt="Notto" className="h-full" />
               </Link>
             </div>
 

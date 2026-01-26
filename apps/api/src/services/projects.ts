@@ -1,18 +1,18 @@
 import { eq, and } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 import { db } from "../db";
-import { projects, workspaces } from "@nottto/shared/db";
+import { projects, workspaces } from "@notto/shared/db";
 import { checkAccess as checkWorkspaceAccess } from "./workspaces";
 import { generateSlug, generateUniqueSlug } from "../utils/slug";
 import type {
   Project,
   CreateProjectInput,
   UpdateProjectInput,
-} from "@nottto/shared";
+} from "@notto/shared";
 
 export async function list(
   workspaceId: string,
-  userId: string
+  userId: string,
 ): Promise<Project[]> {
   // Check workspace access
   const hasAccess = await checkWorkspaceAccess(workspaceId, userId);
@@ -41,7 +41,7 @@ export async function list(
 export async function create(
   workspaceId: string,
   userId: string,
-  data: CreateProjectInput
+  data: CreateProjectInput,
 ): Promise<Project> {
   // Check workspace access
   const hasAccess = await checkWorkspaceAccess(workspaceId, userId);
@@ -112,7 +112,7 @@ export async function get(projectId: string, userId: string): Promise<Project> {
 export async function update(
   projectId: string,
   userId: string,
-  data: UpdateProjectInput
+  data: UpdateProjectInput,
 ): Promise<Project> {
   const [project] = await db
     .select()
@@ -138,8 +138,8 @@ export async function update(
       .where(
         and(
           eq(projects.workspaceId, project.workspaceId),
-          eq(projects.slug, data.slug)
-        )
+          eq(projects.slug, data.slug),
+        ),
       )
       .limit(1);
 
@@ -194,7 +194,7 @@ export async function remove(projectId: string, userId: string): Promise<void> {
 // Helper to check if user has access to a project
 export async function checkProjectAccess(
   projectId: string,
-  userId: string
+  userId: string,
 ): Promise<boolean> {
   const [project] = await db
     .select()

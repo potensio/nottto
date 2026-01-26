@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
-import { updateProjectSchema, createAnnotationSchema } from "@nottto/shared";
+import { updateProjectSchema, createAnnotationSchema } from "@notto/shared";
 import { authMiddleware } from "../middleware/auth";
 import * as projectService from "../services/projects";
 import * as annotationService from "../services/annotations";
@@ -28,7 +28,7 @@ projectRoutes.patch(
     const data = c.req.valid("json");
     const project = await projectService.update(projectId, userId, data);
     return c.json({ project });
-  }
+  },
 );
 
 // DELETE /projects/:id - Delete project
@@ -57,5 +57,5 @@ projectRoutes.post(
     const data = c.req.valid("json");
     const annotation = await annotationService.create(projectId, userId, data);
     return c.json({ annotation }, 201);
-  }
+  },
 );

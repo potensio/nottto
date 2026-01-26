@@ -39,10 +39,10 @@ export async function createAuthSession(): Promise<AuthSession> {
  * Polls for auth session completion.
  */
 export async function pollAuthSession(
-  sessionId: string
+  sessionId: string,
 ): Promise<AuthSessionStatus> {
   const response = await fetch(
-    `${API_URL}/extension-auth/session/${sessionId}`
+    `${API_URL}/extension-auth/session/${sessionId}`,
   );
 
   if (!response.ok) {
@@ -73,7 +73,7 @@ export async function cancelAuthSession(sessionId: string): Promise<void> {
  */
 export async function startAuthFlow(
   onStatusChange?: (status: string) => void,
-  mode: "login" | "register" = "login"
+  mode: "login" | "register" = "login",
 ): Promise<{ success: boolean; user?: User }> {
   let sessionId: string | null = null;
 
@@ -126,7 +126,7 @@ export async function startAuthFlow(
     await cancelAuthSession(sessionId);
     return { success: false };
   } catch (error) {
-    console.error("Nottto: Auth flow error", error);
+    console.error("Notto: Auth flow error", error);
     onStatusChange?.("Login failed");
 
     // Cleanup session if created

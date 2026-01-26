@@ -12,12 +12,12 @@ export function showAuthPrompt(): void {
   removeAuthPrompt();
 
   const overlay = document.createElement("div");
-  overlay.id = "nottto-auth-prompt";
+  overlay.id = "notto-auth-prompt";
   overlay.innerHTML = getModalHTML();
 
   // Add styles
   const style = document.createElement("style");
-  style.id = "nottto-auth-prompt-styles";
+  style.id = "notto-auth-prompt-styles";
   style.textContent = getStyles();
 
   document.head.appendChild(style);
@@ -35,9 +35,9 @@ function getModalHTML(): string {
   const iconUrl = chrome.runtime.getURL("icons/icon48.png");
 
   return `
-    <div class="nottto-auth-backdrop">
-      <div class="nottto-auth-modal">
-        <button id="nottto-auth-close-btn" class="nottto-auth-close">
+    <div class="notto-auth-backdrop">
+      <div class="notto-auth-modal">
+        <button id="notto-auth-close-btn" class="notto-auth-close">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="18" y1="6" x2="6" y2="18"></line>
             <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -45,16 +45,16 @@ function getModalHTML(): string {
         </button>
         
         <!-- Logo -->
-        <div class="nottto-auth-logo">
-          <img src="${iconUrl}" alt="Nottto" class="nottto-auth-logo-icon" />
+        <div class="notto-auth-logo">
+          <img src="${iconUrl}" alt="Notto" class="notto-auth-logo-icon" />
         </div>
         
         <!-- Header -->
-        <h2 class="nottto-auth-title">Welcome to Nottto</h2>
-        <p class="nottto-auth-description">Sign in to save and sync your screenshots</p>
+        <h2 class="notto-auth-title">Welcome to Notto</h2>
+        <p class="notto-auth-description">Sign in to save and sync your screenshots</p>
         
         <!-- Sign In Button -->
-        <button id="nottto-auth-signin-btn" class="nottto-auth-button">
+        <button id="notto-auth-signin-btn" class="notto-auth-button">
           <span>Login / Register</span>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -63,7 +63,7 @@ function getModalHTML(): string {
         </button>
         
         <!-- Terms -->
-        <p class="nottto-auth-terms">
+        <p class="notto-auth-terms">
           By continuing, you agree to our <a href="${WEB_URL}/terms" target="_blank">Terms</a> and <a href="${WEB_URL}/privacy" target="_blank">Privacy Policy</a>
         </p>
       </div>
@@ -78,7 +78,7 @@ function getStyles(): string {
   return `
     @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Manrope:wght@400;500;600;700&display=swap');
 
-    .nottto-auth-backdrop {
+    .notto-auth-backdrop {
       position: fixed;
       top: 0;
       left: 0;
@@ -93,7 +93,7 @@ function getStyles(): string {
       backdrop-filter: blur(4px);
     }
 
-    .nottto-auth-modal {
+    .notto-auth-modal {
       background: #fafafa;
       border-radius: 16px;
       padding: 32px;
@@ -103,7 +103,7 @@ function getStyles(): string {
       box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
     }
 
-    .nottto-auth-close {
+    .notto-auth-close {
       position: absolute;
       top: 16px;
       right: 16px;
@@ -120,25 +120,25 @@ function getStyles(): string {
       transition: background 0.15s, color 0.15s;
     }
 
-    .nottto-auth-close:hover {
+    .notto-auth-close:hover {
       background: #e5e5e5;
       color: #525252;
     }
 
-    .nottto-auth-logo {
+    .notto-auth-logo {
       display: flex;
       align-items: center;
       justify-content: center;
       margin-bottom: 24px;
     }
 
-    .nottto-auth-logo-icon {
+    .notto-auth-logo-icon {
       width: 48px;
       height: 48px;
       border-radius: 12px;
     }
 
-    .nottto-auth-title {
+    .notto-auth-title {
       font-family: 'Instrument Serif', serif;
       font-size: 32px;
       font-weight: 400;
@@ -148,7 +148,7 @@ function getStyles(): string {
       text-align: center;
     }
 
-    .nottto-auth-description {
+    .notto-auth-description {
       font-size: 14px;
       color: #737373;
       margin: 0 0 24px;
@@ -156,7 +156,7 @@ function getStyles(): string {
       text-align: center;
     }
 
-    .nottto-auth-button {
+    .notto-auth-button {
       width: 100%;
       padding: 12px 24px;
       background: #171717;
@@ -173,11 +173,11 @@ function getStyles(): string {
       gap: 8px;
     }
 
-    .nottto-auth-button:hover {
+    .notto-auth-button:hover {
       background: #262626;
     }
 
-    .nottto-auth-terms {
+    .notto-auth-terms {
       font-size: 12px;
       color: #a3a3a3;
       text-align: center;
@@ -185,12 +185,12 @@ function getStyles(): string {
       line-height: 1.5;
     }
 
-    .nottto-auth-terms a {
+    .notto-auth-terms a {
       color: #ea580c;
       text-decoration: none;
     }
 
-    .nottto-auth-terms a:hover {
+    .notto-auth-terms a:hover {
       text-decoration: underline;
     }
   `;
@@ -200,8 +200,8 @@ function getStyles(): string {
  * Initialize all event listeners for the modal
  */
 function initEventListeners(overlay: HTMLElement): void {
-  const signInBtn = document.getElementById("nottto-auth-signin-btn");
-  const closeBtn = document.getElementById("nottto-auth-close-btn");
+  const signInBtn = document.getElementById("notto-auth-signin-btn");
+  const closeBtn = document.getElementById("notto-auth-close-btn");
 
   // Sign in button
   signInBtn?.addEventListener("click", () => {
@@ -216,7 +216,7 @@ function initEventListeners(overlay: HTMLElement): void {
 
   // Close on backdrop click
   overlay.addEventListener("click", (e) => {
-    if (e.target === overlay.querySelector(".nottto-auth-backdrop")) {
+    if (e.target === overlay.querySelector(".notto-auth-backdrop")) {
       removeAuthPrompt();
     }
   });
@@ -235,8 +235,8 @@ function initEventListeners(overlay: HTMLElement): void {
  * Removes the auth prompt overlay
  */
 export function removeAuthPrompt(): void {
-  const overlay = document.getElementById("nottto-auth-prompt");
-  const styles = document.getElementById("nottto-auth-prompt-styles");
+  const overlay = document.getElementById("notto-auth-prompt");
+  const styles = document.getElementById("notto-auth-prompt-styles");
   overlay?.remove();
   styles?.remove();
 }

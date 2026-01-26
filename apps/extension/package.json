@@ -1,8 +1,8 @@
 {
-  "name": "@nottto/extension",
+  "name": "@notto/extension",
   "version": "2.1.0",
   "private": true,
-  "description": "Nottto Chrome extension for screenshot annotation",
+  "description": "Notto Chrome extension for screenshot annotation",
   "scripts": {
     "build": "npm run build:js && npm run build:css",
     "build:js": "node esbuild.config.js",
@@ -20,6 +20,6 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "@nottto/shared": "workspace:*"
+    "@notto/shared": "workspace:*"
   }
 }

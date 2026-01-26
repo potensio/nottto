@@ -7,7 +7,7 @@ import {
   workspaces,
   workspaceMembers,
   projects,
-} from "@nottto/shared/db";
+} from "@notto/shared/db";
 import {
   generateSecureToken,
   hashToken,
@@ -20,7 +20,7 @@ import { generateTokens } from "../utils/auth";
 import { generateSlug, generateUniqueSlug } from "../utils/slug";
 import { sendMagicLinkEmail } from "./email";
 import { checkMagicLinkLimit, recordMagicLinkRequest } from "./rate-limiter";
-import type { User, AuthResponse } from "@nottto/shared";
+import type { User, AuthResponse } from "@notto/shared";
 
 const WEB_URL = process.env.WEB_URL || "http://localhost:3000";
 
@@ -42,7 +42,7 @@ export async function requestMagicLink(
   email: string,
   isRegister: boolean = false,
   name?: string,
-  extensionSession?: string
+  extensionSession?: string,
 ): Promise<MagicLinkRequestResult> {
   const normalizedEmail = email.toLowerCase().trim();
 
@@ -106,7 +106,7 @@ export async function requestMagicLink(
 
   // Build magic link URL (include extension session if provided)
   let magicLinkUrl = `${WEB_URL}/auth/verify?token=${encodeURIComponent(
-    token
+    token,
   )}`;
   if (extensionSession) {
     magicLinkUrl += `&session=${encodeURIComponent(extensionSession)}`;
@@ -131,7 +131,7 @@ export async function requestMagicLink(
  * Creates user, workspace, and project if this is a new user (registration).
  */
 export async function verifyMagicLink(
-  token: string
+  token: string,
 ): Promise<MagicLinkVerifyResult> {
   const tokenHash = hashToken(token);
 
@@ -142,8 +142,8 @@ export async function verifyMagicLink(
     .where(
       and(
         eq(magicLinkTokens.tokenHash, tokenHash),
-        isNull(magicLinkTokens.usedAt)
-      )
+        isNull(magicLinkTokens.usedAt),
+      ),
     )
     .limit(1);
 
@@ -229,7 +229,7 @@ export async function verifyMagicLink(
     const existingProjectSlugs = existingProjects.map((p) => p.slug);
     const projectSlug = generateUniqueSlug(
       "My First Project",
-      existingProjectSlugs
+      existingProjectSlugs,
     );
 
     await db.insert(projects).values({

@@ -1,20 +1,20 @@
 {
-  "name": "nottto",
+  "name": "notto",
   "version": "2.1.0",
   "private": true,
-  "description": "Nottto - Screenshot annotation tool with Chrome extension and API",
+  "description": "Notto - Screenshot annotation tool with Chrome extension and API",
   "scripts": {
     "build": "pnpm -r build",
     "dev": "pnpm -r --parallel dev",
-    "dev:extension": "pnpm --filter @nottto/extension dev",
-    "dev:api": "pnpm --filter @nottto/api dev",
-    "dev:web": "pnpm --filter @nottto/web dev",
-    "build:extension": "pnpm --filter @nottto/extension build",
-    "build:api": "pnpm --filter @nottto/api build",
-    "build:web": "pnpm --filter @nottto/web build",
+    "dev:extension": "pnpm --filter @notto/extension dev",
+    "dev:api": "pnpm --filter @notto/api dev",
+    "dev:web": "pnpm --filter @notto/web dev",
+    "build:extension": "pnpm --filter @notto/extension build",
+    "build:api": "pnpm --filter @notto/api build",
+    "build:web": "pnpm --filter @notto/web build",
     "typecheck": "pnpm -r typecheck",
-    "db:generate": "pnpm --filter @nottto/api db:generate",
-    "db:migrate": "pnpm --filter @nottto/api db:migrate"
+    "db:generate": "pnpm --filter @notto/api db:generate",
+    "db:migrate": "pnpm --filter @notto/api db:migrate"
   },
   "devDependencies": {
     "typescript": "^5.9.3"

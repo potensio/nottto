@@ -1,4 +1,4 @@
-// Project API for Nottto backend integration
+// Project API for Notto backend integration
 
 import { get, post, put, del } from "./client";
 
@@ -30,7 +30,7 @@ export interface UpdateProjectData {
 
 export async function listProjects(workspaceId: string): Promise<Project[]> {
   const response = await get<{ projects: Project[] }>(
-    `/workspaces/${workspaceId}/projects`
+    `/workspaces/${workspaceId}/projects`,
   );
   return response.projects;
 }
@@ -43,14 +43,14 @@ export async function getProject(id: string): Promise<Project> {
 export async function createProject(data: CreateProjectData): Promise<Project> {
   const response = await post<{ project: Project }>(
     `/workspaces/${data.workspaceId}/projects`,
-    data
+    data,
   );
   return response.project;
 }
 
 export async function updateProject(
   id: string,
-  data: UpdateProjectData
+  data: UpdateProjectData,
 ): Promise<Project> {
   const response = await put<{ project: Project }>(`/projects/${id}`, data);
   return response.project;

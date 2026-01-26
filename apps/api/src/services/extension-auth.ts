@@ -1,7 +1,7 @@
 import { eq, and, gt, lt } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 import { db } from "../db";
-import { users, extensionAuthSessions } from "@nottto/shared/db";
+import { users, extensionAuthSessions } from "@notto/shared/db";
 import { generateTokens } from "../utils/auth";
 import { nanoid } from "nanoid";
 
@@ -50,7 +50,7 @@ export async function createAuthSession(): Promise<AuthSessionResponse> {
  * If completed, returns the tokens and user info.
  */
 export async function getAuthSession(
-  sessionId: string
+  sessionId: string,
 ): Promise<AuthSessionStatus> {
   const [session] = await db
     .select()
@@ -118,7 +118,7 @@ export async function getAuthSession(
  */
 export async function completeAuthSession(
   sessionId: string,
-  userId: string
+  userId: string,
 ): Promise<{ success: boolean }> {
   const [session] = await db
     .select()
@@ -126,8 +126,8 @@ export async function completeAuthSession(
     .where(
       and(
         eq(extensionAuthSessions.id, sessionId),
-        gt(extensionAuthSessions.expiresAt, new Date())
-      )
+        gt(extensionAuthSessions.expiresAt, new Date()),
+      ),
     )
     .limit(1);
 

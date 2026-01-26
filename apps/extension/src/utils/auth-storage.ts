@@ -20,9 +20,9 @@ export interface StoredAuthState {
 }
 
 const STORAGE_KEYS = {
-  ACCESS_TOKEN: "nottto_access_token",
-  REFRESH_TOKEN: "nottto_refresh_token",
-  USER: "nottto_user",
+  ACCESS_TOKEN: "notto_access_token",
+  REFRESH_TOKEN: "notto_refresh_token",
+  USER: "notto_user",
 } as const;
 
 /**
@@ -30,7 +30,7 @@ const STORAGE_KEYS = {
  */
 export async function saveAuthState(
   tokens: AuthTokens,
-  user: User
+  user: User,
 ): Promise<void> {
   await chrome.storage.local.set({
     [STORAGE_KEYS.ACCESS_TOKEN]: tokens.accessToken,
@@ -88,7 +88,7 @@ export async function hasValidTokens(): Promise<boolean> {
   const { accessToken, refreshToken } = await getAuthState();
 
   if (!accessToken || !refreshToken) {
-    console.log("Nottto Auth: Missing tokens");
+    console.log("Notto Auth: Missing tokens");
     return false;
   }
 
@@ -98,15 +98,15 @@ export async function hasValidTokens(): Promise<boolean> {
     const now = Math.floor(Date.now() / 1000);
 
     if (payload.exp && payload.exp < now) {
-      console.log("Nottto Auth: Access token expired, will need refresh");
+      console.log("Notto Auth: Access token expired, will need refresh");
       // Token is expired but we have refresh token, so still "valid"
       return true;
     }
 
-    console.log("Nottto Auth: Tokens appear valid");
+    console.log("Notto Auth: Tokens appear valid");
     return true;
   } catch (error) {
-    console.error("Nottto Auth: Invalid token format:", error);
+    console.error("Notto Auth: Invalid token format:", error);
     return false;
   }
 }

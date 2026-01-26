@@ -3,7 +3,7 @@
 export const mockUser = {
   id: "user-1",
   name: "Demo User",
-  email: "demo@nottto.com",
+  email: "demo@notto.site",
 };
 
 export const mockWorkspaces = [
@@ -56,7 +56,7 @@ export const mockAnnotations = {
         name: "Marketing Website",
         slug: "marketing-website",
       },
-      user: { id: "user-1", name: "Demo User", email: "demo@nottto.com" },
+      user: { id: "user-1", name: "Demo User", email: "demo@notto.site" },
     },
     {
       id: "ann-2",
@@ -76,7 +76,7 @@ export const mockAnnotations = {
         name: "Marketing Website",
         slug: "marketing-website",
       },
-      user: { id: "user-1", name: "Demo User", email: "demo@nottto.com" },
+      user: { id: "user-1", name: "Demo User", email: "demo@notto.site" },
     },
     {
       id: "ann-3",
@@ -96,7 +96,7 @@ export const mockAnnotations = {
         name: "Marketing Website",
         slug: "marketing-website",
       },
-      user: { id: "user-1", name: "Demo User", email: "demo@nottto.com" },
+      user: { id: "user-1", name: "Demo User", email: "demo@notto.site" },
     },
   ],
   "proj-2": [
@@ -114,7 +114,7 @@ export const mockAnnotations = {
       createdAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(), // 5 hours ago
       updatedAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
       project: { id: "proj-2", name: "Mobile App", slug: "mobile-app" },
-      user: { id: "user-1", name: "Demo User", email: "demo@nottto.com" },
+      user: { id: "user-1", name: "Demo User", email: "demo@notto.site" },
     },
   ],
   "proj-3": [],
@@ -124,10 +124,10 @@ export const mockAnnotations = {
 export function getWorkspaceAnnotations(workspaceId: string) {
   const projects = mockProjects[workspaceId as keyof typeof mockProjects] || [];
   const allAnnotations = projects.flatMap(
-    (p) => mockAnnotations[p.id as keyof typeof mockAnnotations] || []
+    (p) => mockAnnotations[p.id as keyof typeof mockAnnotations] || [],
   );
   return allAnnotations.sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
   );
 }
 

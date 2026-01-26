@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 import { db } from "../db";
-import { annotations, users, projects } from "@nottto/shared/db";
+import { annotations, users, projects } from "@notto/shared/db";
 import { checkProjectAccess } from "./projects";
 import { uploadBase64Screenshot } from "./upload";
 import { fireWebhookIfEnabled } from "./webhook-executor";
@@ -9,11 +9,11 @@ import type {
   Annotation,
   CreateAnnotationInput,
   UpdateAnnotationInput,
-} from "@nottto/shared";
+} from "@notto/shared";
 
 export async function list(
   projectId: string,
-  userId: string
+  userId: string,
 ): Promise<Annotation[]> {
   // Check project access
   const hasAccess = await checkProjectAccess(projectId, userId);
@@ -34,6 +34,7 @@ export async function list(
     description: a.description,
     type: a.type as Annotation["type"],
     priority: a.priority as Annotation["priority"],
+    status: a.status as Annotation["status"],
     pageUrl: a.pageUrl,
     pageTitle: a.pageTitle,
     screenshotOriginal: a.screenshotOriginal,
@@ -47,7 +48,7 @@ export async function list(
 export async function create(
   projectId: string,
   userId: string,
-  data: CreateAnnotationInput & { screenshotAnnotatedBase64?: string }
+  data: CreateAnnotationInput & { screenshotAnnotatedBase64?: string },
 ): Promise<Annotation> {
   // Check project access
   const hasAccess = await checkProjectAccess(projectId, userId);
@@ -60,7 +61,7 @@ export async function create(
   if (data.screenshotAnnotatedBase64) {
     const uploadResult = await uploadBase64Screenshot(
       data.screenshotAnnotatedBase64,
-      userId
+      userId,
     );
     screenshotAnnotatedUrl = uploadResult.url;
   }
@@ -93,6 +94,7 @@ export async function create(
     description: newAnnotation.description,
     type: newAnnotation.type as Annotation["type"],
     priority: newAnnotation.priority as Annotation["priority"],
+    status: newAnnotation.status as Annotation["status"],
     pageUrl: newAnnotation.pageUrl,
     pageTitle: newAnnotation.pageTitle,
     screenshotOriginal: newAnnotation.screenshotOriginal,
@@ -120,7 +122,7 @@ async function fireWebhookAsync(
     priority: string | null;
     type: string | null;
     createdAt: Date;
-  }
+  },
 ): Promise<void> {
   try {
     // Get user and project info for webhook payload
@@ -167,7 +169,7 @@ async function fireWebhookAsync(
 
 export async function get(
   annotationId: string,
-  userId: string
+  userId: string,
 ): Promise<Annotation> {
   const [annotation] = await db
     .select()
@@ -195,6 +197,7 @@ export async function get(
     description: annotation.description,
     type: annotation.type as Annotation["type"],
     priority: annotation.priority as Annotation["priority"],
+    status: annotation.status as Annotation["status"],
     pageUrl: annotation.pageUrl,
     pageTitle: annotation.pageTitle,
     screenshotOriginal: annotation.screenshotOriginal,
@@ -208,7 +211,7 @@ export async function get(
 export async function update(
   annotationId: string,
   userId: string,
-  data: UpdateAnnotationInput
+  data: UpdateAnnotationInput,
 ): Promise<Annotation> {
   const [annotation] = await db
     .select()
@@ -237,6 +240,7 @@ export async function update(
   if (data.description !== undefined) updateData.description = data.description;
   if (data.type !== undefined) updateData.type = data.type;
   if (data.priority !== undefined) updateData.priority = data.priority;
+  if (data.status !== undefined) updateData.status = data.status;
   if (data.pageUrl !== undefined) updateData.pageUrl = data.pageUrl;
   if (data.pageTitle !== undefined) updateData.pageTitle = data.pageTitle;
   if (data.screenshotOriginal !== undefined)
@@ -259,6 +263,7 @@ export async function update(
     description: updated.description,
     type: updated.type as Annotation["type"],
     priority: updated.priority as Annotation["priority"],
+    status: updated.status as Annotation["status"],
     pageUrl: updated.pageUrl,
     pageTitle: updated.pageTitle,
     screenshotOriginal: updated.screenshotOriginal,
@@ -271,7 +276,7 @@ export async function update(
 
 export async function remove(
   annotationId: string,
-  userId: string
+  userId: string,
 ): Promise<void> {
   const [annotation] = await db
     .select()

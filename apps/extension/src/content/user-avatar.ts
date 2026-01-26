@@ -145,12 +145,12 @@ export async function handleLogout(): Promise<void> {
   try {
     // Clear all stored authentication data
     await clearAuthState();
-    console.log("Nottto: User logged out successfully");
+    console.log("Notto: User logged out successfully");
 
     // Close the annotation overlay
     cleanupOverlay();
   } catch (error) {
-    console.error("Nottto: Failed to logout", error);
+    console.error("Notto: Failed to logout", error);
   }
 }
 

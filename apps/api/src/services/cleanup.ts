@@ -1,6 +1,6 @@
 import { lt, or, isNotNull } from "drizzle-orm";
 import { db } from "../db";
-import { magicLinkTokens, rateLimitRecords } from "@nottto/shared/db";
+import { magicLinkTokens, rateLimitRecords } from "@notto/shared/db";
 
 /**
  * Cleans up expired or used magic link tokens.
@@ -14,7 +14,7 @@ export async function cleanupMagicLinkTokens(): Promise<number> {
   const result = await db
     .delete(magicLinkTokens)
     .where(
-      or(lt(magicLinkTokens.expiresAt, now), isNotNull(magicLinkTokens.usedAt))
+      or(lt(magicLinkTokens.expiresAt, now), isNotNull(magicLinkTokens.usedAt)),
     )
     .returning();
 

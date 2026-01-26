@@ -12,7 +12,7 @@ export default function HomePage() {
       {/* Navigation */}
       <nav className="relative z-50 w-full max-w-7xl mx-auto px-10 py-6 flex items-center justify-between border-b border-neutral-200/50 backdrop-blur-sm">
         <div className="flex items-center gap-3 h-6 ">
-          <img src="/nottto-logo.png" alt="Description" className="h-full" />
+          <img src="/notto-logo.png" alt="Description" className="h-full" />
         </div>
         <div className="hidden md:flex items-center gap-8 bg-white/50 px-6 py-2 rounded-full border border-neutral-200/50 shadow-sm">
           <a

@@ -4,8 +4,8 @@ declare const fabric: any;
 
 declare global {
   interface Window {
-    notttoState: NotttoState;
-    notttoListenerRegistered?: boolean;
+    nottoState: NottoState;
+    nottoListenerRegistered?: boolean;
   }
 }
 
@@ -16,7 +16,7 @@ type FabricCanvas = any;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type FabricObject = any;
 
-export interface NotttoState {
+export interface NottoState {
   fabricCanvas: FabricCanvas | null;
   overlay: HTMLElement | null;
   notesInput: HTMLTextAreaElement | null;

@@ -1,6 +1,6 @@
 import { eq, and, gte, lt } from "drizzle-orm";
 import { db } from "../db";
-import { rateLimitRecords } from "@nottto/shared/db";
+import { rateLimitRecords } from "@notto/shared/db";
 
 const MAGIC_LINK_LIMIT = 5; // Maximum requests per window
 const WINDOW_HOURS = 1; // Time window in hours
@@ -16,7 +16,7 @@ export interface RateLimitResult {
  * Returns rate limit status including remaining requests.
  */
 export async function checkMagicLinkLimit(
-  email: string
+  email: string,
 ): Promise<RateLimitResult> {
   const windowStart = getWindowStart();
 
@@ -28,8 +28,8 @@ export async function checkMagicLinkLimit(
       and(
         eq(rateLimitRecords.identifier, email.toLowerCase()),
         eq(rateLimitRecords.action, "magic_link"),
-        gte(rateLimitRecords.createdAt, windowStart)
-      )
+        gte(rateLimitRecords.createdAt, windowStart),
+      ),
     );
 
   const count = requests.length;
@@ -39,7 +39,7 @@ export async function checkMagicLinkLimit(
   if (!allowed) {
     // Calculate retry-after based on oldest request in window
     const oldestRequest = requests.reduce((oldest, req) =>
-      req.createdAt < oldest.createdAt ? req : oldest
+      req.createdAt < oldest.createdAt ? req : oldest,
     );
     const resetTime = new Date(oldestRequest.createdAt);
     resetTime.setHours(resetTime.getHours() + WINDOW_HOURS);

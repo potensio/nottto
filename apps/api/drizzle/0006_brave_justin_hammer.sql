@@ -1,0 +1,1 @@
+ALTER TABLE "annotations" ADD COLUMN "status" varchar(20) DEFAULT 'open' NOT NULL;

@@ -13,7 +13,7 @@ export function getMagicLinkEmailHtml({
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sign in to Nottto</title>
+  <title>Sign in to Notto</title>
 </head>
 <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
   <table role="presentation" style="width: 100%; border-collapse: collapse;">
@@ -23,7 +23,7 @@ export function getMagicLinkEmailHtml({
           <!-- Header -->
           <tr>
             <td style="padding: 40px 40px 24px 40px; text-align: center;">
-              <img src="https://nottto.com/nottto-logo.png" alt="Nottto" style="height: 32px; width: auto;" />
+              <img src="https://notto.site/notto-logo.png" alt="Notto" style="height: 32px; width: auto;" />
             </td>
           </tr>
           
@@ -31,7 +31,7 @@ export function getMagicLinkEmailHtml({
           <tr>
             <td style="padding: 0 40px 32px 40px;">
               <h1 style="margin: 0 0 16px 0; font-size: 24px; font-weight: 600; color: #171717; text-align: center;">
-                Sign in to Nottto
+                Sign in to Notto
               </h1>
               <p style="margin: 0 0 24px 0; font-size: 16px; line-height: 24px; color: #525252; text-align: center;">
                 Click the button below to securely sign in to your account. This link will expire in ${expirationMinutes} minutes.
@@ -42,7 +42,7 @@ export function getMagicLinkEmailHtml({
                 <tr>
                   <td align="center">
                     <a href="${magicLinkUrl}" style="display: inline-block; padding: 14px 32px; background-color: #171717; color: #ffffff; text-decoration: none; font-size: 16px; font-weight: 500; border-radius: 8px;">
-                      Sign in to Nottto
+                      Sign in to Notto
                     </a>
                   </td>
                 </tr>
@@ -79,7 +79,7 @@ export function getMagicLinkEmailHtml({
           <tr>
             <td style="padding: 24px 20px; text-align: center;">
               <p style="margin: 0; font-size: 12px; color: #a3a3a3;">
-                © ${new Date().getFullYear()} Nottto. All rights reserved.
+                © ${new Date().getFullYear()} Notto. All rights reserved.
               </p>
             </td>
           </tr>
@@ -97,7 +97,7 @@ export function getMagicLinkEmailText({
   expirationMinutes,
 }: MagicLinkEmailProps): string {
   return `
-Sign in to Nottto
+Sign in to Notto
 
 Click the link below to securely sign in to your account. This link will expire in ${expirationMinutes} minutes.
 
@@ -105,6 +105,6 @@ ${magicLinkUrl}
 
 If you didn't request this email, you can safely ignore it.
 
-© ${new Date().getFullYear()} Nottto. All rights reserved.
+© ${new Date().getFullYear()} Notto. All rights reserved.
   `.trim();
 }

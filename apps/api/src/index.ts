@@ -31,7 +31,7 @@ app.use(
         return origin;
 
       // Allow production web app
-      if (origin === "https://nottto-web.vercel.app") return origin;
+      if (origin === "https://notto-web.vercel.app") return origin;
 
       // Allow any Chrome extension (background script requests)
       if (origin.startsWith("chrome-extension://")) return origin;
@@ -55,7 +55,7 @@ app.use(
 app.onError(errorHandler);
 
 // Health check at /api
-app.get("/", (c) => c.json({ status: "ok", service: "nottto-api" }));
+app.get("/", (c) => c.json({ status: "ok", service: "notto-api" }));
 
 // Routes
 app.route("/auth", authRoutes);

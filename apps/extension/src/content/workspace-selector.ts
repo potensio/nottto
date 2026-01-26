@@ -17,7 +17,7 @@ let isDropdownOpen = false;
  */
 export async function initWorkspaceSelector(): Promise<void> {
   const trigger = document.getElementById(
-    "bf-workspace-trigger"
+    "bf-workspace-trigger",
   ) as HTMLButtonElement;
   const nameEl = document.getElementById("bf-workspace-name");
 
@@ -34,11 +34,11 @@ export async function initWorkspaceSelector(): Promise<void> {
 
       // Fetch workspaces from API
       console.log(
-        "Nottto: Fetching workspaces...",
-        retryCount > 0 ? `(retry ${retryCount})` : ""
+        "Notto: Fetching workspaces...",
+        retryCount > 0 ? `(retry ${retryCount})` : "",
       );
       workspaces = await listWorkspaces();
-      console.log("Nottto: Workspaces fetched:", workspaces.length);
+      console.log("Notto: Workspaces fetched:", workspaces.length);
 
       if (workspaces.length === 0) {
         renderNoWorkspacesState();
@@ -54,7 +54,7 @@ export async function initWorkspaceSelector(): Promise<void> {
 
       if (savedSelection.workspaceId) {
         const exists = workspaces.some(
-          (w) => w.id === savedSelection.workspaceId
+          (w) => w.id === savedSelection.workspaceId,
         );
         if (exists) {
           workspaceToSelect = savedSelection.workspaceId;
@@ -78,7 +78,7 @@ export async function initWorkspaceSelector(): Promise<void> {
       // Setup event listeners
       setupDropdownListeners();
     } catch (error) {
-      console.error("Nottto: Failed to load workspaces", error);
+      console.error("Notto: Failed to load workspaces", error);
 
       // Check if it's an authentication error
       if (
@@ -93,7 +93,7 @@ export async function initWorkspaceSelector(): Promise<void> {
       if (retryCount < maxRetries) {
         retryCount++;
         console.log(
-          `Nottto: Retrying workspace fetch (${retryCount}/${maxRetries})...`
+          `Nottto: Retrying workspace fetch (${retryCount}/${maxRetries})...`,
         );
         // Exponential backoff: 1s, 2s, 4s
         const delay = Math.pow(2, retryCount - 1) * 1000;
@@ -155,7 +155,7 @@ function handleClickOutside(event: Event): void {
  */
 async function selectWorkspace(
   workspaceId: string,
-  saveSelection = true
+  saveSelection = true,
 ): Promise<void> {
   const workspace = workspaces.find((w) => w.id === workspaceId);
   if (!workspace) return;
@@ -218,7 +218,7 @@ function renderWorkspaceList(workspaces: Workspace[]): void {
         <span class="bf-workspace-item-name">${workspace.name}</span>
         <span class="bf-workspace-check hidden">${icons.check}</span>
       </button>
-    `
+    `,
     )
     .join("");
 
@@ -240,7 +240,7 @@ function renderWorkspaceList(workspaces: Workspace[]): void {
 function renderNoWorkspacesState(): void {
   const nameEl = document.getElementById("bf-workspace-name");
   const trigger = document.getElementById(
-    "bf-workspace-trigger"
+    "bf-workspace-trigger",
   ) as HTMLButtonElement;
 
   if (nameEl) {
@@ -268,7 +268,7 @@ function renderNoWorkspacesState(): void {
 function renderErrorState(message: string): void {
   const nameEl = document.getElementById("bf-workspace-name");
   const trigger = document.getElementById(
-    "bf-workspace-trigger"
+    "bf-workspace-trigger",
   ) as HTMLButtonElement;
 
   if (nameEl) {
@@ -281,7 +281,7 @@ function renderErrorState(message: string): void {
     () => {
       initWorkspaceSelector();
     },
-    { once: true }
+    { once: true },
   );
 }
 
@@ -291,7 +291,7 @@ function renderErrorState(message: string): void {
 function renderAuthRequiredState(): void {
   const nameEl = document.getElementById("bf-workspace-name");
   const trigger = document.getElementById(
-    "bf-workspace-trigger"
+    "bf-workspace-trigger",
   ) as HTMLButtonElement;
 
   if (nameEl) {
@@ -306,7 +306,7 @@ function renderAuthRequiredState(): void {
         // Trigger re-authentication
         window.location.reload();
       },
-      { once: true }
+      { once: true },
     );
   }
 }

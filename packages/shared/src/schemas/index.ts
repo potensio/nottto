@@ -26,7 +26,7 @@ export const magicLinkRequestSchema = z
   })
   .refine(
     (data) => !data.isRegister || (data.name && data.name.trim().length > 0),
-    { message: "Full name is required for registration", path: ["name"] }
+    { message: "Full name is required for registration", path: ["name"] },
   );
 
 export const magicLinkVerifySchema = z.object({
@@ -74,6 +74,7 @@ export const annotationPrioritySchema = z.enum([
   "medium",
   "low",
 ]);
+export const annotationStatusSchema = z.enum(["open", "done"]);
 
 export const createAnnotationSchema = z.object({
   title: z.string().min(1, "Title is required").max(255),
@@ -93,6 +94,7 @@ export const updateAnnotationSchema = z.object({
   description: z.string().max(5000).optional(),
   type: annotationTypeSchema.optional().nullable(),
   priority: annotationPrioritySchema.optional().nullable(),
+  status: annotationStatusSchema.optional(),
   pageUrl: z.string().url("Invalid URL").optional().nullable(),
   pageTitle: z.string().max(255).optional().nullable(),
   screenshotOriginal: z.string().url("Invalid URL").optional().nullable(),

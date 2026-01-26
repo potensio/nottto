@@ -7,7 +7,7 @@ export interface SelectionData {
   timestamp: number;
 }
 
-const STORAGE_KEY = "nottto_selection";
+const STORAGE_KEY = "notto_selection";
 
 /**
  * Save workspace and project selection to chrome.storage.local
@@ -48,7 +48,7 @@ export async function loadSelection(): Promise<SelectionData> {
             workspaceId: null,
             projectId: null,
             timestamp: 0,
-          }
+          },
         );
       }
     });
@@ -74,7 +74,7 @@ export async function clearSelection(): Promise<void> {
  * Save only workspace selection (clears project when workspace changes)
  */
 export async function saveWorkspaceSelection(
-  workspaceId: string | null
+  workspaceId: string | null,
 ): Promise<void> {
   return saveSelection({
     workspaceId,
@@ -86,7 +86,7 @@ export async function saveWorkspaceSelection(
  * Save only project selection (preserves workspace)
  */
 export async function saveProjectSelection(
-  projectId: string | null
+  projectId: string | null,
 ): Promise<void> {
   const current = await loadSelection();
   return saveSelection({

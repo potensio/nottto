@@ -17,9 +17,9 @@ export async function createOverlay(): Promise<void> {
   const state = getState();
 
   // Inject Google Fonts link if not already present
-  if (!document.getElementById("nottto-google-fonts")) {
+  if (!document.getElementById("notto-google-fonts")) {
     const fontLink = document.createElement("link");
-    fontLink.id = "nottto-google-fonts";
+    fontLink.id = "notto-google-fonts";
     fontLink.rel = "stylesheet";
     fontLink.href =
       "https://fonts.googleapis.com/css2?family=Gochi+Hand&display=swap";
@@ -30,7 +30,7 @@ export async function createOverlay(): Promise<void> {
   const user = await getUser();
 
   state.overlay = document.createElement("div");
-  state.overlay.id = "nottto-overlay";
+  state.overlay.id = "notto-overlay";
   state.overlay.className =
     "fixed top-0 left-0 w-screen h-screen z-overlay bg-bf-bg flex flex-row font-sans text-bf-primary";
   state.overlay.innerHTML = `
@@ -212,7 +212,7 @@ export async function createOverlay(): Promise<void> {
 
   document.body.appendChild(state.overlay);
   state.notesInput = document.getElementById(
-    "bf-description-input"
+    "bf-description-input",
   ) as HTMLTextAreaElement;
   setupEventListeners();
 
@@ -238,7 +238,7 @@ export function cleanupOverlay(): void {
       state.fabricCanvas.off();
       state.fabricCanvas.dispose();
     } catch (e) {
-      console.warn("Nottto: Error disposing canvas", e);
+      console.warn("Notto: Error disposing canvas", e);
     }
   }
 

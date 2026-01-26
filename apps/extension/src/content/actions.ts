@@ -28,7 +28,7 @@ export function deleteSelected(): void {
 export function updateDeleteButtonState(): void {
   const state = getState();
   const deleteBtn = document.getElementById(
-    "bf-delete-btn"
+    "bf-delete-btn",
   ) as HTMLButtonElement | null;
   if (!deleteBtn) return;
 
@@ -58,7 +58,7 @@ export function clearAnnotations(): void {
       });
       state.fabricCanvas!.setBackgroundImage(
         fabricImg,
-        state.fabricCanvas!.renderAll.bind(state.fabricCanvas)
+        state.fabricCanvas!.renderAll.bind(state.fabricCanvas),
       );
     });
   }
@@ -114,7 +114,7 @@ export async function saveTask(): Promise<void> {
     showToast("Annotation saved successfully!");
     setTimeout(cleanupOverlay, 1500);
   } catch (error) {
-    console.error("Nottto: Save failed", error);
+    console.error("Notto: Save failed", error);
     showToast("Failed to save annotation", "error");
 
     // Re-enable save button for retry
@@ -169,7 +169,7 @@ export async function saveTaskLocally(): Promise<void> {
     await chrome.runtime.sendMessage({
       action: "download",
       url: jsonUrl,
-      filename: `nottto-task-${taskId}.json`,
+      filename: `notto-task-${taskId}.json`,
       saveAs: true,
     });
 
@@ -177,7 +177,7 @@ export async function saveTaskLocally(): Promise<void> {
       await chrome.runtime.sendMessage({
         action: "download",
         url: annotatedImageDataUrl,
-        filename: `nottto-screenshot-${taskId}.png`,
+        filename: `notto-screenshot-${taskId}.png`,
         saveAs: false,
       });
     }
@@ -185,7 +185,7 @@ export async function saveTaskLocally(): Promise<void> {
     showToast("Task saved successfully!");
     setTimeout(cleanupOverlay, 1500);
   } catch (error) {
-    console.error("Nottto: Save failed", error);
+    console.error("Notto: Save failed", error);
     showToast("Failed to save task", "error");
   }
 }

@@ -15,10 +15,10 @@ let currentWorkspaceId: string | null = null;
  */
 export async function initProjectSelector(workspaceId: string): Promise<void> {
   const select = document.getElementById(
-    "bf-project-select"
+    "bf-project-select",
   ) as HTMLSelectElement;
   const createBtn = document.getElementById(
-    "bf-create-project-btn"
+    "bf-create-project-btn",
   ) as HTMLButtonElement;
 
   if (!select) return;
@@ -61,7 +61,7 @@ export async function initProjectSelector(workspaceId: string): Promise<void> {
     // Setup create project form handlers
     setupCreateProjectHandlers();
   } catch (error) {
-    console.error("Nottto: Failed to load projects", error);
+    console.error("Notto: Failed to load projects", error);
     renderErrorState("Failed to load projects");
   }
 }
@@ -71,10 +71,10 @@ export async function initProjectSelector(workspaceId: string): Promise<void> {
  */
 export function resetProjectSelector(): void {
   const select = document.getElementById(
-    "bf-project-select"
+    "bf-project-select",
   ) as HTMLSelectElement;
   const createBtn = document.getElementById(
-    "bf-create-project-btn"
+    "bf-create-project-btn",
   ) as HTMLButtonElement;
 
   if (select) {
@@ -113,7 +113,7 @@ async function handleProjectChange(event: Event): Promise<void> {
  */
 function renderProjectDropdown(projects: Project[]): void {
   const select = document.getElementById(
-    "bf-project-select"
+    "bf-project-select",
   ) as HTMLSelectElement;
   if (!select) return;
 
@@ -166,7 +166,7 @@ function setupCreateProjectHandlers(): void {
   const cancelBtn = document.getElementById("bf-cancel-create-project");
   const confirmBtn = document.getElementById("bf-confirm-create-project");
   const nameInput = document.getElementById(
-    "bf-new-project-name"
+    "bf-new-project-name",
   ) as HTMLInputElement;
 
   createBtn?.removeEventListener("click", showCreateProjectForm);
@@ -198,7 +198,7 @@ function handleNameInputKeydown(event: KeyboardEvent): void {
 function showCreateProjectForm(): void {
   const form = document.getElementById("bf-create-project-form");
   const nameInput = document.getElementById(
-    "bf-new-project-name"
+    "bf-new-project-name",
   ) as HTMLInputElement;
 
   if (form) {
@@ -213,7 +213,7 @@ function showCreateProjectForm(): void {
 function hideCreateProjectForm(): void {
   const form = document.getElementById("bf-create-project-form");
   const nameInput = document.getElementById(
-    "bf-new-project-name"
+    "bf-new-project-name",
   ) as HTMLInputElement;
 
   if (form) {
@@ -229,10 +229,10 @@ function hideCreateProjectForm(): void {
  */
 async function handleCreateProject(): Promise<void> {
   const nameInput = document.getElementById(
-    "bf-new-project-name"
+    "bf-new-project-name",
   ) as HTMLInputElement;
   const confirmBtn = document.getElementById(
-    "bf-confirm-create-project"
+    "bf-confirm-create-project",
   ) as HTMLButtonElement;
 
   if (!nameInput || !currentWorkspaceId) return;
@@ -265,7 +265,7 @@ async function handleCreateProject(): Promise<void> {
 
     // Auto-select the new project
     const select = document.getElementById(
-      "bf-project-select"
+      "bf-project-select",
     ) as HTMLSelectElement;
     if (select) {
       select.value = newProject.id;
@@ -277,7 +277,7 @@ async function handleCreateProject(): Promise<void> {
     hideCreateProjectForm();
     showToast("Project created successfully!");
   } catch (error) {
-    console.error("Nottto: Failed to create project", error);
+    console.error("Notto: Failed to create project", error);
     showToast("Failed to create project", "error");
   } finally {
     // Re-enable button

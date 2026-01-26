@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
-import { updateAnnotationSchema } from "@nottto/shared";
+import { updateAnnotationSchema } from "@notto/shared";
 import { authMiddleware } from "../middleware/auth";
 import * as annotationService from "../services/annotations";
 
@@ -28,10 +28,10 @@ annotationRoutes.patch(
     const annotation = await annotationService.update(
       annotationId,
       userId,
-      data
+      data,
     );
     return c.json({ annotation });
-  }
+  },
 );
 
 // DELETE /annotations/:id - Delete annotation

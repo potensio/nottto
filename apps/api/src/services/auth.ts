@@ -7,7 +7,7 @@ import {
   workspaceMembers,
   projects,
   sessions,
-} from "@nottto/shared/db";
+} from "@notto/shared/db";
 import {
   hashPassword,
   verifyPassword,
@@ -17,7 +17,7 @@ import {
 } from "../utils/auth";
 import { generateSlug } from "../utils/slug";
 import { nanoid } from "nanoid";
-import type { User, AuthResponse, RefreshResponse } from "@nottto/shared";
+import type { User, AuthResponse, RefreshResponse } from "@notto/shared";
 
 const SESSION_EXPIRY_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
@@ -25,7 +25,7 @@ const SESSION_EXPIRY_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 export async function createSession(
   userId: string,
   userAgent?: string,
-  ipAddress?: string
+  ipAddress?: string,
 ): Promise<string> {
   const sessionToken = nanoid(64);
   const expiresAt = new Date(Date.now() + SESSION_EXPIRY_MS);
@@ -42,7 +42,7 @@ export async function createSession(
 }
 
 export async function validateSession(
-  sessionToken: string
+  sessionToken: string,
 ): Promise<{ userId: string; userEmail: string } | null> {
   const [session] = await db
     .select({
@@ -93,7 +93,7 @@ export async function cleanupExpiredSessions(): Promise<void> {
 export async function register(
   email: string,
   password: string,
-  name?: string
+  name?: string,
 ): Promise<AuthResponse> {
   // Check if user already exists
   const existingUser = await db
@@ -166,7 +166,7 @@ export async function register(
 
 export async function login(
   email: string,
-  password: string
+  password: string,
 ): Promise<AuthResponse> {
   // Find user
   const [user] = await db
@@ -266,7 +266,7 @@ export async function getUser(userId: string): Promise<User> {
 
 export async function updateUser(
   userId: string,
-  data: { name?: string; profilePicture?: string | null }
+  data: { name?: string; profilePicture?: string | null },
 ): Promise<User> {
   const [user] = await db
     .select()

@@ -38,7 +38,7 @@ export const magicLinkTokens = pgTable(
   (table) => [
     index("idx_magic_link_tokens_email").on(table.email),
     index("idx_magic_link_tokens_expires_at").on(table.expiresAt),
-  ]
+  ],
 );
 
 // Rate Limit Records table
@@ -54,9 +54,9 @@ export const rateLimitRecords = pgTable(
     index("idx_rate_limit_identifier_action").on(
       table.identifier,
       table.action,
-      table.createdAt
+      table.createdAt,
     ),
-  ]
+  ],
 );
 
 // Workspaces table
@@ -88,7 +88,7 @@ export const workspaceMembers = pgTable(
   },
   (table) => [
     unique("workspace_user_unique").on(table.workspaceId, table.userId),
-  ]
+  ],
 );
 
 // Projects table
@@ -107,7 +107,7 @@ export const projects = pgTable(
   },
   (table) => [
     unique("workspace_project_slug_unique").on(table.workspaceId, table.slug),
-  ]
+  ],
 );
 
 // Webhook Integrations table (one-to-one with projects)
@@ -144,7 +144,7 @@ export const sessions = pgTable(
   (table) => [
     index("idx_sessions_user_id").on(table.userId),
     index("idx_sessions_expires_at").on(table.expiresAt),
-  ]
+  ],
 );
 
 // Extension Auth Sessions table (for secure extension authentication)
@@ -160,7 +160,7 @@ export const extensionAuthSessions = pgTable(
   },
   (table) => [
     index("idx_extension_auth_sessions_expires_at").on(table.expiresAt),
-  ]
+  ],
 );
 
 // Annotations table
@@ -174,6 +174,7 @@ export const annotations = pgTable("annotations", {
   description: text("description"),
   type: varchar("type", { length: 50 }),
   priority: varchar("priority", { length: 50 }),
+  status: varchar("status", { length: 20 }).default("open").notNull(),
   pageUrl: text("page_url"),
   pageTitle: varchar("page_title", { length: 255 }),
   screenshotOriginal: text("screenshot_original"),
@@ -218,7 +219,7 @@ export const workspaceMembersRelations = relations(
       fields: [workspaceMembers.userId],
       references: [users.id],
     }),
-  })
+  }),
 );
 
 export const projectsRelations = relations(projects, ({ one, many }) => ({
@@ -237,7 +238,7 @@ export const webhookIntegrationsRelations = relations(
       fields: [webhookIntegrations.projectId],
       references: [projects.id],
     }),
-  })
+  }),
 );
 
 export const annotationsRelations = relations(annotations, ({ one }) => ({

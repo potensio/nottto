@@ -1,4 +1,4 @@
-// Annotation API stubs for Nottto backend integration
+// Annotation API stubs for Notto backend integration
 // Implement when backend is ready
 
 import { get, post, put, del } from "./client";
@@ -38,7 +38,7 @@ export interface UpdateAnnotationData {
 }
 
 export async function listAnnotations(
-  projectId: string
+  projectId: string,
 ): Promise<Annotation[]> {
   return get<Annotation[]>(`/projects/${projectId}/annotations`);
 }
@@ -48,14 +48,14 @@ export async function getAnnotation(id: string): Promise<Annotation> {
 }
 
 export async function createAnnotation(
-  data: CreateAnnotationData
+  data: CreateAnnotationData,
 ): Promise<Annotation> {
   return post<Annotation>(`/projects/${data.projectId}/annotations`, data);
 }
 
 export async function updateAnnotation(
   id: string,
-  data: UpdateAnnotationData
+  data: UpdateAnnotationData,
 ): Promise<Annotation> {
   return put<Annotation>(`/annotations/${id}`, data);
 }
@@ -66,7 +66,7 @@ export async function deleteAnnotation(id: string): Promise<void> {
 
 export async function uploadScreenshot(
   annotationId: string,
-  imageBase64: string
+  imageBase64: string,
 ): Promise<{ url: string }> {
   return post<{ url: string }>(`/annotations/${annotationId}/screenshot`, {
     image: imageBase64,

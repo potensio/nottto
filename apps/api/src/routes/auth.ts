@@ -8,7 +8,7 @@ import {
   magicLinkRequestSchema,
   magicLinkVerifySchema,
   updateUserProfileSchema,
-} from "@nottto/shared";
+} from "@notto/shared";
 import { authMiddleware } from "../middleware/auth";
 import * as authService from "../services/auth";
 import * as magicLinkService from "../services/magic-link";
