@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "dev:vercel": "vercel dev",
-    "build": "pnpm db:push && tsup",
+    "build": "tsup",
     "start": "vercel dev",
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",

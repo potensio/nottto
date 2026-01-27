@@ -4,6 +4,8 @@ node_modules/
 # Build outputs
 dist/
 overlay.css
+.next/
+*.tsbuildinfo
 
 # Environment files
 .env
