@@ -4,10 +4,7 @@
   "version": "2.2.0",
   "description": "Capture screenshots and annotate with arrows, boxes, and text in full-screen mode",
   "permissions": ["activeTab", "downloads", "scripting", "storage", "tabs"],
-  "host_permissions": [
-    "http://localhost:3001/*",
-    "https://notto-api.vercel.app/*"
-  ],
+  "host_permissions": ["https://notto-api.vercel.app/*"],
 
   "action": {
     "default_icon": {

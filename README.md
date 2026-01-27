@@ -95,6 +95,15 @@ Full-screen screenshot annotation tool with drawing capabilities.
 3. Click "Load unpacked"
 4. Select `apps/extension` directory
 
+**Package for Chrome Web Store:**
+
+```bash
+cd apps/extension
+npm run package
+```
+
+This creates a production-ready zip in `apps/extension/release/` with localhost permissions removed.
+
 **Keyboard Shortcuts:**
 | Key | Action |
 |-----|--------|

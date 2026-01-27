@@ -200,14 +200,14 @@ function AuthPageContent() {
             </h1>
             <p className="text-neutral-400 leading-relaxed">
               Screenshot, annotate, and share bug reports in seconds. Join
-              thousands of teams streamlining their feedback workflow.
+              hundres of teams streamlining their feedback workflow.
             </p>
 
             {/* Stats */}
             <div className="flex gap-8 mt-10">
               <div>
                 <div className="text-3xl font-instrument-serif text-white">
-                  24.8K
+                  6.8K
                 </div>
                 <div className="text-xs text-neutral-500 uppercase tracking-wider mt-1">
                   Screenshots
@@ -215,7 +215,7 @@ function AuthPageContent() {
               </div>
               <div>
                 <div className="text-3xl font-instrument-serif text-white">
-                  1.2K
+                  100+
                 </div>
                 <div className="text-xs text-neutral-500 uppercase tracking-wider mt-1">
                   Teams
@@ -223,10 +223,10 @@ function AuthPageContent() {
               </div>
               <div>
                 <div className="text-3xl font-instrument-serif text-white">
-                  99.9%
+                  200+
                 </div>
                 <div className="text-xs text-neutral-500 uppercase tracking-wider mt-1">
-                  Uptime
+                  Integrations
                 </div>
               </div>
             </div>
