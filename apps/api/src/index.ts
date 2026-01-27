@@ -32,6 +32,7 @@ app.use(
 
       // Allow production web app
       if (origin === "https://notto-web.vercel.app") return origin;
+      if (origin === "https://notto.site") return origin;
 
       // Allow any Chrome extension (background script requests)
       if (origin.startsWith("chrome-extension://")) return origin;

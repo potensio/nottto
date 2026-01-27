@@ -8,27 +8,27 @@ export default defineConfig({
   outDir: "api",
   clean: true,
   // Bundle all workspace dependencies
-  noExternal: [/@nottto\/.*/],
+  noExternal: [/@notto\/.*/],
   esbuildOptions(options) {
     // Ensure package exports are resolved correctly
     options.conditions = ["import", "module", "default"];
     // Explicitly resolve workspace packages
     options.alias = {
-      "@nottto/shared/db": path.resolve(
+      "@notto/shared/db": path.resolve(
         __dirname,
-        "../../packages/shared/src/db/index.ts"
+        "../../packages/shared/src/db/index.ts",
       ),
-      "@nottto/shared/schemas": path.resolve(
+      "@notto/shared/schemas": path.resolve(
         __dirname,
-        "../../packages/shared/src/schemas/index.ts"
+        "../../packages/shared/src/schemas/index.ts",
       ),
-      "@nottto/shared/types": path.resolve(
+      "@notto/shared/types": path.resolve(
         __dirname,
-        "../../packages/shared/src/types/index.ts"
+        "../../packages/shared/src/types/index.ts",
       ),
-      "@nottto/shared": path.resolve(
+      "@notto/shared": path.resolve(
         __dirname,
-        "../../packages/shared/src/index.ts"
+        "../../packages/shared/src/index.ts",
       ),
     };
   },
