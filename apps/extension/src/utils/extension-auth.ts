@@ -29,7 +29,10 @@ export async function createAuthSession(): Promise<AuthSession> {
   });
 
   if (!response.ok) {
-    throw new Error("Failed to create auth session");
+    const errorText = await response.text();
+    throw new Error(
+      `Failed to create auth session: ${response.status} - ${errorText}`,
+    );
   }
 
   return response.json();

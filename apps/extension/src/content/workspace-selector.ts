@@ -33,12 +33,7 @@ export async function initWorkspaceSelector(): Promise<void> {
       trigger.disabled = true;
 
       // Fetch workspaces from API
-      console.log(
-        "Notto: Fetching workspaces...",
-        retryCount > 0 ? `(retry ${retryCount})` : "",
-      );
       workspaces = await listWorkspaces();
-      console.log("Notto: Workspaces fetched:", workspaces.length);
 
       if (workspaces.length === 0) {
         renderNoWorkspacesState();
@@ -92,9 +87,6 @@ export async function initWorkspaceSelector(): Promise<void> {
       // Retry logic for network errors
       if (retryCount < maxRetries) {
         retryCount++;
-        console.log(
-          `Nottto: Retrying workspace fetch (${retryCount}/${maxRetries})...`,
-        );
         // Exponential backoff: 1s, 2s, 4s
         const delay = Math.pow(2, retryCount - 1) * 1000;
         setTimeout(attemptFetch, delay);

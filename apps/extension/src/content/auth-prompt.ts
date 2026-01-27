@@ -203,9 +203,10 @@ function initEventListeners(overlay: HTMLElement): void {
   const signInBtn = document.getElementById("notto-auth-signin-btn");
   const closeBtn = document.getElementById("notto-auth-close-btn");
 
-  // Sign in button
+  // Sign in button - trigger auth flow via background script
   signInBtn?.addEventListener("click", () => {
-    openAuthPage();
+    // Send message to background script to start auth flow
+    chrome.runtime.sendMessage({ action: "startAuthFlow" });
     removeAuthPrompt();
   });
 
@@ -239,11 +240,4 @@ export function removeAuthPrompt(): void {
   const styles = document.getElementById("notto-auth-prompt-styles");
   overlay?.remove();
   styles?.remove();
-}
-
-/**
- * Opens the web app auth page in a new tab
- */
-export function openAuthPage(): void {
-  window.open(`${WEB_URL}/auth?source=extension`, "_blank");
 }

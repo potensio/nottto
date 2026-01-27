@@ -1,6 +1,6 @@
 {
   "name": "@notto/extension",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "private": true,
   "description": "Notto Chrome extension for screenshot annotation",
   "scripts": {
@@ -10,7 +10,8 @@
     "dev": "concurrently \"npm run dev:js\" \"npm run dev:css\"",
     "dev:js": "node esbuild.config.js --watch",
     "dev:css": "tailwindcss -i ./src/styles/input.css -o ./dist/overlay.css --watch",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "package": "node scripts/package.js"
   },
   "devDependencies": {
     "@types/chrome": "^0.1.33",

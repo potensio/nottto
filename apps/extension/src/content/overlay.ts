@@ -238,7 +238,7 @@ export function cleanupOverlay(): void {
       state.fabricCanvas.off();
       state.fabricCanvas.dispose();
     } catch (e) {
-      console.warn("Notto: Error disposing canvas", e);
+      // Silently handle canvas disposal errors
     }
   }
 

@@ -3,7 +3,7 @@
   "name": "Notto - Screenshot Annotator",
   "version": "2.2.0",
   "description": "Capture screenshots and annotate with arrows, boxes, and text in full-screen mode",
-  "permissions": ["activeTab", "downloads", "scripting", "storage"],
+  "permissions": ["activeTab", "downloads", "scripting", "storage", "tabs"],
   "host_permissions": [
     "http://localhost:3001/*",
     "https://notto-api.vercel.app/*"

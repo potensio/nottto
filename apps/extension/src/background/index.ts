@@ -38,12 +38,10 @@ async function waitForDocumentReady(
 
       await new Promise((resolve) => setTimeout(resolve, 100));
     } catch (error) {
-      console.warn("Notto: Error checking document ready state", error);
       return false;
     }
   }
 
-  console.warn("Notto: Document did not reach ready state within timeout");
   return false;
 }
 
@@ -300,7 +298,6 @@ async function showAuthPromptInTab(tabId: number): Promise<void> {
 // Handle extension icon click
 chrome.action.onClicked.addListener(async (tab) => {
   if (!isValidTab(tab)) {
-    console.warn("Notto: Cannot capture this page.");
     return;
   }
 
@@ -418,16 +415,12 @@ chrome.runtime.onMessage.addListener(
         message.mode as "login" | "register",
       ).then((result) => {
         broadcastAuthComplete(result.success);
-        if (result.success) {
-          console.log("Notto: Auth complete for user", result.user?.email);
-        }
       });
       sendResponse({ success: true });
       return false;
     }
 
     if (message.action === "authComplete") {
-      console.log("Notto: Auth complete for user", message.user?.email);
       sendResponse({ success: true });
       return false;
     }
@@ -482,7 +475,6 @@ async function handleApiRequest(
 
   // Handle 401 - try to refresh token
   if (response.status === 401 && accessToken) {
-    console.log("Notto Background: Got 401, attempting token refresh...");
     const refreshToken = await getRefreshToken();
     if (refreshToken) {
       try {
@@ -495,7 +487,6 @@ async function handleApiRequest(
         if (refreshResponse.ok) {
           const data = await refreshResponse.json();
           await updateAccessToken(data.accessToken);
-          console.log("Notto Background: Token refreshed, retrying request...");
           response = await makeRequest(data.accessToken);
         } else {
           await clearAuthState();

@@ -90,12 +90,6 @@ export async function apiRequest<T>(
   endpoint: string,
   options: RequestInit = {},
 ): Promise<T> {
-  console.log(
-    "Notto API: Making request to",
-    endpoint,
-    "via background script",
-  );
-
   try {
     // Try request via background script first (avoids CORS)
     return await apiRequestViaBackground<T>(
@@ -125,12 +119,6 @@ async function directApiRequest<T>(
   options: RequestInit = {},
 ): Promise<T> {
   let accessToken = await getAccessToken();
-  console.log(
-    "Notto API: Making direct request to",
-    endpoint,
-    "with token:",
-    accessToken ? "present" : "missing",
-  );
 
   const makeRequest = async (token: string | null) => {
     const headers: HeadersInit = {
@@ -161,20 +149,13 @@ async function directApiRequest<T>(
   };
 
   let response = await makeRequest(accessToken);
-  console.log("Notto API: Response status:", response.status);
 
   // Handle 401 - try to refresh token
   if (response.status === 401 && accessToken) {
-    console.log("Notto API: Got 401, attempting token refresh...");
     const newToken = await refreshAccessToken();
     if (newToken) {
-      console.log("Notto API: Token refreshed, retrying request...");
       response = await makeRequest(newToken);
-      console.log("Notto API: Retry response status:", response.status);
     } else {
-      console.log(
-        "Notto API: Token refresh failed - user needs to re-authenticate",
-      );
       // Throw a specific error that the UI can handle
       throw new Error("AUTHENTICATION_REQUIRED");
     }
@@ -186,7 +167,6 @@ async function directApiRequest<T>(
       const errorData = await response.json();
       errorMessage =
         errorData.message || errorData.error?.message || errorMessage;
-      console.log("Notto API: Error response:", errorData);
     } catch {
       // Ignore JSON parse errors
     }
@@ -226,16 +206,13 @@ export async function del<T>(endpoint: string): Promise<T> {
 // Legacy exports for backward compatibility
 export function setAuthToken(_token: string): void {
   // No-op: tokens are now managed via chrome.storage
-  console.warn("setAuthToken is deprecated. Use saveAuthState instead.");
 }
 
 export function clearAuthToken(): void {
   // No-op: tokens are now managed via chrome.storage
-  console.warn("clearAuthToken is deprecated. Use clearAuthState instead.");
 }
 
 export function getAuthToken(): string | null {
   // No-op: tokens are now managed via chrome.storage
-  console.warn("getAuthToken is deprecated. Use getAccessToken instead.");
   return null;
 }

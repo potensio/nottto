@@ -88,7 +88,6 @@ export async function hasValidTokens(): Promise<boolean> {
   const { accessToken, refreshToken } = await getAuthState();
 
   if (!accessToken || !refreshToken) {
-    console.log("Notto Auth: Missing tokens");
     return false;
   }
 
@@ -98,12 +97,10 @@ export async function hasValidTokens(): Promise<boolean> {
     const now = Math.floor(Date.now() / 1000);
 
     if (payload.exp && payload.exp < now) {
-      console.log("Notto Auth: Access token expired, will need refresh");
       // Token is expired but we have refresh token, so still "valid"
       return true;
     }
 
-    console.log("Notto Auth: Tokens appear valid");
     return true;
   } catch (error) {
     console.error("Notto Auth: Invalid token format:", error);
