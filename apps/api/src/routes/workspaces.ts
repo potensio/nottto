@@ -4,10 +4,14 @@ import {
   createWorkspaceSchema,
   updateWorkspaceSchema,
   createProjectSchema,
+  updateMemberRoleSchema,
+  createInvitationSchema,
 } from "@notto/shared";
 import { authMiddleware } from "../middleware/auth";
 import * as workspaceService from "../services/workspaces";
 import * as projectService from "../services/projects";
+import * as memberService from "../services/members";
+import * as invitationService from "../services/invitations";
 
 export const workspaceRoutes = new Hono();
 
@@ -88,5 +92,89 @@ workspaceRoutes.post(
     const data = c.req.valid("json");
     const project = await projectService.create(workspaceId, userId, data);
     return c.json({ project }, 201);
+  },
+);
+
+// GET /workspaces/:workspaceId/members - List workspace members
+workspaceRoutes.get("/:workspaceId/members", async (c) => {
+  const userId = c.get("userId");
+  const workspaceId = c.req.param("workspaceId");
+  const members = await memberService.listWorkspaceMembers(workspaceId, userId);
+  return c.json({ members });
+});
+
+// PATCH /workspaces/:workspaceId/members/:memberId - Update member role
+workspaceRoutes.patch(
+  "/:workspaceId/members/:memberId",
+  zValidator("json", updateMemberRoleSchema),
+  async (c) => {
+    const userId = c.get("userId");
+    const workspaceId = c.req.param("workspaceId");
+    const memberId = c.req.param("memberId");
+    const { role } = c.req.valid("json");
+    const member = await memberService.updateMemberRole(
+      workspaceId,
+      memberId,
+      userId,
+      role,
+    );
+    return c.json({ member });
+  },
+);
+
+// DELETE /workspaces/:workspaceId/members/:memberId - Remove member
+workspaceRoutes.delete("/:workspaceId/members/:memberId", async (c) => {
+  const userId = c.get("userId");
+  const workspaceId = c.req.param("workspaceId");
+  const memberId = c.req.param("memberId");
+  await memberService.removeMember(workspaceId, memberId, userId);
+  return c.body(null, 204);
+});
+
+// POST /workspaces/:workspaceId/invitations - Create invitation
+workspaceRoutes.post(
+  "/:workspaceId/invitations",
+  zValidator("json", createInvitationSchema),
+  async (c) => {
+    const userId = c.get("userId");
+    const workspaceId = c.req.param("workspaceId");
+    const { email, role } = c.req.valid("json");
+    const result = await invitationService.createInvitation(
+      workspaceId,
+      userId,
+      email,
+      role,
+    );
+    return c.json({ invitation: result.invitation }, 201);
+  },
+);
+
+// GET /workspaces/:workspaceId/invitations - List pending invitations
+workspaceRoutes.get("/:workspaceId/invitations", async (c) => {
+  const userId = c.get("userId");
+  const workspaceId = c.req.param("workspaceId");
+  const invitations = await invitationService.listPendingInvitations(
+    workspaceId,
+    userId,
+  );
+  return c.json({ invitations });
+});
+
+// DELETE /workspaces/:workspaceId/invitations/:inviteId - Cancel invitation
+workspaceRoutes.delete("/:workspaceId/invitations/:inviteId", async (c) => {
+  const userId = c.get("userId");
+  const inviteId = c.req.param("inviteId");
+  await invitationService.cancelInvitation(inviteId, userId);
+  return c.body(null, 204);
+});
+
+// POST /workspaces/:workspaceId/invitations/:inviteId/resend - Resend invitation
+workspaceRoutes.post(
+  "/:workspaceId/invitations/:inviteId/resend",
+  async (c) => {
+    const userId = c.get("userId");
+    const inviteId = c.req.param("inviteId");
+    const result = await invitationService.resendInvitation(inviteId, userId);
+    return c.json({ invitation: result.invitation });
   },
 );

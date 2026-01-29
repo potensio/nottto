@@ -27,8 +27,9 @@ export default function DashboardLayout({
   const [showCreateWorkspaceModal, setShowCreateWorkspaceModal] =
     useState(false);
   const [newWorkspaceName, setNewWorkspaceName] = useState("");
-  const [showIntegrationToast, setShowIntegrationToast] = useState(false);
   const [showCreateProjectModal, setShowCreateProjectModal] = useState(false);
+  const [showIntegrationGuideModal, setShowIntegrationGuideModal] =
+    useState(false);
 
   // Fetch workspaces
   const { data: workspaces = [] } = useWorkspaces();
@@ -102,8 +103,7 @@ export default function DashboardLayout({
   };
 
   const handleIntegrationClick = () => {
-    setShowIntegrationToast(true);
-    setTimeout(() => setShowIntegrationToast(false), 3000);
+    setShowIntegrationGuideModal(true);
   };
 
   // Don't show layout on workspace selector page
@@ -398,6 +398,20 @@ export default function DashboardLayout({
             {/* Bottom section */}
             <div className="pt-4 border-t border-neutral-200 space-y-1">
               <Link
+                href={`/dashboard/${workspaceSlug}/team`}
+                className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
+                  pathname === `/dashboard/${workspaceSlug}/team`
+                    ? "bg-neutral-100 text-neutral-900"
+                    : "text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900"
+                }`}
+              >
+                <iconify-icon
+                  icon="lucide:users"
+                  className="text-lg text-neutral-400"
+                ></iconify-icon>
+                <span className="text-sm font-medium">Team</span>
+              </Link>
+              <Link
                 href={`/dashboard/${workspaceSlug}/settings`}
                 className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
                   pathname === `/dashboard/${workspaceSlug}/settings`
@@ -414,30 +428,6 @@ export default function DashboardLayout({
             </div>
           </div>
         </aside>
-
-        {/* Integration Coming Soon Toast */}
-        {showIntegrationToast && (
-          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
-            <div className="bg-white text-neutral-900 px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 border border-neutral-200">
-              <iconify-icon
-                icon="lucide:sparkles"
-                className="text-accent"
-              ></iconify-icon>
-              <span className="text-sm">
-                Integrations with Linear, Jira, and Asana coming really soon!
-              </span>
-              <button
-                onClick={() => setShowIntegrationToast(false)}
-                className="p-1 hover:bg-neutral-100 rounded transition-colors"
-              >
-                <iconify-icon
-                  icon="lucide:x"
-                  className="text-neutral-400 text-sm"
-                ></iconify-icon>
-              </button>
-            </div>
-          </div>
-        )}
 
         {/* Mobile overlay */}
         {isMobile && sidebarOpen && (
@@ -531,6 +521,96 @@ export default function DashboardLayout({
                 onClose={() => setShowCreateProjectModal(false)}
                 onSuccess={() => setShowCreateProjectModal(false)}
               />
+            </div>
+          </div>
+        )}
+
+        {/* Integration Guide Modal */}
+        {showIntegrationGuideModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-xl w-full max-w-lg">
+              <div className="p-6 border-b border-neutral-100">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h3 className="text-xl font-instrument-serif text-neutral-900">
+                      Link Integrations
+                    </h3>
+                    <p className="text-sm text-neutral-500 mt-1">
+                      Connect your annotations to Linear, Jira, or Asana
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setShowIntegrationGuideModal(false)}
+                    className="text-neutral-400 hover:text-neutral-600 transition-colors"
+                  >
+                    <iconify-icon
+                      icon="lucide:x"
+                      className="text-xl"
+                    ></iconify-icon>
+                  </button>
+                </div>
+              </div>
+              <div className="p-6 space-y-4">
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 w-6 h-6 rounded-full bg-neutral-900 text-white flex items-center justify-center text-sm font-medium">
+                    1
+                  </div>
+                  <div>
+                    <p className="text-sm text-neutral-700">
+                      Go to your project settings page
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 w-6 h-6 rounded-full bg-neutral-900 text-white flex items-center justify-center text-sm font-medium">
+                    2
+                  </div>
+                  <div>
+                    <p className="text-sm text-neutral-700">
+                      Navigate to the{" "}
+                      <span className="font-medium">Integration</span> tab
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 w-6 h-6 rounded-full bg-neutral-900 text-white flex items-center justify-center text-sm font-medium">
+                    3
+                  </div>
+                  <div>
+                    <p className="text-sm text-neutral-700">
+                      Enter your webhook URL from Linear, Jira, or Asana
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 w-6 h-6 rounded-full bg-neutral-900 text-white flex items-center justify-center text-sm font-medium">
+                    4
+                  </div>
+                  <div>
+                    <p className="text-sm text-neutral-700">
+                      Configure headers and body template as needed
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 w-6 h-6 rounded-full bg-neutral-900 text-white flex items-center justify-center text-sm font-medium">
+                    5
+                  </div>
+                  <div>
+                    <p className="text-sm text-neutral-700">
+                      Test the connection and save your settings
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="p-6 pt-0 flex gap-3 justify-end border-t border-neutral-100">
+                <button
+                  onClick={() => setShowIntegrationGuideModal(false)}
+                  className="px-4 py-2 bg-neutral-900 text-white rounded-lg hover:bg-neutral-800 transition-colors"
+                >
+                  Got it
+                </button>
+              </div>
             </div>
           </div>
         )}

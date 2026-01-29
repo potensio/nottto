@@ -1,0 +1,251 @@
+# Implementation Plan: Workspace Team Invitations
+
+## Overview
+
+This implementation plan breaks down the workspace team invitation feature into discrete, incremental tasks. The approach follows the existing codebase patterns (Hono API, Drizzle ORM, existing email service) and focuses on core functionality with minimal overhead.
+
+## Tasks
+
+- [x] 1. Database schema and migrations
+  - Create workspace_invitations table with proper indexes and constraints
+  - Add migration file using Drizzle ORM
+  - Run migration to update database schema
+  - _Requirements: 1.1, 1.5, 1.6, 9.2_
+
+- [x] 2. Invitation service core logic
+  - [x] 2.1 Implement invitation creation with token generation
+    - Create invitation record with hashed token
+    - Validate workspace access and email uniqueness
+    - Set 7-day expiration
+    - _Requirements: 1.1, 1.3, 1.4, 1.5, 1.6, 9.2_
+  - [ ]\* 2.2 Write property test for invitation creation
+    - **Property 1: Valid invitation creation**
+    - **Validates: Requirements 1.1, 1.5, 1.6**
+  - [ ]\* 2.3 Write property test for duplicate prevention
+    - **Property 3: Duplicate member invitation rejected**
+    - **Property 4: Duplicate pending invitation rejected**
+    - **Validates: Requirements 1.3, 1.4**
+  - [x] 2.4 Implement token verification logic
+    - Hash incoming token and compare with database
+    - Check expiration and status
+    - Return invitation details with workspace info
+    - _Requirements: 2.1, 2.6, 2.7_
+  - [ ]\* 2.5 Write property test for token verification
+    - **Property 5: Valid token returns invitation details**
+    - **Property 7: Expired token rejected**
+    - **Property 8: Invalid token rejected**
+    - **Validates: Requirements 2.1, 2.6, 2.7**
+  - [x] 2.6 Implement invitation acceptance logic
+    - Verify token and user email match
+    - Create workspace_members record
+    - Update invitation status to accepted
+    - _Requirements: 2.2, 2.3_
+  - [ ]\* 2.7 Write property test for invitation acceptance
+    - **Property 6: Accepting invitation creates membership**
+    - **Validates: Requirements 2.2, 2.3**
+  - [x] 2.8 Implement invitation decline logic
+    - Update invitation status to declined
+    - Record decline timestamp
+    - _Requirements: 3.1, 3.2_
+  - [ ]\* 2.9 Write property test for invitation decline
+    - **Property 9: Declining invitation updates status**
+    - **Validates: Requirements 3.1, 3.2**
+
+- [x] 3. Checkpoint - Core invitation flow working
+  - Ensure all tests pass, ask the user if questions arise.
+
+- [ ] 4. Invitation management endpoints
+  - [x] 4.1 Implement list pending invitations
+    - Query invitations with status "pending"
+    - Include invitee email, dates, expiration
+    - Verify workspace access
+    - _Requirements: 4.1, 4.2_
+  - [ ]\* 4.2 Write property test for pending invitations list
+    - **Property 10: Pending invitations list completeness**
+    - **Validates: Requirements 4.1, 4.2**
+  - [x] 4.3 Implement cancel invitation
+    - Update invitation status to cancelled
+    - Verify workspace owner/admin permission
+    - _Requirements: 4.3, 4.4_
+  - [ ]\* 4.4 Write property test for invitation cancellation
+    - **Property 11: Cancelling invitation prevents use**
+    - **Validates: Requirements 4.3, 4.4**
+  - [x] 4.5 Implement resend invitation
+    - Generate new token and expiration
+    - Trigger email service
+    - _Requirements: 4.5_
+  - [ ]\* 4.6 Write property test for resend invitation
+    - **Property 12: Resending generates new token**
+    - **Validates: Requirements 4.5**
+
+- [ ] 5. Email template and integration
+  - [x] 5.1 Create invitation email template
+    - HTML and plain text versions
+    - Include workspace name, inviter name, role, expiration
+    - Add accept/decline links with token
+    - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6_
+  - [x] 5.2 Integrate email sending with invitation creation
+    - Call email service after invitation created
+    - Pass invitation details to template
+    - _Requirements: 1.2_
+  - [ ]\* 5.3 Write property test for email integration
+    - **Property 2: Email sent on invitation creation**
+    - **Property 19: Invitation email completeness**
+    - **Validates: Requirements 1.2, 7.1-7.6**
+
+- [ ] 6. Member management service
+  - [x] 6.1 Implement list workspace members
+    - Query workspace_members with user details
+    - Include name, email, role, join date
+    - _Requirements: 5.1, 5.2_
+  - [ ]\* 6.2 Write property test for members list
+    - **Property 13: Members list completeness**
+    - **Validates: Requirements 5.1, 5.2**
+  - [x] 6.3 Implement update member role
+    - Validate permissions (owner/admin only)
+    - Prevent self-role-change
+    - Prevent changing owner role
+    - _Requirements: 5.3, 5.6_
+  - [ ]\* 6.4 Write property test for role updates
+    - **Property 14: Role update persistence**
+    - **Property 17: Self-role-change prevention**
+    - **Validates: Requirements 5.3, 5.6**
+  - [x] 6.5 Implement remove member
+    - Validate permissions (owner/admin only)
+    - Prevent self-removal
+    - Prevent removing owner
+    - Delete workspace_members record
+    - _Requirements: 5.4, 5.5_
+  - [ ]\* 6.6 Write property test for member removal
+    - **Property 15: Member removal deletes record**
+    - **Property 16: Self-removal prevention**
+    - **Validates: Requirements 5.4, 5.5**
+
+- [ ] 7. Permission system
+  - [x] 7.1 Implement permission checking function
+    - Define role-based permissions map
+    - Check user role against required permission
+    - _Requirements: 8.2, 8.3, 8.4_
+  - [ ]\* 7.2 Write property tests for permissions
+    - **Property 20: Owner permissions**
+    - **Property 21: Admin permissions**
+    - **Property 22: Member permissions**
+    - **Validates: Requirements 8.2, 8.3, 8.4**
+  - [ ] 7.3 Add permission checks to all endpoints
+    - Verify permissions before allowing actions
+    - Return 403 for unauthorized actions
+    - _Requirements: 8.5_
+
+- [ ] 8. API routes implementation
+  - [x] 8.1 Create invitation management routes
+    - POST /api/workspaces/:id/invitations
+    - GET /api/workspaces/:id/invitations
+    - DELETE /api/workspaces/:id/invitations/:inviteId
+    - POST /api/workspaces/:id/invitations/:inviteId/resend
+    - Add auth middleware and validation
+    - _Requirements: 1.1, 4.1, 4.3, 4.5_
+  - [x] 8.2 Create member management routes
+    - GET /api/workspaces/:id/members
+    - PATCH /api/workspaces/:id/members/:memberId
+    - DELETE /api/workspaces/:id/members/:memberId
+    - Add auth middleware and validation
+    - _Requirements: 5.1, 5.3, 5.4_
+  - [ ] 8.3 Create invitation acceptance routes
+    - GET /api/invitations/:token
+    - POST /api/invitations/:token/accept
+    - POST /api/invitations/:token/decline
+    - Add validation (auth required for accept only)
+    - _Requirements: 2.1, 2.2, 3.1_
+  - [ ]\* 8.4 Write integration tests for API routes
+    - Test complete invitation flow
+    - Test permission enforcement
+    - Test error cases
+
+- [ ] 9. Checkpoint - Backend complete
+  - Ensure all tests pass, ask the user if questions arise.
+
+- [ ] 10. Security and cleanup utilities
+  - [x] 10.1 Implement maximum pending invitations check
+    - Count pending invitations before creating new one
+    - Return error if limit (5) reached
+    - _Requirements: 9.4_
+  - [ ]\* 10.2 Write property test for invitation limit
+    - **Property 24: Maximum pending invitations**
+    - **Validates: Requirements 9.4**
+  - [x] 10.3 Implement expired invitation cleanup function
+    - Query invitations expired > 30 days ago
+    - Delete old expired invitations
+    - _Requirements: 9.5_
+  - [ ]\* 10.4 Write property test for cleanup
+    - **Property 25: Expired invitation cleanup**
+    - **Validates: Requirements 9.5**
+  - [ ]\* 10.5 Write property test for token hashing
+    - **Property 23: Token hash storage**
+    - **Validates: Requirements 9.2**
+
+- [x] 11. Frontend - Team management page
+  - [x] 11.1 Create team management page component
+    - Display current members list
+    - Display pending invitations list
+    - Add invite form
+    - Add role update and remove actions
+    - _Requirements: 4.1, 4.2, 5.1, 5.2_
+  - [x] 11.2 Implement invite team member form
+    - Email input with validation
+    - Role selector (admin/member)
+    - Submit to POST /api/workspaces/:id/invitations
+    - Show success/error messages
+    - _Requirements: 1.1_
+  - [x] 11.3 Implement pending invitations management
+    - Show list of pending invitations
+    - Add cancel button for each invitation
+    - Add resend button for each invitation
+    - _Requirements: 4.1, 4.3, 4.5_
+  - [x] 11.4 Implement member management actions
+    - Role dropdown for each member
+    - Remove member button
+    - Disable actions for self and owner
+    - _Requirements: 5.3, 5.4, 5.5, 5.6_
+
+- [x] 12. Frontend - Invitation acceptance page
+  - [x] 12.1 Create invitation accept page
+    - Extract token from URL
+    - Fetch invitation details from GET /api/invitations/:token
+    - Display workspace info and inviter
+    - Show accept/decline buttons
+    - _Requirements: 2.1_
+  - [x] 12.2 Implement accept invitation flow
+    - Check if user is authenticated
+    - If not, redirect to auth with return URL
+    - If yes, call POST /api/invitations/:token/accept
+    - Redirect to workspace on success
+    - _Requirements: 2.2, 2.4_
+  - [x] 12.3 Implement decline invitation flow
+    - Call POST /api/invitations/:token/decline
+    - Show confirmation message
+    - _Requirements: 3.1_
+  - [x] 12.4 Handle error cases
+    - Show expired token message
+    - Show invalid token message
+    - Show already accepted/declined message
+    - _Requirements: 2.6, 2.7_
+
+- [ ] 13. Frontend - Workspace list updates
+  - [ ] 13.1 Update workspace list to show member workspaces
+    - Fetch workspaces from existing endpoint
+    - Display owned vs member workspaces
+    - Show role badge for each workspace
+    - _Requirements: 6.1, 6.2, 6.4_
+
+- [ ] 14. Final checkpoint - Complete feature
+  - Ensure all tests pass, ask the user if questions arise.
+
+## Notes
+
+- Tasks marked with `*` are optional and can be skipped for faster MVP
+- Each task references specific requirements for traceability
+- Checkpoints ensure incremental validation
+- Property tests validate universal correctness properties
+- Unit tests validate specific examples and edge cases
+- The implementation follows existing patterns: Hono for API, Drizzle for ORM, existing email service
+- Frontend uses Next.js App Router with existing API client patterns

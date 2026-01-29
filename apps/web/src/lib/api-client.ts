@@ -453,6 +453,165 @@ class ApiClient {
       body: JSON.stringify(data),
     });
   }
+
+  // Team invitation endpoints
+  async getWorkspaceMembers(workspaceId: string) {
+    return this.fetch<{
+      members: Array<{
+        id: string;
+        workspaceId: string;
+        userId: string;
+        role: "owner" | "admin" | "member";
+        createdAt: string;
+        user: {
+          id: string;
+          email: string;
+          name: string | null;
+          profilePicture: string | null;
+        };
+      }>;
+    }>(`/workspaces/${workspaceId}/members`);
+  }
+
+  async updateMemberRole(
+    workspaceId: string,
+    memberId: string,
+    role: "admin" | "member",
+  ) {
+    return this.fetch<{
+      member: {
+        id: string;
+        workspaceId: string;
+        userId: string;
+        role: "owner" | "admin" | "member";
+        createdAt: string;
+      };
+    }>(`/workspaces/${workspaceId}/members/${memberId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ role }),
+    });
+  }
+
+  async removeMember(workspaceId: string, memberId: string) {
+    return this.fetch<void>(`/workspaces/${workspaceId}/members/${memberId}`, {
+      method: "DELETE",
+    });
+  }
+
+  async getPendingInvitations(workspaceId: string) {
+    return this.fetch<{
+      invitations: Array<{
+        id: string;
+        workspaceId: string;
+        inviterUserId: string;
+        inviteeEmail: string;
+        role: "admin" | "member";
+        status: string;
+        expiresAt: string;
+        createdAt: string;
+      }>;
+    }>(`/workspaces/${workspaceId}/invitations`);
+  }
+
+  async sendInvitation(
+    workspaceId: string,
+    email: string,
+    role: "admin" | "member",
+  ) {
+    return this.fetch<{
+      invitation: {
+        id: string;
+        workspaceId: string;
+        inviterUserId: string;
+        inviteeEmail: string;
+        role: "admin" | "member";
+        status: string;
+        expiresAt: string;
+        createdAt: string;
+      };
+    }>(`/workspaces/${workspaceId}/invitations`, {
+      method: "POST",
+      body: JSON.stringify({ email, role }),
+    });
+  }
+
+  async cancelInvitation(workspaceId: string, invitationId: string) {
+    return this.fetch<void>(
+      `/workspaces/${workspaceId}/invitations/${invitationId}`,
+      {
+        method: "DELETE",
+      },
+    );
+  }
+
+  async resendInvitation(workspaceId: string, invitationId: string) {
+    return this.fetch<{
+      invitation: {
+        id: string;
+        workspaceId: string;
+        inviterUserId: string;
+        inviteeEmail: string;
+        role: "admin" | "member";
+        status: string;
+        expiresAt: string;
+        createdAt: string;
+      };
+    }>(`/workspaces/${workspaceId}/invitations/${invitationId}/resend`, {
+      method: "POST",
+    });
+  }
+
+  // Invitation acceptance endpoints (invitee actions)
+  async getInvitationDetails(token: string) {
+    return this.fetch<{
+      invitation: {
+        id: string;
+        workspaceId: string;
+        inviterUserId: string;
+        inviteeEmail: string;
+        role: "admin" | "member";
+        status: string;
+        expiresAt: string;
+        createdAt: string;
+      };
+      workspace: {
+        id: string;
+        name: string;
+        icon: string;
+      };
+      inviter: {
+        name: string | null;
+        email: string;
+      };
+      userExists: boolean;
+    }>(`/invitations/${token}`);
+  }
+
+  async acceptInvitation(token: string, fullName?: string) {
+    return this.fetch<{
+      workspace: {
+        id: string;
+        name: string;
+        slug: string;
+        icon: string;
+      };
+      sessionToken?: string;
+      user?: {
+        id: string;
+        email: string;
+        name: string | null;
+      };
+    }>(`/invitations/${token}/accept`, {
+      method: "POST",
+      body: JSON.stringify({ fullName }),
+    });
+  }
+
+  async declineInvitation(token: string) {
+    return this.fetch<void>(`/invitations/${token}/decline`, {
+      method: "POST",
+    });
+  }
 }
 
 // Export singleton instance

@@ -91,6 +91,39 @@ export const workspaceMembers = pgTable(
   ],
 );
 
+// Workspace invitations table
+export const workspaceInvitations = pgTable(
+  "workspace_invitations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id")
+      .references(() => workspaces.id, { onDelete: "cascade" })
+      .notNull(),
+    inviterUserId: uuid("inviter_user_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    inviteeEmail: varchar("invitee_email", { length: 255 }).notNull(),
+    role: varchar("role", { length: 50 }).default("member").notNull(),
+    tokenHash: varchar("token_hash", { length: 255 }).notNull(),
+    status: varchar("status", { length: 20 }).default("pending").notNull(),
+    expiresAt: timestamp("expires_at").notNull(),
+    acceptedAt: timestamp("accepted_at"),
+    declinedAt: timestamp("declined_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("idx_workspace_invitations_workspace_id").on(table.workspaceId),
+    index("idx_workspace_invitations_email").on(table.inviteeEmail),
+    index("idx_workspace_invitations_expires_at").on(table.expiresAt),
+    // Prevent duplicate pending invitations
+    unique("workspace_email_pending_unique").on(
+      table.workspaceId,
+      table.inviteeEmail,
+      table.status,
+    ),
+  ],
+);
+
 // Projects table
 export const projects = pgTable(
   "projects",
@@ -205,6 +238,7 @@ export const workspacesRelations = relations(workspaces, ({ one, many }) => ({
     references: [users.id],
   }),
   members: many(workspaceMembers),
+  invitations: many(workspaceInvitations),
   projects: many(projects),
 }));
 
@@ -217,6 +251,20 @@ export const workspaceMembersRelations = relations(
     }),
     user: one(users, {
       fields: [workspaceMembers.userId],
+      references: [users.id],
+    }),
+  }),
+);
+
+export const workspaceInvitationsRelations = relations(
+  workspaceInvitations,
+  ({ one }) => ({
+    workspace: one(workspaces, {
+      fields: [workspaceInvitations.workspaceId],
+      references: [workspaces.id],
+    }),
+    inviter: one(users, {
+      fields: [workspaceInvitations.inviterUserId],
       references: [users.id],
     }),
   }),
@@ -259,6 +307,10 @@ export type WorkspaceRecord = typeof workspaces.$inferSelect;
 export type NewWorkspaceRecord = typeof workspaces.$inferInsert;
 export type WorkspaceMemberRecord = typeof workspaceMembers.$inferSelect;
 export type NewWorkspaceMemberRecord = typeof workspaceMembers.$inferInsert;
+export type WorkspaceInvitationRecord =
+  typeof workspaceInvitations.$inferSelect;
+export type NewWorkspaceInvitationRecord =
+  typeof workspaceInvitations.$inferInsert;
 export type ProjectRecord = typeof projects.$inferSelect;
 export type NewProjectRecord = typeof projects.$inferInsert;
 export type AnnotationRecord = typeof annotations.$inferSelect;

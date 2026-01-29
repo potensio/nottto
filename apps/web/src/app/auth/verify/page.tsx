@@ -13,7 +13,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
  * This allows the extension to receive the auth tokens via polling.
  */
 async function completeExtensionAuthSession(
-  sessionId: string
+  sessionId: string,
 ): Promise<boolean> {
   try {
     const response = await fetch(
@@ -25,7 +25,7 @@ async function completeExtensionAuthSession(
         },
         credentials: "include", // Send session cookie
         body: JSON.stringify({}),
-      }
+      },
     );
     return response.ok;
   } catch (error) {
@@ -47,6 +47,7 @@ function VerifyContent() {
 
     const token = searchParams.get("token");
     const extensionSession = searchParams.get("session");
+    const returnUrl = searchParams.get("returnUrl");
 
     if (!token) {
       setStatus("error");
@@ -63,9 +64,8 @@ function VerifyContent() {
 
         // If this is from the extension, complete the auth session
         if (extensionSession) {
-          const completed = await completeExtensionAuthSession(
-            extensionSession
-          );
+          const completed =
+            await completeExtensionAuthSession(extensionSession);
           if (completed) {
             console.log("Extension auth session completed successfully");
           }
@@ -75,7 +75,15 @@ function VerifyContent() {
 
         // Use hard navigation to ensure cookies are properly sent
         setTimeout(() => {
-          window.location.href = "/dashboard";
+          // Check for stored invitation return URL
+          const storedReturnUrl =
+            typeof window !== "undefined"
+              ? localStorage.getItem("invitationReturnUrl")
+              : null;
+
+          // Redirect to returnUrl if provided, stored invitation URL, or dashboard
+          const destination = returnUrl || storedReturnUrl || "/dashboard";
+          window.location.href = destination;
         }, 2000);
       } catch (err) {
         setStatus("error");

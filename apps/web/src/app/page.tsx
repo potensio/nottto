@@ -1,4 +1,11 @@
+"use client";
+import { FlipWords } from "@/components/ui/flip-words";
+import { useAuth } from "@/lib/auth-context";
+
 export default function HomePage() {
+  const words = ["Linear", "Jira", "Asana", "ClickUp", "Anywhere"];
+  const { isAuthenticated, isLoading } = useAuth();
+
   return (
     <>
       {/* Tech Background Layers */}
@@ -14,14 +21,16 @@ export default function HomePage() {
         <div className="flex items-center gap-3 h-6 ">
           <img src="/notto-logo.png" alt="Description" className="h-full" />
         </div>
-        <div className="hidden md:flex items-center gap-8 bg-white/50 px-6 py-2 rounded-full border border-neutral-200/50 shadow-sm">
-          <a
-            href="/auth"
-            className="text-xs font-mono text-neutral-500 hover:text-accent transition-colors uppercase tracking-widest"
-          >
-            Login
-          </a>
-        </div>
+        {!isLoading && (
+          <div className="hidden md:flex items-center gap-8 bg-white/50 px-6 py-2 rounded-full border border-neutral-200/50 shadow-sm">
+            <a
+              href={isAuthenticated ? "/dashboard" : "/auth"}
+              className="text-xs font-mono text-neutral-500 hover:text-accent transition-colors uppercase tracking-widest"
+            >
+              {isAuthenticated ? "Dashboard" : "Login"}
+            </a>
+          </div>
+        )}
       </nav>
 
       {/* Main Content */}
@@ -39,10 +48,16 @@ export default function HomePage() {
 
         {/* Hero Text */}
         <div className="text-center max-w-4xl mx-auto mb-10 z-20 relative px-4">
-          <h1 className="text-5xl md:text-7xl tracking-tight text-neutral-900 leading-[0.95] mb-6 reveal-text font-instrument-serif font-normal">
+          <h1 className="text-5xl md:text-7xl tracking-tight text-neutral-900 leading-[0.95] mb-6 font-instrument-serif font-normal">
             Spot bugs. Annotate. <br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-orange-500 font-instrument-serif font-normal">
-              Push to Linear instantly.
+              Push to{" "}
+              <FlipWords
+                words={words}
+                duration={2500}
+                className="text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-orange-500 font-instrument-serif"
+              />{" "}
+              instantly.
             </span>
           </h1>
           <p className="md:text-lg text-neutral-500 max-w-2xl mx-auto mb-6 leading-relaxed font-manrope">
@@ -346,29 +361,19 @@ export default function HomePage() {
               ></iconify-icon>
             </div>
           </div>
-          <div className="flex justify-end gap-3">
-            <div className="px-4 py-2 rounded-lg bg-neutral-50 border border-neutral-200 flex items-center gap-3">
-              <div className="w-8 h-8 rounded bg-white border border-neutral-200 flex items-center justify-center text-accent">
-                <iconify-icon icon="lucide:camera"></iconify-icon>
-              </div>
-              <div>
-                <div className="text-xs font-bold">Screenshot</div>
-                <div className="text-[10px] text-neutral-500">
-                  Auto-attached
-                </div>
-              </div>
-            </div>
-            <div className="px-4 py-2 rounded-lg bg-neutral-50 border border-neutral-200 flex items-center gap-3">
-              <div className="w-8 h-8 rounded bg-white border border-neutral-200 flex items-center justify-center text-accent">
-                <iconify-icon icon="lucide:terminal"></iconify-icon>
-              </div>
-              <div>
-                <div className="text-xs font-bold">Console Logs</div>
-                <div className="text-[10px] text-neutral-500">
-                  Auto-captured
-                </div>
-              </div>
-            </div>
+          <div className="flex justify-end gap-6">
+            <a
+              href="/privacy"
+              className="text-sm text-neutral-600 hover:text-neutral-900 transition-colors"
+            >
+              Privacy Policy
+            </a>
+            <a
+              href="/terms"
+              className="text-sm text-neutral-600 hover:text-neutral-900 transition-colors"
+            >
+              Terms of Service
+            </a>
           </div>
         </div>
       </div>

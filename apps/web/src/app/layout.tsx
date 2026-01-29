@@ -9,6 +9,7 @@ export const metadata: Metadata = {
   keywords: [
     "bug reporting",
     "annotation",
+    "marker tool",
     "QA tool",
     "Linear integration",
     "visual feedback",

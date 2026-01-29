@@ -16,10 +16,10 @@ interface IntegrationFormProps {
   projectId: string;
   initialData?: (WebhookIntegrationInput & { locked?: boolean }) | null;
   onSave: (
-    data: WebhookIntegrationInput & { locked?: boolean }
+    data: WebhookIntegrationInput & { locked?: boolean },
   ) => Promise<void>;
   onTest: (
-    data: WebhookIntegrationInput & { locked?: boolean }
+    data: WebhookIntegrationInput & { locked?: boolean },
   ) => Promise<TestResult>;
 }
 
@@ -44,7 +44,7 @@ export function IntegrationForm({
     return [];
   });
   const [bodyTemplate, setBodyTemplate] = useState(
-    initialData?.bodyTemplate ?? ""
+    initialData?.bodyTemplate ?? "",
   );
 
   // Validation state
@@ -78,7 +78,7 @@ export function IntegrationForm({
             id: crypto.randomUUID(),
             key,
             value,
-          }))
+          })),
         );
       } else {
         setHeaders([]);

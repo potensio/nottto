@@ -33,6 +33,7 @@ function AuthPageContent() {
 
   // Get extension session from URL if present
   const extensionSession = searchParams.get("session");
+  const returnUrl = searchParams.get("returnUrl");
 
   // Countdown timer for resend button
   useEffect(() => {

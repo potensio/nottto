@@ -108,8 +108,25 @@ export const updateUserProfileSchema = z.object({
   profilePicture: z.string().url("Invalid URL").optional().nullable(),
 });
 
+// Member schemas
+export const updateMemberRoleSchema = z.object({
+  role: z.enum(["admin", "member"], {
+    errorMap: () => ({ message: "Role must be either 'admin' or 'member'" }),
+  }),
+});
+
+// Invitation schemas
+export const createInvitationSchema = z.object({
+  email: z.string().email("Invalid email format"),
+  role: z.enum(["admin", "member"], {
+    errorMap: () => ({ message: "Role must be either 'admin' or 'member'" }),
+  }),
+});
+
 // Type exports from schemas
 export type UpdateUserProfileInput = z.infer<typeof updateUserProfileSchema>;
+export type UpdateMemberRoleInput = z.infer<typeof updateMemberRoleSchema>;
+export type CreateInvitationInput = z.infer<typeof createInvitationSchema>;
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type RefreshInput = z.infer<typeof refreshSchema>;
