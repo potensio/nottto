@@ -67,10 +67,14 @@ class ApiClient {
         // Ignore JSON parse errors
       }
 
-      // Redirect to auth on 401 (but not if already on auth page)
+      // Redirect to auth on 401 (but not if already on auth page or invitation page)
+      // Also don't redirect if this is a /auth/me request (let the auth context handle it)
       if (response.status === 401 && typeof window !== "undefined") {
         const isAuthPage = window.location.pathname.startsWith("/auth");
-        if (!isAuthPage) {
+        const isInvitationPage =
+          window.location.pathname.startsWith("/invitations");
+        const isAuthMeRequest = endpoint === "/auth/me";
+        if (!isAuthPage && !isInvitationPage && !isAuthMeRequest) {
           window.location.href = "/auth";
         }
       }

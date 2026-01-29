@@ -102,7 +102,7 @@ function InvitationContent() {
 
       // If we got a session token, store it and refresh auth
       if (result.sessionToken) {
-        localStorage.setItem("sessionToken", result.sessionToken);
+        localStorage.setItem("accessToken", result.sessionToken);
         // Trigger auth context refresh
         window.location.href = `/dashboard/${result.workspace.slug}`;
         return;
@@ -159,7 +159,7 @@ function InvitationContent() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-neutral-50 p-8">
       <div className="w-full max-w-md">
-        {status === "loading" && (
+        {(status === "loading" || (status === "ready" && authLoading)) && (
           <div className="text-center">
             <div className="w-16 h-16 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-6">
               <iconify-icon
@@ -260,7 +260,7 @@ function InvitationContent() {
                 </div>
               )}
 
-              {status === "ready" && (
+              {status === "ready" && !authLoading && (
                 <>
                   {!details.userExists && !isAuthenticated && (
                     <div className="mb-6">

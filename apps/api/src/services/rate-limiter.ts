@@ -2,7 +2,7 @@ import { eq, and, gte, lt } from "drizzle-orm";
 import { db } from "../db";
 import { rateLimitRecords } from "@notto/shared/db";
 
-const MAGIC_LINK_LIMIT = 5; // Maximum requests per window
+const MAGIC_LINK_LIMIT = 50; // Maximum requests per window (temporarily increased for testing)
 const WINDOW_HOURS = 1; // Time window in hours
 
 export interface RateLimitResult {

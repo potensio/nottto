@@ -17,6 +17,7 @@
     "test": "bun test"
   },
   "dependencies": {
+    "@getbrevo/brevo": "^2.5.0",
     "@hono/zod-validator": "^0.4.2",
     "@neondatabase/serverless": "^0.10.4",
     "@notto/shared": "workspace:*",
@@ -27,7 +28,6 @@
     "hono": "^4.6.16",
     "jose": "^5.9.6",
     "nanoid": "^5.1.6",
-    "resend": "^6.7.0",
     "zod": "^3.24.1"
   },
   "devDependencies": {

@@ -1,4 +1,4 @@
-import { Resend } from "resend";
+import * as brevo from "@getbrevo/brevo";
 import {
   getMagicLinkEmailHtml,
   getMagicLinkEmailText,
@@ -10,13 +10,17 @@ import {
 } from "../templates/invitation-email";
 
 // Lazy initialization - env vars may not be available at module load time in serverless
-let resend: Resend | null = null;
+let apiInstance: brevo.TransactionalEmailsApi | null = null;
 
-function getResendClient(): Resend {
-  if (!resend) {
-    resend = new Resend(process.env.RESEND_API_KEY);
+function getBrevoClient(): brevo.TransactionalEmailsApi {
+  if (!apiInstance) {
+    apiInstance = new brevo.TransactionalEmailsApi();
+    apiInstance.setApiKey(
+      brevo.TransactionalEmailsApiApiKeys.apiKey,
+      process.env.BREVO_API_KEY || "",
+    );
   }
-  return resend;
+  return apiInstance;
 }
 
 const EMAIL_FROM = process.env.EMAIL_FROM || "Hanif <noreply@notto.site>";
@@ -48,29 +52,25 @@ export async function sendMagicLinkEmail(
     return { success: true };
   }
 
-  // Production mode: send actual email via Resend
+  // Production mode: send actual email via Brevo
   try {
-    const { error } = await getResendClient().emails.send({
-      from: EMAIL_FROM,
-      to: email,
-      subject: "Sign in to Notto",
-      html: getMagicLinkEmailHtml({
-        magicLinkUrl,
-        expirationMinutes: MAGIC_LINK_EXPIRATION_MINUTES,
-      }),
-      text: getMagicLinkEmailText({
-        magicLinkUrl,
-        expirationMinutes: MAGIC_LINK_EXPIRATION_MINUTES,
-      }),
+    const sendSmtpEmail = new brevo.SendSmtpEmail();
+    sendSmtpEmail.sender = {
+      email: EMAIL_FROM.match(/<(.+)>/)?.[1] || EMAIL_FROM,
+      name: EMAIL_FROM.match(/^(.+?)\s*</)?.[1] || "Notto",
+    };
+    sendSmtpEmail.to = [{ email }];
+    sendSmtpEmail.subject = "Sign in to Notto";
+    sendSmtpEmail.htmlContent = getMagicLinkEmailHtml({
+      magicLinkUrl,
+      expirationMinutes: MAGIC_LINK_EXPIRATION_MINUTES,
+    });
+    sendSmtpEmail.textContent = getMagicLinkEmailText({
+      magicLinkUrl,
+      expirationMinutes: MAGIC_LINK_EXPIRATION_MINUTES,
     });
 
-    if (error) {
-      console.error("Failed to send magic link email:", {
-        email: maskEmailForLog(email),
-        error: error.message,
-      });
-      return { success: false, error: error.message };
-    }
+    await getBrevoClient().sendTransacEmail(sendSmtpEmail);
 
     console.log("Magic link email sent:", {
       email: maskEmailForLog(email),
@@ -78,13 +78,15 @@ export async function sendMagicLinkEmail(
     });
 
     return { success: true };
-  } catch (err) {
-    const errorMessage =
-      err instanceof Error ? err.message : "Unknown error occurred";
+  } catch (err: any) {
     console.error("Failed to send magic link email:", {
       email: maskEmailForLog(email),
-      error: errorMessage,
+      error: err.message || "Unknown error",
+      response: err.response?.body || err.response?.text || null,
+      statusCode: err.statusCode || null,
     });
+    const errorMessage =
+      err.response?.body?.message || err.message || "Unknown error occurred";
     return { success: false, error: errorMessage };
   }
 }
@@ -134,24 +136,19 @@ export async function sendInvitationEmail(
     return { success: true };
   }
 
-  // Production mode: send actual email via Resend
+  // Production mode: send actual email via Brevo
   try {
-    const { error } = await getResendClient().emails.send({
-      from: EMAIL_FROM,
-      to: email,
-      subject: `You're invited to join ${invitationData.workspaceName}`,
-      html: getInvitationEmailHtml(invitationData),
-      text: getInvitationEmailText(invitationData),
-    });
+    const sendSmtpEmail = new brevo.SendSmtpEmail();
+    sendSmtpEmail.sender = {
+      email: EMAIL_FROM.match(/<(.+)>/)?.[1] || EMAIL_FROM,
+      name: EMAIL_FROM.match(/^(.+?)\s*</)?.[1] || "Notto",
+    };
+    sendSmtpEmail.to = [{ email }];
+    sendSmtpEmail.subject = `You're invited to join ${invitationData.workspaceName}`;
+    sendSmtpEmail.htmlContent = getInvitationEmailHtml(invitationData);
+    sendSmtpEmail.textContent = getInvitationEmailText(invitationData);
 
-    if (error) {
-      console.error("Failed to send invitation email:", {
-        email: maskEmailForLog(email),
-        workspace: invitationData.workspaceName,
-        error: error.message,
-      });
-      return { success: false, error: error.message };
-    }
+    await getBrevoClient().sendTransacEmail(sendSmtpEmail);
 
     console.log("Invitation email sent:", {
       email: maskEmailForLog(email),
@@ -160,14 +157,16 @@ export async function sendInvitationEmail(
     });
 
     return { success: true };
-  } catch (err) {
-    const errorMessage =
-      err instanceof Error ? err.message : "Unknown error occurred";
+  } catch (err: any) {
     console.error("Failed to send invitation email:", {
       email: maskEmailForLog(email),
       workspace: invitationData.workspaceName,
-      error: errorMessage,
+      error: err.message || "Unknown error",
+      response: err.response?.body || err.response?.text || null,
+      statusCode: err.statusCode || null,
     });
+    const errorMessage =
+      err.response?.body?.message || err.message || "Unknown error occurred";
     return { success: false, error: errorMessage };
   }
 }
