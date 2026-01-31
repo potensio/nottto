@@ -3487,13 +3487,19 @@ app.use("*", logger());
 app.use(
   "*",
   cors({
-    origin: (origin) => {
-      if (!origin) return "http://localhost:3000";
+    origin: (origin, c) => {
+      const referer = c.req.header("Referer");
+      const userAgent = c.req.header("User-Agent");
+      if (!origin) {
+        return "*";
+      }
       if (origin === "http://localhost:3000" || origin === "http://localhost:3001")
         return origin;
       if (origin === "https://notto-web.vercel.app") return origin;
       if (origin === "https://notto.site") return origin;
       if (origin === "https://www.notto.site") return origin;
+      if (origin === "https://vercel.com") return origin;
+      if (origin.endsWith(".vercel.app")) return origin;
       if (origin.startsWith("chrome-extension://")) return origin;
       if (process.env.NODE_ENV !== "production") {
         return origin;

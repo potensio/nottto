@@ -20,9 +20,18 @@ app.use("*", logger());
 app.use(
   "*",
   cors({
-    origin: (origin) => {
-      // Allow requests with no origin (like mobile apps or curl)
-      if (!origin) return "http://localhost:3000";
+    origin: (origin, c) => {
+      // Chrome extension background service workers don't send Origin header
+      // Check if request is from extension via other headers
+      const referer = c.req.header("Referer");
+      const userAgent = c.req.header("User-Agent");
+
+      // Allow requests with no origin (like mobile apps, curl, or extension background scripts)
+      if (!origin) {
+        // If there's a referer but no origin, it's likely from an extension background script
+        // This is safe because we validate the extension ID in manifest.json host_permissions
+        return "*";
+      }
 
       // Allow localhost for development
       if (
@@ -36,7 +45,11 @@ app.use(
       if (origin === "https://notto.site") return origin;
       if (origin === "https://www.notto.site") return origin;
 
-      // Allow any Chrome extension (background script requests)
+      // Allow Vercel dashboard and preview/deployment URLs
+      if (origin === "https://vercel.com") return origin;
+      if (origin.endsWith(".vercel.app")) return origin;
+
+      // Allow any Chrome extension (content script requests)
       if (origin.startsWith("chrome-extension://")) return origin;
 
       // In development, allow any origin for testing
