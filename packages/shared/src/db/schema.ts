@@ -41,6 +41,25 @@ export const magicLinkTokens = pgTable(
   ],
 );
 
+// Verification Codes table (for extension auth)
+export const verificationCodes = pgTable(
+  "verification_codes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    email: varchar("email", { length: 255 }).notNull(),
+    codeHash: varchar("code_hash", { length: 255 }).notNull(),
+    name: varchar("name", { length: 255 }), // For registration - stores user's full name
+    isRegister: boolean("is_register").default(false).notNull(), // Distinguishes login vs register
+    expiresAt: timestamp("expires_at").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    usedAt: timestamp("used_at"),
+  },
+  (table) => [
+    index("idx_verification_codes_email").on(table.email),
+    index("idx_verification_codes_expires_at").on(table.expiresAt),
+  ],
+);
+
 // Rate Limit Records table
 export const rateLimitRecords = pgTable(
   "rate_limit_records",
@@ -180,19 +199,24 @@ export const sessions = pgTable(
   ],
 );
 
-// Extension Auth Sessions table (for secure extension authentication)
-export const extensionAuthSessions = pgTable(
-  "extension_auth_sessions",
+// OAuth Authorization Codes table (for OAuth 2.0 with PKCE flow)
+export const oauthAuthorizationCodes = pgTable(
+  "oauth_authorization_codes",
   {
     id: varchar("id", { length: 64 }).primaryKey(), // nanoid
-    status: varchar("status", { length: 20 }).default("pending").notNull(),
-    userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    codeChallenge: varchar("code_challenge", { length: 255 }).notNull(),
+    redirectUri: text("redirect_uri").notNull(),
+    clientId: varchar("client_id", { length: 255 }).notNull(),
+    state: varchar("state", { length: 255 }).notNull(),
     expiresAt: timestamp("expires_at").notNull(),
-    completedAt: timestamp("completed_at"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => [
-    index("idx_extension_auth_sessions_expires_at").on(table.expiresAt),
+    index("idx_oauth_authorization_codes_user_id").on(table.userId),
+    index("idx_oauth_authorization_codes_expires_at").on(table.expiresAt),
   ],
 );
 
@@ -317,14 +341,16 @@ export type AnnotationRecord = typeof annotations.$inferSelect;
 export type NewAnnotationRecord = typeof annotations.$inferInsert;
 export type MagicLinkTokenRecord = typeof magicLinkTokens.$inferSelect;
 export type NewMagicLinkTokenRecord = typeof magicLinkTokens.$inferInsert;
+export type VerificationCodeRecord = typeof verificationCodes.$inferSelect;
+export type NewVerificationCodeRecord = typeof verificationCodes.$inferInsert;
 export type RateLimitRecord = typeof rateLimitRecords.$inferSelect;
 export type NewRateLimitRecord = typeof rateLimitRecords.$inferInsert;
 export type WebhookIntegrationRecord = typeof webhookIntegrations.$inferSelect;
 export type NewWebhookIntegrationRecord =
   typeof webhookIntegrations.$inferInsert;
-export type ExtensionAuthSessionRecord =
-  typeof extensionAuthSessions.$inferSelect;
-export type NewExtensionAuthSessionRecord =
-  typeof extensionAuthSessions.$inferInsert;
 export type SessionRecord = typeof sessions.$inferSelect;
 export type NewSessionRecord = typeof sessions.$inferInsert;
+export type OAuthAuthorizationCodeRecord =
+  typeof oauthAuthorizationCodes.$inferSelect;
+export type NewOAuthAuthorizationCodeRecord =
+  typeof oauthAuthorizationCodes.$inferInsert;

@@ -21,8 +21,8 @@ export const magicLinkRequestSchema = z
   .object({
     email: z.string().email("Invalid email format"),
     isRegister: z.boolean().default(false),
-    name: z.string().min(1, "Full name is required").max(255).optional(),
-    extensionSession: z.string().max(64).optional(), // Extension auth session ID
+    name: z.string().max(255).optional(),
+    extensionSession: z.string().max(512).optional(), // Extension auth session ID (can be a JWT or long identifier)
   })
   .refine(
     (data) => !data.isRegister || (data.name && data.name.trim().length > 0),
@@ -31,6 +31,23 @@ export const magicLinkRequestSchema = z
 
 export const magicLinkVerifySchema = z.object({
   token: z.string().min(1, "Token is required"),
+});
+
+// Verification Code schemas (for extension auth)
+export const verificationCodeRequestSchema = z
+  .object({
+    email: z.string().email("Invalid email format"),
+    isRegister: z.boolean().default(false),
+    name: z.string().max(255).optional(),
+  })
+  .refine(
+    (data) => !data.isRegister || (data.name && data.name.trim().length > 0),
+    { message: "Full name is required for registration", path: ["name"] },
+  );
+
+export const verificationCodeVerifySchema = z.object({
+  email: z.string().email("Invalid email format"),
+  code: z.string().length(6, "Code must be 6 digits"),
 });
 
 // Workspace schemas
@@ -132,6 +149,12 @@ export type LoginInput = z.infer<typeof loginSchema>;
 export type RefreshInput = z.infer<typeof refreshSchema>;
 export type MagicLinkRequestInput = z.infer<typeof magicLinkRequestSchema>;
 export type MagicLinkVerifyInput = z.infer<typeof magicLinkVerifySchema>;
+export type VerificationCodeRequestInput = z.infer<
+  typeof verificationCodeRequestSchema
+>;
+export type VerificationCodeVerifyInput = z.infer<
+  typeof verificationCodeVerifySchema
+>;
 export type CreateWorkspaceInput = z.infer<typeof createWorkspaceSchema>;
 export type UpdateWorkspaceInput = z.infer<typeof updateWorkspaceSchema>;
 export type CreateProjectInput = z.infer<typeof createProjectSchema>;
