@@ -6,14 +6,15 @@ const WEB_URL = config.WEB_URL;
 
 /**
  * Creates and displays the auth prompt overlay
+ * @param errorMessage - Optional error message to display
  */
-export function showAuthPrompt(): void {
+export function showAuthPrompt(errorMessage?: string): void {
   // Remove existing prompt if any
   removeAuthPrompt();
 
   const overlay = document.createElement("div");
   overlay.id = "notto-auth-prompt";
-  overlay.innerHTML = getModalHTML();
+  overlay.innerHTML = getModalHTML(errorMessage);
 
   // Add styles
   const style = document.createElement("style");
@@ -29,10 +30,24 @@ export function showAuthPrompt(): void {
 
 /**
  * Returns the modal HTML structure
+ * @param errorMessage - Optional error message to display
  */
-function getModalHTML(): string {
+function getModalHTML(errorMessage?: string): string {
   // Get the extension icon URL
   const iconUrl = chrome.runtime.getURL("icons/icon48.png");
+
+  const errorHTML = errorMessage
+    ? `
+    <div class="notto-auth-error">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="12"></line>
+        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+      </svg>
+      <span>${errorMessage}</span>
+    </div>
+    `
+    : "";
 
   return `
     <div class="notto-auth-backdrop">
@@ -52,6 +67,8 @@ function getModalHTML(): string {
         <!-- Header -->
         <h2 class="notto-auth-title">Welcome to Notto</h2>
         <p class="notto-auth-description">Sign in to save and sync your screenshots</p>
+        
+        ${errorHTML}
         
         <!-- Sign In Button -->
         <button id="notto-auth-signin-btn" class="notto-auth-button">
@@ -154,6 +171,25 @@ function getStyles(): string {
       margin: 0 0 24px;
       line-height: 1.5;
       text-align: center;
+    }
+
+    .notto-auth-error {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 16px;
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      color: #991b1b;
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    .notto-auth-error svg {
+      flex-shrink: 0;
+      color: #dc2626;
     }
 
     .notto-auth-button {

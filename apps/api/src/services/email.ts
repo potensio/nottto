@@ -4,6 +4,11 @@ import {
   getMagicLinkEmailText,
 } from "../templates/magic-link-email";
 import {
+  getVerificationCodeEmailHtml,
+  getVerificationCodeEmailText,
+  type VerificationCodeEmailProps,
+} from "../templates/verification-code-email";
+import {
   getInvitationEmailHtml,
   getInvitationEmailText,
   type InvitationEmailProps,
@@ -80,6 +85,67 @@ export async function sendMagicLinkEmail(
     return { success: true };
   } catch (err: any) {
     console.error("Failed to send magic link email:", {
+      email: maskEmailForLog(email),
+      error: err.message || "Unknown error",
+      response: err.response?.body || err.response?.text || null,
+      statusCode: err.statusCode || null,
+    });
+    const errorMessage =
+      err.response?.body?.message || err.message || "Unknown error occurred";
+    return { success: false, error: errorMessage };
+  }
+}
+
+/**
+ * Sends a verification code email to the specified address.
+ * In development mode, logs the code to console instead.
+ * Returns success status and any error message.
+ */
+export async function sendVerificationCodeEmail(
+  email: string,
+  code: string,
+): Promise<SendMagicLinkEmailResult> {
+  const VERIFICATION_CODE_EXPIRATION_MINUTES = 10;
+
+  // Development mode: log code to console
+  if (EMAIL_MODE === "development") {
+    console.log("\n" + "=".repeat(60));
+    console.log("🔢 VERIFICATION CODE (dev mode - no email sent)");
+    console.log("=".repeat(60));
+    console.log(`📧 Email: ${email}`);
+    console.log(`🔑 Code: ${code}`);
+    console.log("=".repeat(60) + "\n");
+    return { success: true };
+  }
+
+  // Production mode: send actual email via Brevo
+  try {
+    const sendSmtpEmail = new brevo.SendSmtpEmail();
+    sendSmtpEmail.sender = {
+      email: EMAIL_FROM.match(/<(.+)>/)?.[1] || EMAIL_FROM,
+      name: EMAIL_FROM.match(/^(.+?)\s*</)?.[1] || "Notto",
+    };
+    sendSmtpEmail.to = [{ email }];
+    sendSmtpEmail.subject = "Your Notto Verification Code";
+    sendSmtpEmail.htmlContent = getVerificationCodeEmailHtml({
+      code,
+      expirationMinutes: VERIFICATION_CODE_EXPIRATION_MINUTES,
+    });
+    sendSmtpEmail.textContent = getVerificationCodeEmailText({
+      code,
+      expirationMinutes: VERIFICATION_CODE_EXPIRATION_MINUTES,
+    });
+
+    await getBrevoClient().sendTransacEmail(sendSmtpEmail);
+
+    console.log("Verification code email sent:", {
+      email: maskEmailForLog(email),
+      timestamp: new Date().toISOString(),
+    });
+
+    return { success: true };
+  } catch (err: any) {
+    console.error("Failed to send verification code email:", {
       email: maskEmailForLog(email),
       error: err.message || "Unknown error",
       response: err.response?.body || err.response?.text || null,

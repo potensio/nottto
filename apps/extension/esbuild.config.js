@@ -18,6 +18,12 @@ async function build() {
       entryPoints: ["src/content/index.ts"],
       outfile: "dist/content.js",
     }),
+    // Auth prompt (new)
+    esbuild.context({
+      ...commonOptions,
+      entryPoints: ["src/content/auth-prompt-new.ts"],
+      outfile: "dist/auth-prompt-new.js",
+    }),
     // Background script
     esbuild.context({
       ...commonOptions,

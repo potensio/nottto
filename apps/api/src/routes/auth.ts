@@ -7,11 +7,14 @@ import {
   refreshSchema,
   magicLinkRequestSchema,
   magicLinkVerifySchema,
+  verificationCodeRequestSchema,
+  verificationCodeVerifySchema,
   updateUserProfileSchema,
 } from "@notto/shared";
 import { authMiddleware } from "../middleware/auth";
 import * as authService from "../services/auth";
 import * as magicLinkService from "../services/magic-link";
+import * as verificationCodeService from "../services/verification-code";
 
 export const authRoutes = new Hono();
 
@@ -39,9 +42,22 @@ function clearSessionCookie(c: any) {
 // POST /auth/magic-link - Request magic link
 authRoutes.post(
   "/magic-link",
-  zValidator("json", magicLinkRequestSchema),
+  zValidator("json", magicLinkRequestSchema, (result, c) => {
+    if (!result.success) {
+      console.error(
+        "Magic link validation failed:",
+        JSON.stringify(result.error.flatten(), null, 2),
+      );
+    }
+  }),
   async (c) => {
     const { email, isRegister, name, extensionSession } = c.req.valid("json");
+    console.log("Magic link request:", {
+      email,
+      isRegister,
+      hasName: !!name,
+      hasExtensionSession: !!extensionSession,
+    });
     const result = await magicLinkService.requestMagicLink(
       email,
       isRegister,
@@ -59,6 +75,44 @@ authRoutes.post(
   async (c) => {
     const { token } = c.req.valid("json");
     const result = await magicLinkService.verifyMagicLink(token);
+
+    // Create session and set cookie
+    const userAgent = c.req.header("user-agent");
+    const sessionToken = await authService.createSession(
+      result.user.id,
+      userAgent,
+    );
+    setSessionCookie(c, sessionToken);
+
+    return c.json(result);
+  },
+);
+
+// POST /auth/request-code - Request verification code (for extension)
+authRoutes.post(
+  "/request-code",
+  zValidator("json", verificationCodeRequestSchema),
+  async (c) => {
+    const { email, isRegister, name } = c.req.valid("json");
+    const result = await verificationCodeService.requestVerificationCode(
+      email,
+      isRegister,
+      name,
+    );
+    return c.json(result);
+  },
+);
+
+// POST /auth/verify-code - Verify verification code (for extension)
+authRoutes.post(
+  "/verify-code",
+  zValidator("json", verificationCodeVerifySchema),
+  async (c) => {
+    const { email, code } = c.req.valid("json");
+    const result = await verificationCodeService.verifyVerificationCode(
+      email,
+      code,
+    );
 
     // Create session and set cookie
     const userAgent = c.req.header("user-agent");

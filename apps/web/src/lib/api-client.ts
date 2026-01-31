@@ -61,8 +61,27 @@ class ApiClient {
 
       try {
         const errorData = await response.json();
-        error.message = errorData.message || error.message;
-        error.code = errorData.code;
+        // Handle nested error structure from API
+        if (errorData.error) {
+          error.message = errorData.error.message || error.message;
+          error.code = errorData.error.code;
+
+          // Include validation details if present
+          if (errorData.error.details) {
+            const validationErrors = Object.entries(errorData.error.details)
+              .map(
+                ([field, messages]) =>
+                  `${field}: ${(messages as string[]).join(", ")}`,
+              )
+              .join("; ");
+            error.message = `${error.message} (${validationErrors})`;
+          }
+        } else {
+          // Fallback for non-standard error format
+          error.message =
+            errorData.message || errorData.error_description || error.message;
+          error.code = errorData.code || errorData.error;
+        }
       } catch {
         // Ignore JSON parse errors
       }
@@ -80,6 +99,11 @@ class ApiClient {
       }
 
       throw error;
+    }
+
+    // Handle 204 No Content responses (no body to parse)
+    if (response.status === 204) {
+      return undefined as T;
     }
 
     return response.json();
@@ -119,12 +143,17 @@ class ApiClient {
     name?: string,
     extensionSession?: string,
   ) {
+    const body: Record<string, any> = { email, isRegister };
+    // Only include name if it's provided and not empty
+    if (name && name.trim().length > 0) body.name = name;
+    if (extensionSession) body.extensionSession = extensionSession;
+
     return this.fetch<{
       message: string;
       email: string;
     }>("/auth/magic-link", {
       method: "POST",
-      body: JSON.stringify({ email, isRegister, name, extensionSession }),
+      body: JSON.stringify(body),
     });
   }
 

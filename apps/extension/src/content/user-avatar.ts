@@ -146,8 +146,17 @@ export async function handleLogout(): Promise<void> {
     // Clear all stored authentication data
     await clearAuthState();
 
+    // Also clear any legacy auth tokens that might exist
+    await chrome.storage.local.remove(["authToken"]);
+
+    // Optionally clear workspace/project selection on logout
+    // This ensures a clean slate when the user logs back in
+    await chrome.storage.local.remove(["notto_selection"]);
+
     // Close the annotation overlay
     cleanupOverlay();
+
+    console.log("Notto: Successfully logged out");
   } catch (error) {
     console.error("Notto: Failed to logout", error);
   }

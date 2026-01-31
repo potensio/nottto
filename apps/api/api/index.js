@@ -4,12 +4,12 @@ import {
   db,
   deleteAllUserSessions,
   deleteUser,
-  extensionAuthSessions,
   generateTokens,
   generateUniqueSlug,
   getUser,
   login,
   magicLinkTokens,
+  oauthAuthorizationCodes,
   projects,
   rateLimitRecords,
   refresh,
@@ -18,11 +18,12 @@ import {
   updateUser,
   users,
   validateSession,
+  verificationCodes,
   webhookIntegrations,
   workspaceInvitations,
   workspaceMembers,
-  workspaces,
-} from "./chunk-GZMTDH7Q.js";
+  workspaces
+} from "./chunk-SWCWKGH4.js";
 
 // src/index.ts
 import { Hono as Hono9 } from "hono";
@@ -40,59 +41,64 @@ import { z } from "zod";
 var registerSchema = z.object({
   email: z.string().email("Invalid email format"),
   password: z.string().min(8, "Password must be at least 8 characters"),
-  name: z.string().min(1).max(255).optional(),
+  name: z.string().min(1).max(255).optional()
 });
 var loginSchema = z.object({
   email: z.string().email("Invalid email format"),
-  password: z.string().min(1, "Password is required"),
+  password: z.string().min(1, "Password is required")
 });
 var refreshSchema = z.object({
-  refreshToken: z.string().min(1, "Refresh token is required"),
+  refreshToken: z.string().min(1, "Refresh token is required")
 });
-var magicLinkRequestSchema = z
-  .object({
-    email: z.string().email("Invalid email format"),
-    isRegister: z.boolean().default(false),
-    name: z.string().min(1, "Full name is required").max(255).optional(),
-    extensionSession: z.string().max(64).optional(),
-    // Extension auth session ID
-  })
-  .refine(
-    (data) => !data.isRegister || (data.name && data.name.trim().length > 0),
-    { message: "Full name is required for registration", path: ["name"] },
-  );
+var magicLinkRequestSchema = z.object({
+  email: z.string().email("Invalid email format"),
+  isRegister: z.boolean().default(false),
+  name: z.string().max(255).optional(),
+  extensionSession: z.string().max(512).optional()
+  // Extension auth session ID (can be a JWT or long identifier)
+}).refine(
+  (data) => !data.isRegister || data.name && data.name.trim().length > 0,
+  { message: "Full name is required for registration", path: ["name"] }
+);
 var magicLinkVerifySchema = z.object({
-  token: z.string().min(1, "Token is required"),
+  token: z.string().min(1, "Token is required")
+});
+var verificationCodeRequestSchema = z.object({
+  email: z.string().email("Invalid email format"),
+  isRegister: z.boolean().default(false),
+  name: z.string().max(255).optional()
+}).refine(
+  (data) => !data.isRegister || data.name && data.name.trim().length > 0,
+  { message: "Full name is required for registration", path: ["name"] }
+);
+var verificationCodeVerifySchema = z.object({
+  email: z.string().email("Invalid email format"),
+  code: z.string().length(6, "Code must be 6 digits")
 });
 var createWorkspaceSchema = z.object({
-  name: z.string().min(1, "Name is required").max(255),
+  name: z.string().min(1, "Name is required").max(255)
 });
 var updateWorkspaceSchema = z.object({
   name: z.string().min(1).max(255).optional(),
-  slug: z
-    .string()
-    .min(1)
-    .max(255)
-    .regex(/^[a-z0-9-]+$/, "Slug must be lowercase alphanumeric with hyphens")
-    .optional(),
-  icon: z.string().min(1).max(50).optional(),
+  slug: z.string().min(1).max(255).regex(/^[a-z0-9-]+$/, "Slug must be lowercase alphanumeric with hyphens").optional(),
+  icon: z.string().min(1).max(50).optional()
 });
 var createProjectSchema = z.object({
   name: z.string().min(1, "Name is required").max(255),
-  description: z.string().max(1e3).optional(),
+  description: z.string().max(1e3).optional()
 });
 var updateProjectSchema = z.object({
   name: z.string().min(1).max(255).optional(),
-  slug: z
-    .string()
-    .min(1)
-    .max(255)
-    .regex(/^[a-z0-9-]+$/, "Slug must be lowercase alphanumeric with hyphens")
-    .optional(),
-  description: z.string().max(1e3).optional(),
+  slug: z.string().min(1).max(255).regex(/^[a-z0-9-]+$/, "Slug must be lowercase alphanumeric with hyphens").optional(),
+  description: z.string().max(1e3).optional()
 });
 var annotationTypeSchema = z.enum(["bug", "improvement", "question"]);
-var annotationPrioritySchema = z.enum(["urgent", "high", "medium", "low"]);
+var annotationPrioritySchema = z.enum([
+  "urgent",
+  "high",
+  "medium",
+  "low"
+]);
 var annotationStatusSchema = z.enum(["open", "done"]);
 var createAnnotationSchema = z.object({
   title: z.string().min(1, "Title is required").max(255),
@@ -106,7 +112,7 @@ var createAnnotationSchema = z.object({
   screenshotAnnotated: z.string().url("Invalid URL").optional(),
   screenshotAnnotatedBase64: z.string().optional(),
   // Base64 data URL from extension
-  canvasData: z.any().optional(),
+  canvasData: z.any().optional()
 });
 var updateAnnotationSchema = z.object({
   title: z.string().min(1).max(255).optional(),
@@ -118,22 +124,22 @@ var updateAnnotationSchema = z.object({
   pageTitle: z.string().max(255).optional().nullable(),
   screenshotOriginal: z.string().url("Invalid URL").optional().nullable(),
   screenshotAnnotated: z.string().url("Invalid URL").optional().nullable(),
-  canvasData: z.any().optional().nullable(),
+  canvasData: z.any().optional().nullable()
 });
 var updateUserProfileSchema = z.object({
   name: z.string().min(1, "Name is required").max(255).optional(),
-  profilePicture: z.string().url("Invalid URL").optional().nullable(),
+  profilePicture: z.string().url("Invalid URL").optional().nullable()
 });
 var updateMemberRoleSchema = z.object({
   role: z.enum(["admin", "member"], {
-    errorMap: () => ({ message: "Role must be either 'admin' or 'member'" }),
-  }),
+    errorMap: () => ({ message: "Role must be either 'admin' or 'member'" })
+  })
 });
 var createInvitationSchema = z.object({
   email: z.string().email("Invalid email format"),
   role: z.enum(["admin", "member"], {
-    errorMap: () => ({ message: "Role must be either 'admin' or 'member'" }),
-  }),
+    errorMap: () => ({ message: "Role must be either 'admin' or 'member'" })
+  })
 });
 
 // src/middleware/auth.ts
@@ -172,7 +178,7 @@ async function authMiddleware(c, next) {
     }
   }
   throw new HTTPException(401, {
-    message: "Missing or invalid authentication",
+    message: "Missing or invalid authentication"
   });
 }
 
@@ -210,7 +216,10 @@ function maskEmail(email) {
 import * as brevo from "@getbrevo/brevo";
 
 // src/templates/magic-link-email.ts
-function getMagicLinkEmailHtml({ magicLinkUrl, expirationMinutes }) {
+function getMagicLinkEmailHtml({
+  magicLinkUrl,
+  expirationMinutes
+}) {
   return `
 <!DOCTYPE html>
 <html lang="en">
@@ -283,7 +292,7 @@ function getMagicLinkEmailHtml({ magicLinkUrl, expirationMinutes }) {
           <tr>
             <td style="padding: 24px 20px; text-align: center;">
               <p style="margin: 0; font-size: 12px; color: #a3a3a3;">
-                \xA9 ${/* @__PURE__ */ new Date().getFullYear()} Notto. All rights reserved.
+                \xA9 ${(/* @__PURE__ */ new Date()).getFullYear()} Notto. All rights reserved.
               </p>
             </td>
           </tr>
@@ -295,7 +304,10 @@ function getMagicLinkEmailHtml({ magicLinkUrl, expirationMinutes }) {
 </html>
   `.trim();
 }
-function getMagicLinkEmailText({ magicLinkUrl, expirationMinutes }) {
+function getMagicLinkEmailText({
+  magicLinkUrl,
+  expirationMinutes
+}) {
   return `
 Sign in to Notto
 
@@ -305,7 +317,88 @@ ${magicLinkUrl}
 
 If you didn't request this email, you can safely ignore it.
 
-\xA9 ${/* @__PURE__ */ new Date().getFullYear()} Notto. All rights reserved.
+\xA9 ${(/* @__PURE__ */ new Date()).getFullYear()} Notto. All rights reserved.
+  `.trim();
+}
+
+// src/templates/verification-code-email.ts
+function getVerificationCodeEmailHtml(props) {
+  const { code, expirationMinutes } = props;
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your Notto Verification Code</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
+  <table role="presentation" style="width: 100%; border-collapse: collapse;">
+    <tr>
+      <td align="center" style="padding: 40px 20px;">
+        <table role="presentation" style="width: 100%; max-width: 600px; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+          <!-- Header -->
+          <tr>
+            <td style="padding: 40px 40px 20px; text-align: center;">
+              <h1 style="margin: 0; font-size: 28px; font-weight: 600; color: #171717;">Notto</h1>
+            </td>
+          </tr>
+          
+          <!-- Content -->
+          <tr>
+            <td style="padding: 0 40px 40px;">
+              <h2 style="margin: 0 0 16px; font-size: 24px; font-weight: 600; color: #171717;">Your Verification Code</h2>
+              <p style="margin: 0 0 24px; font-size: 16px; line-height: 24px; color: #525252;">
+                Enter this code in the Notto extension to complete your authentication:
+              </p>
+              
+              <!-- Verification Code -->
+              <div style="background-color: #fafafa; border: 2px solid #e5e5e5; border-radius: 8px; padding: 24px; text-align: center; margin: 0 0 24px;">
+                <div style="font-size: 36px; font-weight: 700; letter-spacing: 8px; color: #171717; font-family: 'Courier New', monospace;">
+                  ${code}
+                </div>
+              </div>
+              
+              <p style="margin: 0 0 16px; font-size: 14px; line-height: 20px; color: #737373;">
+                This code will expire in <strong>${expirationMinutes} minutes</strong>.
+              </p>
+              
+              <p style="margin: 0; font-size: 14px; line-height: 20px; color: #737373;">
+                If you didn't request this code, you can safely ignore this email.
+              </p>
+            </td>
+          </tr>
+          
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 20px 40px; border-top: 1px solid #e5e5e5; text-align: center;">
+              <p style="margin: 0; font-size: 12px; color: #a3a3a3;">
+                \xA9 ${(/* @__PURE__ */ new Date()).getFullYear()} Notto. All rights reserved.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `.trim();
+}
+function getVerificationCodeEmailText(props) {
+  const { code, expirationMinutes } = props;
+  return `
+Your Notto Verification Code
+
+Enter this code in the Notto extension to complete your authentication:
+
+${code}
+
+This code will expire in ${expirationMinutes} minutes.
+
+If you didn't request this code, you can safely ignore this email.
+
+\xA9 ${(/* @__PURE__ */ new Date()).getFullYear()} Notto. All rights reserved.
   `.trim();
 }
 
@@ -318,7 +411,7 @@ function getInvitationEmailHtml({
   role,
   acceptUrl,
   declineUrl,
-  expiresAt,
+  expiresAt
 }) {
   const greeting = inviteeName ? `Hi ${inviteeName}` : "Hi there";
   const inviterText = inviterName || "Someone";
@@ -326,7 +419,7 @@ function getInvitationEmailHtml({
   const expirationDate = expiresAt.toLocaleDateString("en-US", {
     month: "long",
     day: "numeric",
-    year: "numeric",
+    year: "numeric"
   });
   return `
 <!DOCTYPE html>
@@ -416,7 +509,7 @@ function getInvitationEmailHtml({
           <tr>
             <td style="padding: 24px 20px; text-align: center;">
               <p style="margin: 0; font-size: 12px; color: #a3a3a3;">
-                \xA9 ${/* @__PURE__ */ new Date().getFullYear()} Notto. All rights reserved.
+                \xA9 ${(/* @__PURE__ */ new Date()).getFullYear()} Notto. All rights reserved.
               </p>
             </td>
           </tr>
@@ -436,7 +529,7 @@ function getInvitationEmailText({
   role,
   acceptUrl,
   declineUrl,
-  expiresAt,
+  expiresAt
 }) {
   const greeting = inviteeName ? `Hi ${inviteeName}` : "Hi there";
   const inviterText = inviterName || "Someone";
@@ -444,7 +537,7 @@ function getInvitationEmailText({
   const expirationDate = expiresAt.toLocaleDateString("en-US", {
     month: "long",
     day: "numeric",
-    year: "numeric",
+    year: "numeric"
   });
   return `
 You're invited to join ${workspaceIcon} ${workspaceName}
@@ -465,7 +558,7 @@ This invitation expires on ${expirationDate}.
 
 If you didn't expect this invitation, you can safely ignore this email.
 
-\xA9 ${/* @__PURE__ */ new Date().getFullYear()} Notto. All rights reserved.
+\xA9 ${(/* @__PURE__ */ new Date()).getFullYear()} Notto. All rights reserved.
   `.trim();
 }
 
@@ -476,7 +569,7 @@ function getBrevoClient() {
     apiInstance = new brevo.TransactionalEmailsApi();
     apiInstance.setApiKey(
       brevo.TransactionalEmailsApiApiKeys.apiKey,
-      process.env.BREVO_API_KEY || "",
+      process.env.BREVO_API_KEY || ""
     );
   }
   return apiInstance;
@@ -498,22 +591,22 @@ async function sendMagicLinkEmail(email, magicLinkUrl) {
     const sendSmtpEmail = new brevo.SendSmtpEmail();
     sendSmtpEmail.sender = {
       email: EMAIL_FROM.match(/<(.+)>/)?.[1] || EMAIL_FROM,
-      name: EMAIL_FROM.match(/^(.+?)\s*</)?.[1] || "Notto",
+      name: EMAIL_FROM.match(/^(.+?)\s*</)?.[1] || "Notto"
     };
     sendSmtpEmail.to = [{ email }];
     sendSmtpEmail.subject = "Sign in to Notto";
     sendSmtpEmail.htmlContent = getMagicLinkEmailHtml({
       magicLinkUrl,
-      expirationMinutes: MAGIC_LINK_EXPIRATION_MINUTES,
+      expirationMinutes: MAGIC_LINK_EXPIRATION_MINUTES
     });
     sendSmtpEmail.textContent = getMagicLinkEmailText({
       magicLinkUrl,
-      expirationMinutes: MAGIC_LINK_EXPIRATION_MINUTES,
+      expirationMinutes: MAGIC_LINK_EXPIRATION_MINUTES
     });
     await getBrevoClient().sendTransacEmail(sendSmtpEmail);
     console.log("Magic link email sent:", {
       email: maskEmailForLog(email),
-      timestamp: /* @__PURE__ */ new Date().toISOString(),
+      timestamp: (/* @__PURE__ */ new Date()).toISOString()
     });
     return { success: true };
   } catch (err) {
@@ -521,10 +614,53 @@ async function sendMagicLinkEmail(email, magicLinkUrl) {
       email: maskEmailForLog(email),
       error: err.message || "Unknown error",
       response: err.response?.body || err.response?.text || null,
-      statusCode: err.statusCode || null,
+      statusCode: err.statusCode || null
     });
-    const errorMessage =
-      err.response?.body?.message || err.message || "Unknown error occurred";
+    const errorMessage = err.response?.body?.message || err.message || "Unknown error occurred";
+    return { success: false, error: errorMessage };
+  }
+}
+async function sendVerificationCodeEmail(email, code) {
+  const VERIFICATION_CODE_EXPIRATION_MINUTES = 10;
+  if (EMAIL_MODE === "development") {
+    console.log("\n" + "=".repeat(60));
+    console.log("\u{1F522} VERIFICATION CODE (dev mode - no email sent)");
+    console.log("=".repeat(60));
+    console.log(`\u{1F4E7} Email: ${email}`);
+    console.log(`\u{1F511} Code: ${code}`);
+    console.log("=".repeat(60) + "\n");
+    return { success: true };
+  }
+  try {
+    const sendSmtpEmail = new brevo.SendSmtpEmail();
+    sendSmtpEmail.sender = {
+      email: EMAIL_FROM.match(/<(.+)>/)?.[1] || EMAIL_FROM,
+      name: EMAIL_FROM.match(/^(.+?)\s*</)?.[1] || "Notto"
+    };
+    sendSmtpEmail.to = [{ email }];
+    sendSmtpEmail.subject = "Your Notto Verification Code";
+    sendSmtpEmail.htmlContent = getVerificationCodeEmailHtml({
+      code,
+      expirationMinutes: VERIFICATION_CODE_EXPIRATION_MINUTES
+    });
+    sendSmtpEmail.textContent = getVerificationCodeEmailText({
+      code,
+      expirationMinutes: VERIFICATION_CODE_EXPIRATION_MINUTES
+    });
+    await getBrevoClient().sendTransacEmail(sendSmtpEmail);
+    console.log("Verification code email sent:", {
+      email: maskEmailForLog(email),
+      timestamp: (/* @__PURE__ */ new Date()).toISOString()
+    });
+    return { success: true };
+  } catch (err) {
+    console.error("Failed to send verification code email:", {
+      email: maskEmailForLog(email),
+      error: err.message || "Unknown error",
+      response: err.response?.body || err.response?.text || null,
+      statusCode: err.statusCode || null
+    });
+    const errorMessage = err.response?.body?.message || err.message || "Unknown error occurred";
     return { success: false, error: errorMessage };
   }
 }
@@ -542,11 +678,9 @@ async function sendInvitationEmail(email, invitationData) {
     console.log("=".repeat(60));
     console.log(`\u{1F4E7} Email: ${email}`);
     console.log(
-      `\u{1F3E2} Workspace: ${invitationData.workspaceIcon} ${invitationData.workspaceName}`,
+      `\u{1F3E2} Workspace: ${invitationData.workspaceIcon} ${invitationData.workspaceName}`
     );
-    console.log(
-      `\u{1F464} Inviter: ${invitationData.inviterName || "Unknown"}`,
-    );
+    console.log(`\u{1F464} Inviter: ${invitationData.inviterName || "Unknown"}`);
     console.log(`\u{1F3AD} Role: ${invitationData.role}`);
     console.log(`\u2705 Accept: ${invitationData.acceptUrl}`);
     console.log(`\u274C Decline: ${invitationData.declineUrl}`);
@@ -558,7 +692,7 @@ async function sendInvitationEmail(email, invitationData) {
     const sendSmtpEmail = new brevo.SendSmtpEmail();
     sendSmtpEmail.sender = {
       email: EMAIL_FROM.match(/<(.+)>/)?.[1] || EMAIL_FROM,
-      name: EMAIL_FROM.match(/^(.+?)\s*</)?.[1] || "Notto",
+      name: EMAIL_FROM.match(/^(.+?)\s*</)?.[1] || "Notto"
     };
     sendSmtpEmail.to = [{ email }];
     sendSmtpEmail.subject = `You're invited to join ${invitationData.workspaceName}`;
@@ -568,7 +702,7 @@ async function sendInvitationEmail(email, invitationData) {
     console.log("Invitation email sent:", {
       email: maskEmailForLog(email),
       workspace: invitationData.workspaceName,
-      timestamp: /* @__PURE__ */ new Date().toISOString(),
+      timestamp: (/* @__PURE__ */ new Date()).toISOString()
     });
     return { success: true };
   } catch (err) {
@@ -577,10 +711,9 @@ async function sendInvitationEmail(email, invitationData) {
       workspace: invitationData.workspaceName,
       error: err.message || "Unknown error",
       response: err.response?.body || err.response?.text || null,
-      statusCode: err.statusCode || null,
+      statusCode: err.statusCode || null
     });
-    const errorMessage =
-      err.response?.body?.message || err.message || "Unknown error occurred";
+    const errorMessage = err.response?.body?.message || err.message || "Unknown error occurred";
     return { success: false, error: errorMessage };
   }
 }
@@ -591,22 +724,19 @@ var MAGIC_LINK_LIMIT = 50;
 var WINDOW_HOURS = 1;
 async function checkMagicLinkLimit(email) {
   const windowStart = getWindowStart();
-  const requests = await db
-    .select()
-    .from(rateLimitRecords)
-    .where(
-      and(
-        eq(rateLimitRecords.identifier, email.toLowerCase()),
-        eq(rateLimitRecords.action, "magic_link"),
-        gte(rateLimitRecords.createdAt, windowStart),
-      ),
-    );
+  const requests = await db.select().from(rateLimitRecords).where(
+    and(
+      eq(rateLimitRecords.identifier, email.toLowerCase()),
+      eq(rateLimitRecords.action, "magic_link"),
+      gte(rateLimitRecords.createdAt, windowStart)
+    )
+  );
   const count = requests.length;
   const remaining = Math.max(0, MAGIC_LINK_LIMIT - count);
   const allowed = count < MAGIC_LINK_LIMIT;
   if (!allowed) {
-    const oldestRequest = requests.reduce((oldest, req) =>
-      req.createdAt < oldest.createdAt ? req : oldest,
+    const oldestRequest = requests.reduce(
+      (oldest, req) => req.createdAt < oldest.createdAt ? req : oldest
     );
     const resetTime = new Date(oldestRequest.createdAt);
     resetTime.setHours(resetTime.getHours() + WINDOW_HOURS);
@@ -618,7 +748,7 @@ async function checkMagicLinkLimit(email) {
 async function recordMagicLinkRequest(email) {
   await db.insert(rateLimitRecords).values({
     identifier: email.toLowerCase(),
-    action: "magic_link",
+    action: "magic_link"
   });
 }
 function getWindowStart() {
@@ -629,42 +759,32 @@ function getWindowStart() {
 
 // src/services/magic-link.ts
 var WEB_URL = process.env.WEB_URL || "http://localhost:3000";
-async function requestMagicLink(
-  email,
-  isRegister = false,
-  name,
-  extensionSession,
-) {
+async function requestMagicLink(email, isRegister = false, name, extensionSession) {
   const normalizedEmail = email.toLowerCase().trim();
   const rateLimit = await checkMagicLinkLimit(normalizedEmail);
   if (!rateLimit.allowed) {
     throw new HTTPException2(429, {
       message: "Too many requests. Please try again later.",
       // @ts-ignore - Adding custom property for retry-after
-      retryAfter: rateLimit.retryAfter,
+      retryAfter: rateLimit.retryAfter
     });
   }
-  const [existingUser] = await db
-    .select()
-    .from(users)
-    .where(eq2(users.email, normalizedEmail))
-    .limit(1);
+  const [existingUser] = await db.select().from(users).where(eq2(users.email, normalizedEmail)).limit(1);
   if (isRegister) {
     if (existingUser) {
       throw new HTTPException2(409, {
-        message:
-          "An account with this email already exists. Please login instead.",
+        message: "An account with this email already exists. Please login instead."
       });
     }
     if (!name || name.trim().length === 0) {
       throw new HTTPException2(400, {
-        message: "Full name is required for registration.",
+        message: "Full name is required for registration."
       });
     }
   } else {
     if (!existingUser) {
       throw new HTTPException2(404, {
-        message: "No account found with this email. Please register first.",
+        message: "No account found with this email. Please register first."
       });
     }
   }
@@ -676,11 +796,11 @@ async function requestMagicLink(
     tokenHash,
     name: isRegister ? name?.trim() : null,
     isRegister,
-    expiresAt,
+    expiresAt
   });
   await recordMagicLinkRequest(normalizedEmail);
   let magicLinkUrl = `${WEB_URL}/auth/verify?token=${encodeURIComponent(
-    token,
+    token
   )}`;
   if (extensionSession) {
     magicLinkUrl += `&session=${encodeURIComponent(extensionSession)}`;
@@ -688,103 +808,78 @@ async function requestMagicLink(
   const emailResult = await sendMagicLinkEmail(normalizedEmail, magicLinkUrl);
   if (!emailResult.success) {
     throw new HTTPException2(500, {
-      message: "Failed to send email. Please try again.",
+      message: "Failed to send email. Please try again."
     });
   }
   return {
     message: "Magic link sent! Check your email.",
-    email: maskEmail(normalizedEmail),
+    email: maskEmail(normalizedEmail)
   };
 }
 async function verifyMagicLink(token) {
   const tokenHash = hashToken(token);
-  const [tokenRecord] = await db
-    .select()
-    .from(magicLinkTokens)
-    .where(
-      and2(
-        eq2(magicLinkTokens.tokenHash, tokenHash),
-        isNull(magicLinkTokens.usedAt),
-      ),
+  const [tokenRecord] = await db.select().from(magicLinkTokens).where(
+    and2(
+      eq2(magicLinkTokens.tokenHash, tokenHash),
+      isNull(magicLinkTokens.usedAt)
     )
-    .limit(1);
+  ).limit(1);
   if (!tokenRecord) {
     throw new HTTPException2(401, {
-      message: "Invalid or expired link. Please request a new one.",
+      message: "Invalid or expired link. Please request a new one."
     });
   }
   if (isTokenExpired(tokenRecord.expiresAt)) {
-    await db
-      .update(magicLinkTokens)
-      .set({ usedAt: /* @__PURE__ */ new Date() })
-      .where(eq2(magicLinkTokens.id, tokenRecord.id));
+    await db.update(magicLinkTokens).set({ usedAt: /* @__PURE__ */ new Date() }).where(eq2(magicLinkTokens.id, tokenRecord.id));
     throw new HTTPException2(401, {
-      message: "This link has expired. Please request a new one.",
+      message: "This link has expired. Please request a new one."
     });
   }
-  await db
-    .update(magicLinkTokens)
-    .set({ usedAt: /* @__PURE__ */ new Date() })
-    .where(eq2(magicLinkTokens.id, tokenRecord.id));
-  let [existingUser] = await db
-    .select()
-    .from(users)
-    .where(eq2(users.email, tokenRecord.email))
-    .limit(1);
+  await db.update(magicLinkTokens).set({ usedAt: /* @__PURE__ */ new Date() }).where(eq2(magicLinkTokens.id, tokenRecord.id));
+  let [existingUser] = await db.select().from(users).where(eq2(users.email, tokenRecord.email)).limit(1);
   let isNewUser = false;
   if (!existingUser) {
     isNewUser = true;
-    const [newUser] = await db
-      .insert(users)
-      .values({
-        email: tokenRecord.email,
-        name: tokenRecord.name || null,
-        // Use name from registration token
-        passwordHash: null,
-        // Passwordless user
-      })
-      .returning();
+    const [newUser] = await db.insert(users).values({
+      email: tokenRecord.email,
+      name: tokenRecord.name || null,
+      // Use name from registration token
+      passwordHash: null
+      // Passwordless user
+    }).returning();
     existingUser = newUser;
-    const existingWorkspaces = await db
-      .select({ slug: workspaces.slug })
-      .from(workspaces);
+    const existingWorkspaces = await db.select({ slug: workspaces.slug }).from(workspaces);
     const existingSlugs = existingWorkspaces.map((w) => w.slug);
     const workspaceName = tokenRecord.name || "Personal";
     const workspaceSlug = generateUniqueSlug(workspaceName, existingSlugs);
-    const [newWorkspace] = await db
-      .insert(workspaces)
-      .values({
-        name: workspaceName,
-        slug: workspaceSlug,
-        icon: "\u{1F4C1}",
-        // Default icon
-        ownerId: newUser.id,
-      })
-      .returning();
+    const [newWorkspace] = await db.insert(workspaces).values({
+      name: workspaceName,
+      slug: workspaceSlug,
+      icon: "\u{1F4C1}",
+      // Default icon
+      ownerId: newUser.id
+    }).returning();
     await db.insert(workspaceMembers).values({
       workspaceId: newWorkspace.id,
       userId: newUser.id,
-      role: "owner",
+      role: "owner"
     });
-    const existingProjects = await db
-      .select({ slug: projects.slug })
-      .from(projects)
-      .where(eq2(projects.workspaceId, newWorkspace.id));
+    const existingProjects = await db.select({ slug: projects.slug }).from(projects).where(eq2(projects.workspaceId, newWorkspace.id));
     const existingProjectSlugs = existingProjects.map((p) => p.slug);
     const projectSlug = generateUniqueSlug(
       "My First Project",
-      existingProjectSlugs,
+      existingProjectSlugs
     );
     await db.insert(projects).values({
       workspaceId: newWorkspace.id,
       name: "My First Project",
       slug: projectSlug,
-      description: "Your first project - start capturing feedback!",
+      description: "Your first project - start capturing feedback!"
     });
   }
   const tokens = await generateTokens({
     sub: existingUser.id,
-    email: existingUser.email,
+    email: existingUser.email
   });
   const user = {
     id: existingUser.id,
@@ -792,9 +887,155 @@ async function verifyMagicLink(token) {
     name: existingUser.name,
     profilePicture: existingUser.profilePicture,
     createdAt: existingUser.createdAt,
-    updatedAt: existingUser.updatedAt,
+    updatedAt: existingUser.updatedAt
   };
   return { user, tokens, isNewUser };
+}
+
+// src/services/verification-code.ts
+import { eq as eq3, and as and3, isNull as isNull2 } from "drizzle-orm";
+import { HTTPException as HTTPException3 } from "hono/http-exception";
+var WEB_URL2 = process.env.WEB_URL || "http://localhost:3000";
+function generateVerificationCode() {
+  return Math.floor(1e5 + Math.random() * 9e5).toString();
+}
+async function requestVerificationCode(email, isRegister = false, name) {
+  const normalizedEmail = email.toLowerCase().trim();
+  const rateLimit = await checkMagicLinkLimit(normalizedEmail);
+  if (!rateLimit.allowed) {
+    throw new HTTPException3(429, {
+      message: "Too many requests. Please try again later."
+    });
+  }
+  const [existingUser] = await db.select().from(users).where(eq3(users.email, normalizedEmail)).limit(1);
+  if (isRegister) {
+    if (existingUser) {
+      throw new HTTPException3(409, {
+        message: "An account with this email already exists. Please login instead."
+      });
+    }
+    if (!name || name.trim().length === 0) {
+      throw new HTTPException3(400, {
+        message: "Full name is required for registration."
+      });
+    }
+  } else {
+    if (!existingUser) {
+      throw new HTTPException3(404, {
+        message: "No account found with this email. Please register first."
+      });
+    }
+  }
+  const code = generateVerificationCode();
+  const codeHash = hashToken(code);
+  const expiresAt = getTokenExpiration(10);
+  await db.insert(verificationCodes).values({
+    email: normalizedEmail,
+    codeHash,
+    name: isRegister ? name?.trim() : null,
+    isRegister,
+    expiresAt
+  });
+  await recordMagicLinkRequest(normalizedEmail);
+  const emailResult = await sendVerificationCodeEmail(normalizedEmail, code);
+  if (!emailResult.success) {
+    throw new HTTPException3(500, {
+      message: "Failed to send email. Please try again."
+    });
+  }
+  return {
+    message: "Verification code sent! Check your email.",
+    email: maskEmail(normalizedEmail)
+  };
+}
+async function verifyVerificationCode(email, code) {
+  const normalizedEmail = email.toLowerCase().trim();
+  const codeHash = hashToken(code);
+  const [codeRecord] = await db.select().from(verificationCodes).where(
+    and3(
+      eq3(verificationCodes.email, normalizedEmail),
+      eq3(verificationCodes.codeHash, codeHash),
+      isNull2(verificationCodes.usedAt)
+    )
+  ).limit(1);
+  if (!codeRecord) {
+    throw new HTTPException3(401, {
+      message: "Invalid or expired code. Please request a new one."
+    });
+  }
+  if (isTokenExpired(codeRecord.expiresAt)) {
+    await db.update(verificationCodes).set({ usedAt: /* @__PURE__ */ new Date() }).where(eq3(verificationCodes.id, codeRecord.id));
+    throw new HTTPException3(401, {
+      message: "This code has expired. Please request a new one."
+    });
+  }
+  await db.update(verificationCodes).set({ usedAt: /* @__PURE__ */ new Date() }).where(eq3(verificationCodes.id, codeRecord.id));
+  let [existingUser] = await db.select().from(users).where(eq3(users.email, normalizedEmail)).limit(1);
+  let isNewUser = false;
+  if (!existingUser) {
+    isNewUser = true;
+    const [newUser] = await db.insert(users).values({
+      email: normalizedEmail,
+      name: codeRecord.name || null,
+      passwordHash: null
+      // Passwordless user
+    }).returning();
+    existingUser = newUser;
+    const existingWorkspaces = await db.select({ slug: workspaces.slug }).from(workspaces);
+    const existingSlugs = existingWorkspaces.map((w) => w.slug);
+    const workspaceName = codeRecord.name || "Personal";
+    const workspaceSlug = generateUniqueSlug(workspaceName, existingSlugs);
+    const [newWorkspace] = await db.insert(workspaces).values({
+      name: workspaceName,
+      slug: workspaceSlug,
+      icon: "\u{1F4C1}",
+      ownerId: newUser.id
+    }).returning();
+    await db.insert(workspaceMembers).values({
+      workspaceId: newWorkspace.id,
+      userId: newUser.id,
+      role: "owner"
+    });
+    const existingProjects = await db.select({ slug: projects.slug }).from(projects).where(eq3(projects.workspaceId, newWorkspace.id));
+    const existingProjectSlugs = existingProjects.map((p) => p.slug);
+    const projectSlug = generateUniqueSlug(
+      "My First Project",
+      existingProjectSlugs
+    );
+    await db.insert(projects).values({
+      workspaceId: newWorkspace.id,
+      name: "My First Project",
+      slug: projectSlug,
+      description: "Your first project - start capturing feedback!"
+    });
+  }
+  const tokens = await generateTokens({
+    sub: existingUser.id,
+    email: existingUser.email
+  });
+  const user = {
+    id: existingUser.id,
+    email: existingUser.email,
+    name: existingUser.name,
+    profilePicture: existingUser.profilePicture,
+    createdAt: existingUser.createdAt,
+    updatedAt: existingUser.updatedAt
+  };
+  const magicToken = generateSecureToken();
+  const magicTokenHash = hashToken(magicToken);
+  const magicExpiresAt = getTokenExpiration(15);
+  await db.insert(magicLinkTokens).values({
+    email: normalizedEmail,
+    tokenHash: magicTokenHash,
+    name: existingUser.name,
+    isRegister: false,
+    // User already exists/created
+    expiresAt: magicExpiresAt
+  });
+  const magicLinkUrl = `${WEB_URL2}/auth/verify?token=${encodeURIComponent(
+    magicToken
+  )}`;
+  return { user, tokens, isNewUser, magicLinkUrl };
 }
 
 // src/routes/auth.ts
@@ -807,7 +1048,7 @@ function setSessionCookie(c, sessionToken) {
     // None required for cross-site cookies
     maxAge: 60 * 60 * 24 * 30,
     // 30 days
-    path: "/",
+    path: "/"
   });
 }
 function clearSessionCookie(c) {
@@ -815,22 +1056,35 @@ function clearSessionCookie(c) {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
-    path: "/",
+    path: "/"
   });
 }
 authRoutes.post(
   "/magic-link",
-  zValidator("json", magicLinkRequestSchema),
+  zValidator("json", magicLinkRequestSchema, (result, c) => {
+    if (!result.success) {
+      console.error(
+        "Magic link validation failed:",
+        JSON.stringify(result.error.flatten(), null, 2)
+      );
+    }
+  }),
   async (c) => {
     const { email, isRegister, name, extensionSession } = c.req.valid("json");
+    console.log("Magic link request:", {
+      email,
+      isRegister,
+      hasName: !!name,
+      hasExtensionSession: !!extensionSession
+    });
     const result = await requestMagicLink(
       email,
       isRegister,
       name,
-      extensionSession,
+      extensionSession
     );
     return c.json(result);
-  },
+  }
 );
 authRoutes.post(
   "/verify-magic-link",
@@ -839,16 +1093,53 @@ authRoutes.post(
     const { token } = c.req.valid("json");
     const result = await verifyMagicLink(token);
     const userAgent = c.req.header("user-agent");
-    const sessionToken = await createSession(result.user.id, userAgent);
+    const sessionToken = await createSession(
+      result.user.id,
+      userAgent
+    );
     setSessionCookie(c, sessionToken);
     return c.json(result);
-  },
+  }
+);
+authRoutes.post(
+  "/request-code",
+  zValidator("json", verificationCodeRequestSchema),
+  async (c) => {
+    const { email, isRegister, name } = c.req.valid("json");
+    const result = await requestVerificationCode(
+      email,
+      isRegister,
+      name
+    );
+    return c.json(result);
+  }
+);
+authRoutes.post(
+  "/verify-code",
+  zValidator("json", verificationCodeVerifySchema),
+  async (c) => {
+    const { email, code } = c.req.valid("json");
+    const result = await verifyVerificationCode(
+      email,
+      code
+    );
+    const userAgent = c.req.header("user-agent");
+    const sessionToken = await createSession(
+      result.user.id,
+      userAgent
+    );
+    setSessionCookie(c, sessionToken);
+    return c.json(result);
+  }
 );
 authRoutes.post("/register", zValidator("json", registerSchema), async (c) => {
   const { email, password, name } = c.req.valid("json");
   const result = await register(email, password, name);
   const userAgent = c.req.header("user-agent");
-  const sessionToken = await createSession(result.user.id, userAgent);
+  const sessionToken = await createSession(
+    result.user.id,
+    userAgent
+  );
   setSessionCookie(c, sessionToken);
   return c.json(result, 201);
 });
@@ -856,7 +1147,10 @@ authRoutes.post("/login", zValidator("json", loginSchema), async (c) => {
   const { email, password } = c.req.valid("json");
   const result = await login(email, password);
   const userAgent = c.req.header("user-agent");
-  const sessionToken = await createSession(result.user.id, userAgent);
+  const sessionToken = await createSession(
+    result.user.id,
+    userAgent
+  );
   setSessionCookie(c, sessionToken);
   return c.json(result);
 });
@@ -879,7 +1173,7 @@ authRoutes.patch(
     const data = c.req.valid("json");
     const user = await updateUser(userId, data);
     return c.json({ user });
-  },
+  }
 );
 authRoutes.delete("/me", authMiddleware, async (c) => {
   const userId = c.get("userId");
@@ -894,141 +1188,330 @@ authRoutes.post("/logout", authMiddleware, async (c) => {
   return c.json({ success: true, message: "Logged out successfully" });
 });
 
-// src/routes/extension-auth.ts
+// src/routes/oauth.ts
 import { Hono as Hono2 } from "hono";
 import { zValidator as zValidator2 } from "@hono/zod-validator";
 import { z as z2 } from "zod";
+import { HTTPException as HTTPException5 } from "hono/http-exception";
 
-// src/services/extension-auth.ts
-import { eq as eq3, and as and3, gt, lt as lt2 } from "drizzle-orm";
-import { HTTPException as HTTPException3 } from "hono/http-exception";
+// src/services/oauth.ts
+import { eq as eq4, lt as lt2 } from "drizzle-orm";
+import { HTTPException as HTTPException4 } from "hono/http-exception";
 import { nanoid } from "nanoid";
-var SESSION_EXPIRY_MS = 10 * 60 * 1e3;
-async function createAuthSession() {
-  const sessionId = nanoid(32);
-  const expiresAt = new Date(Date.now() + SESSION_EXPIRY_MS);
-  await db.insert(extensionAuthSessions).values({
-    id: sessionId,
-    status: "pending",
-    expiresAt,
+
+// src/utils/pkce.ts
+async function validatePKCE(verifier, challenge) {
+  try {
+    const computedChallenge = await generateCodeChallenge(verifier);
+    return computedChallenge === challenge;
+  } catch (error) {
+    console.error("PKCE validation error:", error);
+    return false;
+  }
+}
+async function generateCodeChallenge(verifier) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(verifier);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  return base64UrlEncode(hashBuffer);
+}
+function base64UrlEncode(buffer) {
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  const base64 = Buffer.from(binary, "binary").toString("base64");
+  return base64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
+}
+
+// src/services/oauth.ts
+var AUTHORIZATION_CODE_EXPIRY_MS = 5 * 60 * 1e3;
+var REDIRECT_URI_PATTERN = /^https:\/\/[a-z]{32}\.chromiumapp\.org\/.*$/;
+async function createAuthorizationCode(userId, codeChallenge, redirectUri, clientId, state) {
+  if (!validateRedirectUri(redirectUri, clientId)) {
+    console.error("OAuth Service: Invalid redirect URI", {
+      redirectUri,
+      clientId,
+      timestamp: (/* @__PURE__ */ new Date()).toISOString()
+    });
+    throw new HTTPException4(400, {
+      message: JSON.stringify({
+        error: "invalid_request",
+        error_description: "Invalid redirect URI format. Must match https://<extension-id>.chromiumapp.org/*"
+      })
+    });
+  }
+  const code = nanoid(32);
+  const expiresAt = new Date(Date.now() + AUTHORIZATION_CODE_EXPIRY_MS);
+  await db.insert(oauthAuthorizationCodes).values({
+    id: code,
+    userId,
+    codeChallenge,
+    redirectUri,
+    clientId,
+    state,
+    expiresAt
+  });
+  console.log("OAuth Service: Authorization code created", {
+    userId,
+    clientId,
+    expiresAt: expiresAt.toISOString(),
+    timestamp: (/* @__PURE__ */ new Date()).toISOString()
+  });
+  return code;
+}
+async function exchangeAuthorizationCode(code, codeVerifier, redirectUri, clientId) {
+  console.log("OAuth Service: Exchanging authorization code", {
+    codeLength: code.length,
+    verifierLength: codeVerifier.length,
+    clientId,
+    timestamp: (/* @__PURE__ */ new Date()).toISOString()
+  });
+  const [authCode] = await db.select().from(oauthAuthorizationCodes).where(eq4(oauthAuthorizationCodes.id, code)).limit(1);
+  if (!authCode) {
+    console.error("OAuth Service: Authorization code not found", {
+      codeLength: code.length,
+      clientId,
+      timestamp: (/* @__PURE__ */ new Date()).toISOString()
+    });
+    throw new HTTPException4(400, {
+      message: JSON.stringify({
+        error: "invalid_grant",
+        error_description: "Invalid authorization code"
+      })
+    });
+  }
+  if (/* @__PURE__ */ new Date() > authCode.expiresAt) {
+    console.error("OAuth Service: Authorization code expired", {
+      code,
+      expiresAt: authCode.expiresAt.toISOString(),
+      now: (/* @__PURE__ */ new Date()).toISOString(),
+      timestamp: (/* @__PURE__ */ new Date()).toISOString()
+    });
+    await db.delete(oauthAuthorizationCodes).where(eq4(oauthAuthorizationCodes.id, code));
+    throw new HTTPException4(400, {
+      message: JSON.stringify({
+        error: "invalid_grant",
+        error_description: "Authorization code has expired"
+      })
+    });
+  }
+  if (authCode.redirectUri !== redirectUri) {
+    console.error("OAuth Service: Redirect URI mismatch", {
+      expected: authCode.redirectUri,
+      received: redirectUri,
+      timestamp: (/* @__PURE__ */ new Date()).toISOString()
+    });
+    throw new HTTPException4(400, {
+      message: JSON.stringify({
+        error: "invalid_request",
+        error_description: "Redirect URI does not match the original request"
+      })
+    });
+  }
+  if (authCode.clientId !== clientId) {
+    console.error("OAuth Service: Client ID mismatch", {
+      expected: authCode.clientId,
+      received: clientId,
+      timestamp: (/* @__PURE__ */ new Date()).toISOString()
+    });
+    throw new HTTPException4(400, {
+      message: JSON.stringify({
+        error: "invalid_client",
+        error_description: "Client ID does not match the original request"
+      })
+    });
+  }
+  console.log("OAuth Service: Validating PKCE", {
+    verifierLength: codeVerifier.length,
+    challengeLength: authCode.codeChallenge.length
+  });
+  const isPKCEValid = await validatePKCE(codeVerifier, authCode.codeChallenge);
+  if (!isPKCEValid) {
+    console.error("OAuth Service: PKCE validation failed", {
+      verifierLength: codeVerifier.length,
+      challengeLength: authCode.codeChallenge.length,
+      timestamp: (/* @__PURE__ */ new Date()).toISOString()
+    });
+    throw new HTTPException4(400, {
+      message: JSON.stringify({
+        error: "invalid_grant",
+        error_description: "PKCE validation failed. The code verifier does not match the code challenge."
+      })
+    });
+  }
+  console.log("OAuth Service: PKCE validation successful");
+  const [user] = await db.select().from(users).where(eq4(users.id, authCode.userId)).limit(1);
+  if (!user) {
+    console.error("OAuth Service: User not found", {
+      userId: authCode.userId,
+      timestamp: (/* @__PURE__ */ new Date()).toISOString()
+    });
+    throw new HTTPException4(400, {
+      message: JSON.stringify({
+        error: "invalid_grant",
+        error_description: "User not found"
+      })
+    });
+  }
+  await db.delete(oauthAuthorizationCodes).where(eq4(oauthAuthorizationCodes.id, code));
+  console.log("OAuth Service: Authorization code deleted (single-use)");
+  const tokens = await generateTokens({
+    sub: user.id,
+    email: user.email
+  });
+  console.log("OAuth Service: Tokens generated successfully", {
+    userId: user.id,
+    timestamp: (/* @__PURE__ */ new Date()).toISOString()
   });
   return {
-    sessionId,
-    expiresAt: expiresAt.toISOString(),
+    ...tokens,
+    user: {
+      id: user.id,
+      email: user.email,
+      name: user.name
+    }
   };
 }
-async function getAuthSession(sessionId) {
-  const [session] = await db
-    .select()
-    .from(extensionAuthSessions)
-    .where(eq3(extensionAuthSessions.id, sessionId))
-    .limit(1);
-  if (!session) {
-    throw new HTTPException3(404, { message: "Session not found" });
+function validateRedirectUri(uri, clientId) {
+  if (!REDIRECT_URI_PATTERN.test(uri)) {
+    return false;
   }
-  if (/* @__PURE__ */ new Date() > session.expiresAt) {
-    await db
-      .delete(extensionAuthSessions)
-      .where(eq3(extensionAuthSessions.id, sessionId));
-    return { status: "expired" };
+  const match = uri.match(/^https:\/\/([a-z]{32})\.chromiumapp\.org\//);
+  if (!match) {
+    return false;
   }
-  if (session.status === "pending") {
-    return { status: "pending" };
-  }
-  if (session.status === "completed" && session.userId) {
-    const [user] = await db
-      .select()
-      .from(users)
-      .where(eq3(users.id, session.userId))
-      .limit(1);
-    if (!user) {
-      throw new HTTPException3(404, { message: "User not found" });
-    }
-    const tokens = await generateTokens({
-      sub: user.id,
-      email: user.email,
-    });
-    await db
-      .delete(extensionAuthSessions)
-      .where(eq3(extensionAuthSessions.id, sessionId));
-    return {
-      status: "completed",
-      tokens,
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-      },
-    };
-  }
-  return { status: "pending" };
-}
-async function completeAuthSession(sessionId, userId) {
-  const [session] = await db
-    .select()
-    .from(extensionAuthSessions)
-    .where(
-      and3(
-        eq3(extensionAuthSessions.id, sessionId),
-        gt(extensionAuthSessions.expiresAt, /* @__PURE__ */ new Date()),
-      ),
-    )
-    .limit(1);
-  if (!session) {
-    throw new HTTPException3(404, {
-      message: "Session not found or expired",
-    });
-  }
-  if (session.status === "completed") {
-    throw new HTTPException3(400, {
-      message: "Session already completed",
-    });
-  }
-  await db
-    .update(extensionAuthSessions)
-    .set({
-      status: "completed",
-      userId,
-      completedAt: /* @__PURE__ */ new Date(),
-    })
-    .where(eq3(extensionAuthSessions.id, sessionId));
-  return { success: true };
-}
-async function deleteAuthSession(sessionId) {
-  await db
-    .delete(extensionAuthSessions)
-    .where(eq3(extensionAuthSessions.id, sessionId));
+  const extensionId = match[1];
+  return extensionId === clientId;
 }
 
-// src/routes/extension-auth.ts
-var extensionAuthRoutes = new Hono2();
-extensionAuthRoutes.post("/session", async (c) => {
-  const result = await createAuthSession();
-  return c.json(result);
+// src/routes/oauth.ts
+import { eq as eq5, and as and5, gte as gte2 } from "drizzle-orm";
+var oauthRoutes = new Hono2();
+var AUTHORIZE_LIMIT = 10;
+var TOKEN_LIMIT = 5;
+var RATE_LIMIT_WINDOW_MS = 60 * 1e3;
+var oauthAuthorizeSchema = z2.object({
+  response_type: z2.literal("code"),
+  client_id: z2.string().min(1, "Client ID is required"),
+  redirect_uri: z2.string().url("Invalid redirect URI"),
+  code_challenge: z2.string().min(1, "Code challenge is required"),
+  code_challenge_method: z2.literal("S256"),
+  state: z2.string().min(1, "State parameter is required")
 });
-extensionAuthRoutes.get("/session/:sessionId", async (c) => {
-  const sessionId = c.req.param("sessionId");
-  const result = await getAuthSession(sessionId);
-  return c.json(result);
+var oauthTokenSchema = z2.object({
+  grant_type: z2.literal("authorization_code"),
+  code: z2.string().min(1, "Authorization code is required"),
+  redirect_uri: z2.string().url("Invalid redirect URI"),
+  code_verifier: z2.string().min(1, "Code verifier is required"),
+  client_id: z2.string().min(1, "Client ID is required")
 });
-var completeSessionSchema = z2.object({
-  // No body needed - we get user from auth middleware
-});
-extensionAuthRoutes.post(
-  "/session/:sessionId/complete",
+async function rateLimitMiddleware(identifier, action, limit) {
+  const windowStart = new Date(Date.now() - RATE_LIMIT_WINDOW_MS);
+  const requests = await db.select().from(rateLimitRecords).where(
+    and5(
+      eq5(rateLimitRecords.identifier, identifier),
+      eq5(rateLimitRecords.action, action),
+      gte2(rateLimitRecords.createdAt, windowStart)
+    )
+  );
+  if (requests.length >= limit) {
+    throw new HTTPException5(429, {
+      message: "Rate limit exceeded. Please try again later."
+    });
+  }
+  await db.insert(rateLimitRecords).values({
+    identifier,
+    action
+  });
+}
+oauthRoutes.post(
+  "/authorize",
   authMiddleware,
-  zValidator2("json", completeSessionSchema),
+  zValidator2("json", oauthAuthorizeSchema),
   async (c) => {
-    const sessionId = c.req.param("sessionId");
     const userId = c.get("userId");
-    const result = await completeAuthSession(sessionId, userId);
-    return c.json(result);
-  },
+    const {
+      client_id,
+      redirect_uri,
+      code_challenge,
+      code_challenge_method,
+      state
+    } = c.req.valid("json");
+    try {
+      console.log("OAuth Authorize: Request received", {
+        userId,
+        clientId: client_id,
+        redirectUri: redirect_uri,
+        timestamp: (/* @__PURE__ */ new Date()).toISOString()
+      });
+      await rateLimitMiddleware(client_id, "oauth_authorize", AUTHORIZE_LIMIT);
+      const code = await createAuthorizationCode(
+        userId,
+        code_challenge,
+        redirect_uri,
+        client_id,
+        state
+      );
+      console.log("OAuth Authorize: Authorization code created", {
+        userId,
+        clientId: client_id,
+        codeLength: code.length,
+        timestamp: (/* @__PURE__ */ new Date()).toISOString()
+      });
+      return c.json({
+        code,
+        state
+      });
+    } catch (error) {
+      console.error("OAuth Authorize: Failed", {
+        userId,
+        clientId: client_id,
+        error: error instanceof Error ? error.message : "Unknown error",
+        timestamp: (/* @__PURE__ */ new Date()).toISOString()
+      });
+      throw error;
+    }
+  }
 );
-extensionAuthRoutes.delete("/session/:sessionId", async (c) => {
-  const sessionId = c.req.param("sessionId");
-  await deleteAuthSession(sessionId);
-  return c.json({ success: true });
+oauthRoutes.post("/token", zValidator2("json", oauthTokenSchema), async (c) => {
+  const { code, code_verifier, redirect_uri, client_id } = c.req.valid("json");
+  try {
+    console.log("OAuth Token: Exchange request received", {
+      clientId: client_id,
+      codeLength: code.length,
+      verifierLength: code_verifier.length,
+      timestamp: (/* @__PURE__ */ new Date()).toISOString()
+    });
+    await rateLimitMiddleware(client_id, "oauth_token", TOKEN_LIMIT);
+    const tokens = await exchangeAuthorizationCode(
+      code,
+      code_verifier,
+      redirect_uri,
+      client_id
+    );
+    console.log("OAuth Token: Token exchange successful", {
+      clientId: client_id,
+      userId: tokens.user?.id,
+      timestamp: (/* @__PURE__ */ new Date()).toISOString()
+    });
+    return c.json({
+      access_token: tokens.accessToken,
+      refresh_token: tokens.refreshToken,
+      token_type: "Bearer",
+      expires_in: 30 * 24 * 60 * 60,
+      // 30 days in seconds
+      user: tokens.user
+    });
+  } catch (error) {
+    console.error("OAuth Token: Exchange failed", {
+      clientId: client_id,
+      error: error instanceof Error ? error.message : "Unknown error",
+      timestamp: (/* @__PURE__ */ new Date()).toISOString()
+    });
+    throw error;
+  }
 });
 
 // src/routes/workspaces.ts
@@ -1036,26 +1519,19 @@ import { Hono as Hono3 } from "hono";
 import { zValidator as zValidator3 } from "@hono/zod-validator";
 
 // src/services/workspaces.ts
-import { eq as eq4, and as and4 } from "drizzle-orm";
-import { HTTPException as HTTPException4 } from "hono/http-exception";
+import { eq as eq6, and as and6 } from "drizzle-orm";
+import { HTTPException as HTTPException6 } from "hono/http-exception";
 async function list(userId) {
-  const ownedWorkspaces = await db
-    .select()
-    .from(workspaces)
-    .where(eq4(workspaces.ownerId, userId));
-  const memberWorkspaces = await db
-    .select({
-      id: workspaces.id,
-      name: workspaces.name,
-      slug: workspaces.slug,
-      icon: workspaces.icon,
-      ownerId: workspaces.ownerId,
-      createdAt: workspaces.createdAt,
-      updatedAt: workspaces.updatedAt,
-    })
-    .from(workspaceMembers)
-    .innerJoin(workspaces, eq4(workspaceMembers.workspaceId, workspaces.id))
-    .where(eq4(workspaceMembers.userId, userId));
+  const ownedWorkspaces = await db.select().from(workspaces).where(eq6(workspaces.ownerId, userId));
+  const memberWorkspaces = await db.select({
+    id: workspaces.id,
+    name: workspaces.name,
+    slug: workspaces.slug,
+    icon: workspaces.icon,
+    ownerId: workspaces.ownerId,
+    createdAt: workspaces.createdAt,
+    updatedAt: workspaces.updatedAt
+  }).from(workspaceMembers).innerJoin(workspaces, eq6(workspaceMembers.workspaceId, workspaces.id)).where(eq6(workspaceMembers.userId, userId));
   const allWorkspaces = [...ownedWorkspaces];
   for (const ws of memberWorkspaces) {
     if (!allWorkspaces.find((w) => w.id === ws.id)) {
@@ -1069,29 +1545,24 @@ async function list(userId) {
     icon: ws.icon,
     ownerId: ws.ownerId,
     createdAt: ws.createdAt,
-    updatedAt: ws.updatedAt,
+    updatedAt: ws.updatedAt
   }));
 }
 async function create(userId, data) {
-  const existingWorkspaces = await db
-    .select({ slug: workspaces.slug })
-    .from(workspaces);
+  const existingWorkspaces = await db.select({ slug: workspaces.slug }).from(workspaces);
   const existingSlugs = existingWorkspaces.map((w) => w.slug);
   const slug = generateUniqueSlug(data.name, existingSlugs);
-  const [newWorkspace] = await db
-    .insert(workspaces)
-    .values({
-      name: data.name,
-      slug,
-      icon: "\u{1F4C1}",
-      // Default icon
-      ownerId: userId,
-    })
-    .returning();
+  const [newWorkspace] = await db.insert(workspaces).values({
+    name: data.name,
+    slug,
+    icon: "\u{1F4C1}",
+    // Default icon
+    ownerId: userId
+  }).returning();
   await db.insert(workspaceMembers).values({
     workspaceId: newWorkspace.id,
     userId,
-    role: "owner",
+    role: "owner"
   });
   return {
     id: newWorkspace.id,
@@ -1100,22 +1571,18 @@ async function create(userId, data) {
     icon: newWorkspace.icon,
     ownerId: newWorkspace.ownerId,
     createdAt: newWorkspace.createdAt,
-    updatedAt: newWorkspace.updatedAt,
+    updatedAt: newWorkspace.updatedAt
   };
 }
 async function get(workspaceId, userId) {
-  const [workspace] = await db
-    .select()
-    .from(workspaces)
-    .where(eq4(workspaces.id, workspaceId))
-    .limit(1);
+  const [workspace] = await db.select().from(workspaces).where(eq6(workspaces.id, workspaceId)).limit(1);
   if (!workspace) {
-    throw new HTTPException4(404, { message: "Workspace not found" });
+    throw new HTTPException6(404, { message: "Workspace not found" });
   }
   const hasAccess = await checkAccess(workspaceId, userId);
   if (!hasAccess) {
-    throw new HTTPException4(403, {
-      message: "Access denied to this workspace",
+    throw new HTTPException6(403, {
+      message: "Access denied to this workspace"
     });
   }
   return {
@@ -1125,22 +1592,18 @@ async function get(workspaceId, userId) {
     icon: workspace.icon,
     ownerId: workspace.ownerId,
     createdAt: workspace.createdAt,
-    updatedAt: workspace.updatedAt,
+    updatedAt: workspace.updatedAt
   };
 }
 async function getBySlug(slug, userId) {
-  const [workspace] = await db
-    .select()
-    .from(workspaces)
-    .where(eq4(workspaces.slug, slug))
-    .limit(1);
+  const [workspace] = await db.select().from(workspaces).where(eq6(workspaces.slug, slug)).limit(1);
   if (!workspace) {
-    throw new HTTPException4(404, { message: "Workspace not found" });
+    throw new HTTPException6(404, { message: "Workspace not found" });
   }
   const hasAccess = await checkAccess(workspace.id, userId);
   if (!hasAccess) {
-    throw new HTTPException4(403, {
-      message: "Access denied to this workspace",
+    throw new HTTPException6(403, {
+      message: "Access denied to this workspace"
     });
   }
   return {
@@ -1150,41 +1613,29 @@ async function getBySlug(slug, userId) {
     icon: workspace.icon,
     ownerId: workspace.ownerId,
     createdAt: workspace.createdAt,
-    updatedAt: workspace.updatedAt,
+    updatedAt: workspace.updatedAt
   };
 }
 async function update(workspaceId, userId, data) {
-  const [workspace] = await db
-    .select()
-    .from(workspaces)
-    .where(eq4(workspaces.id, workspaceId))
-    .limit(1);
+  const [workspace] = await db.select().from(workspaces).where(eq6(workspaces.id, workspaceId)).limit(1);
   if (!workspace) {
-    throw new HTTPException4(404, { message: "Workspace not found" });
+    throw new HTTPException6(404, { message: "Workspace not found" });
   }
   if (workspace.ownerId !== userId) {
-    throw new HTTPException4(403, {
-      message: "Only the owner can update this workspace",
+    throw new HTTPException6(403, {
+      message: "Only the owner can update this workspace"
     });
   }
   if (data.slug && data.slug !== workspace.slug) {
-    const [existing] = await db
-      .select()
-      .from(workspaces)
-      .where(eq4(workspaces.slug, data.slug))
-      .limit(1);
+    const [existing] = await db.select().from(workspaces).where(eq6(workspaces.slug, data.slug)).limit(1);
     if (existing) {
-      throw new HTTPException4(409, { message: "Slug already in use" });
+      throw new HTTPException6(409, { message: "Slug already in use" });
     }
   }
-  const [updated] = await db
-    .update(workspaces)
-    .set({
-      ...data,
-      updatedAt: /* @__PURE__ */ new Date(),
-    })
-    .where(eq4(workspaces.id, workspaceId))
-    .returning();
+  const [updated] = await db.update(workspaces).set({
+    ...data,
+    updatedAt: /* @__PURE__ */ new Date()
+  }).where(eq6(workspaces.id, workspaceId)).returning();
   return {
     id: updated.id,
     name: updated.name,
@@ -1192,63 +1643,46 @@ async function update(workspaceId, userId, data) {
     icon: updated.icon,
     ownerId: updated.ownerId,
     createdAt: updated.createdAt,
-    updatedAt: updated.updatedAt,
+    updatedAt: updated.updatedAt
   };
 }
 async function remove(workspaceId, userId) {
-  const [workspace] = await db
-    .select()
-    .from(workspaces)
-    .where(eq4(workspaces.id, workspaceId))
-    .limit(1);
+  const [workspace] = await db.select().from(workspaces).where(eq6(workspaces.id, workspaceId)).limit(1);
   if (!workspace) {
-    throw new HTTPException4(404, { message: "Workspace not found" });
+    throw new HTTPException6(404, { message: "Workspace not found" });
   }
   if (workspace.ownerId !== userId) {
-    throw new HTTPException4(403, {
-      message: "Only the owner can delete this workspace",
+    throw new HTTPException6(403, {
+      message: "Only the owner can delete this workspace"
     });
   }
-  await db.delete(workspaces).where(eq4(workspaces.id, workspaceId));
+  await db.delete(workspaces).where(eq6(workspaces.id, workspaceId));
 }
 async function checkAccess(workspaceId, userId) {
-  const [workspace] = await db
-    .select()
-    .from(workspaces)
-    .where(
-      and4(eq4(workspaces.id, workspaceId), eq4(workspaces.ownerId, userId)),
-    )
-    .limit(1);
+  const [workspace] = await db.select().from(workspaces).where(and6(eq6(workspaces.id, workspaceId), eq6(workspaces.ownerId, userId))).limit(1);
   if (workspace) {
     return true;
   }
-  const [member] = await db
-    .select()
-    .from(workspaceMembers)
-    .where(
-      and4(
-        eq4(workspaceMembers.workspaceId, workspaceId),
-        eq4(workspaceMembers.userId, userId),
-      ),
+  const [member] = await db.select().from(workspaceMembers).where(
+    and6(
+      eq6(workspaceMembers.workspaceId, workspaceId),
+      eq6(workspaceMembers.userId, userId)
     )
-    .limit(1);
+  ).limit(1);
   return !!member;
 }
 
 // src/services/projects.ts
-import { eq as eq5, and as and5 } from "drizzle-orm";
-import { HTTPException as HTTPException5 } from "hono/http-exception";
+import { eq as eq7, and as and7 } from "drizzle-orm";
+import { HTTPException as HTTPException7 } from "hono/http-exception";
 async function list2(workspaceId, userId) {
   const hasAccess = await checkAccess(workspaceId, userId);
   if (!hasAccess) {
-    throw new HTTPException5(403, {
-      message: "Access denied to this workspace",
+    throw new HTTPException7(403, {
+      message: "Access denied to this workspace"
     });
   }
-  const projectList = await db
-    .select()
-    .from(projects)
-    .where(eq5(projects.workspaceId, workspaceId));
+  const projectList = await db.select().from(projects).where(eq7(projects.workspaceId, workspaceId));
   return projectList.map((p) => ({
     id: p.id,
     workspaceId: p.workspaceId,
@@ -1256,31 +1690,25 @@ async function list2(workspaceId, userId) {
     slug: p.slug,
     description: p.description,
     createdAt: p.createdAt,
-    updatedAt: p.updatedAt,
+    updatedAt: p.updatedAt
   }));
 }
 async function create2(workspaceId, userId, data) {
   const hasAccess = await checkAccess(workspaceId, userId);
   if (!hasAccess) {
-    throw new HTTPException5(403, {
-      message: "Access denied to this workspace",
+    throw new HTTPException7(403, {
+      message: "Access denied to this workspace"
     });
   }
-  const existingProjects = await db
-    .select({ slug: projects.slug })
-    .from(projects)
-    .where(eq5(projects.workspaceId, workspaceId));
+  const existingProjects = await db.select({ slug: projects.slug }).from(projects).where(eq7(projects.workspaceId, workspaceId));
   const existingSlugs = existingProjects.map((p) => p.slug);
   const slug = generateUniqueSlug(data.name, existingSlugs);
-  const [newProject] = await db
-    .insert(projects)
-    .values({
-      workspaceId,
-      name: data.name,
-      slug,
-      description: data.description || null,
-    })
-    .returning();
+  const [newProject] = await db.insert(projects).values({
+    workspaceId,
+    name: data.name,
+    slug,
+    description: data.description || null
+  }).returning();
   return {
     id: newProject.id,
     workspaceId: newProject.workspaceId,
@@ -1288,21 +1716,17 @@ async function create2(workspaceId, userId, data) {
     slug: newProject.slug,
     description: newProject.description,
     createdAt: newProject.createdAt,
-    updatedAt: newProject.updatedAt,
+    updatedAt: newProject.updatedAt
   };
 }
 async function get2(projectId, userId) {
-  const [project] = await db
-    .select()
-    .from(projects)
-    .where(eq5(projects.id, projectId))
-    .limit(1);
+  const [project] = await db.select().from(projects).where(eq7(projects.id, projectId)).limit(1);
   if (!project) {
-    throw new HTTPException5(404, { message: "Project not found" });
+    throw new HTTPException7(404, { message: "Project not found" });
   }
   const hasAccess = await checkAccess(project.workspaceId, userId);
   if (!hasAccess) {
-    throw new HTTPException5(403, { message: "Access denied to this project" });
+    throw new HTTPException7(403, { message: "Access denied to this project" });
   }
   return {
     id: project.id,
@@ -1311,47 +1735,35 @@ async function get2(projectId, userId) {
     slug: project.slug,
     description: project.description,
     createdAt: project.createdAt,
-    updatedAt: project.updatedAt,
+    updatedAt: project.updatedAt
   };
 }
 async function update2(projectId, userId, data) {
-  const [project] = await db
-    .select()
-    .from(projects)
-    .where(eq5(projects.id, projectId))
-    .limit(1);
+  const [project] = await db.select().from(projects).where(eq7(projects.id, projectId)).limit(1);
   if (!project) {
-    throw new HTTPException5(404, { message: "Project not found" });
+    throw new HTTPException7(404, { message: "Project not found" });
   }
   const hasAccess = await checkAccess(project.workspaceId, userId);
   if (!hasAccess) {
-    throw new HTTPException5(403, { message: "Access denied to this project" });
+    throw new HTTPException7(403, { message: "Access denied to this project" });
   }
   if (data.slug && data.slug !== project.slug) {
-    const [existing] = await db
-      .select()
-      .from(projects)
-      .where(
-        and5(
-          eq5(projects.workspaceId, project.workspaceId),
-          eq5(projects.slug, data.slug),
-        ),
+    const [existing] = await db.select().from(projects).where(
+      and7(
+        eq7(projects.workspaceId, project.workspaceId),
+        eq7(projects.slug, data.slug)
       )
-      .limit(1);
+    ).limit(1);
     if (existing) {
-      throw new HTTPException5(409, {
-        message: "Slug already in use in this workspace",
+      throw new HTTPException7(409, {
+        message: "Slug already in use in this workspace"
       });
     }
   }
-  const [updated] = await db
-    .update(projects)
-    .set({
-      ...data,
-      updatedAt: /* @__PURE__ */ new Date(),
-    })
-    .where(eq5(projects.id, projectId))
-    .returning();
+  const [updated] = await db.update(projects).set({
+    ...data,
+    updatedAt: /* @__PURE__ */ new Date()
+  }).where(eq7(projects.id, projectId)).returning();
   return {
     id: updated.id,
     workspaceId: updated.workspaceId,
@@ -1359,30 +1771,22 @@ async function update2(projectId, userId, data) {
     slug: updated.slug,
     description: updated.description,
     createdAt: updated.createdAt,
-    updatedAt: updated.updatedAt,
+    updatedAt: updated.updatedAt
   };
 }
 async function remove2(projectId, userId) {
-  const [project] = await db
-    .select()
-    .from(projects)
-    .where(eq5(projects.id, projectId))
-    .limit(1);
+  const [project] = await db.select().from(projects).where(eq7(projects.id, projectId)).limit(1);
   if (!project) {
-    throw new HTTPException5(404, { message: "Project not found" });
+    throw new HTTPException7(404, { message: "Project not found" });
   }
   const hasAccess = await checkAccess(project.workspaceId, userId);
   if (!hasAccess) {
-    throw new HTTPException5(403, { message: "Access denied to this project" });
+    throw new HTTPException7(403, { message: "Access denied to this project" });
   }
-  await db.delete(projects).where(eq5(projects.id, projectId));
+  await db.delete(projects).where(eq7(projects.id, projectId));
 }
 async function checkProjectAccess(projectId, userId) {
-  const [project] = await db
-    .select()
-    .from(projects)
-    .where(eq5(projects.id, projectId))
-    .limit(1);
+  const [project] = await db.select().from(projects).where(eq7(projects.id, projectId)).limit(1);
   if (!project) {
     return false;
   }
@@ -1390,8 +1794,8 @@ async function checkProjectAccess(projectId, userId) {
 }
 
 // src/services/members.ts
-import { eq as eq6, and as and6 } from "drizzle-orm";
-import { HTTPException as HTTPException6 } from "hono/http-exception";
+import { eq as eq8, and as and8 } from "drizzle-orm";
+import { HTTPException as HTTPException8 } from "hono/http-exception";
 var PERMISSIONS = {
   owner: [
     "invite_members",
@@ -1399,88 +1803,72 @@ var PERMISSIONS = {
     "update_workspace",
     "delete_workspace",
     "create_project",
-    "view_workspace",
+    "view_workspace"
   ],
   admin: [
     "invite_members",
     "manage_members",
     "create_project",
-    "view_workspace",
+    "view_workspace"
   ],
-  member: ["create_project", "view_workspace"],
+  member: ["create_project", "view_workspace"]
 };
 async function listWorkspaceMembers(workspaceId, userId) {
   const hasPermission = await checkPermission(
     workspaceId,
     userId,
-    "view_workspace",
+    "view_workspace"
   );
   if (!hasPermission) {
-    throw new HTTPException6(403, {
-      message: "You do not have permission to view this workspace",
+    throw new HTTPException8(403, {
+      message: "You do not have permission to view this workspace"
     });
   }
-  const members = await db
-    .select({
-      id: workspaceMembers.id,
-      workspaceId: workspaceMembers.workspaceId,
-      userId: workspaceMembers.userId,
-      role: workspaceMembers.role,
-      createdAt: workspaceMembers.createdAt,
-      user: {
-        id: users.id,
-        email: users.email,
-        name: users.name,
-        profilePicture: users.profilePicture,
-      },
-    })
-    .from(workspaceMembers)
-    .innerJoin(users, eq6(workspaceMembers.userId, users.id))
-    .where(eq6(workspaceMembers.workspaceId, workspaceId));
+  const members = await db.select({
+    id: workspaceMembers.id,
+    workspaceId: workspaceMembers.workspaceId,
+    userId: workspaceMembers.userId,
+    role: workspaceMembers.role,
+    createdAt: workspaceMembers.createdAt,
+    user: {
+      id: users.id,
+      email: users.email,
+      name: users.name,
+      profilePicture: users.profilePicture
+    }
+  }).from(workspaceMembers).innerJoin(users, eq8(workspaceMembers.userId, users.id)).where(eq8(workspaceMembers.workspaceId, workspaceId));
   return members;
 }
 async function updateMemberRole(workspaceId, memberId, userId, newRole) {
   const hasPermission = await checkPermission(
     workspaceId,
     userId,
-    "manage_members",
+    "manage_members"
   );
   if (!hasPermission) {
-    throw new HTTPException6(403, {
-      message: "You do not have permission to manage members in this workspace",
+    throw new HTTPException8(403, {
+      message: "You do not have permission to manage members in this workspace"
     });
   }
-  const [member] = await db
-    .select()
-    .from(workspaceMembers)
-    .where(eq6(workspaceMembers.id, memberId))
-    .limit(1);
+  const [member] = await db.select().from(workspaceMembers).where(eq8(workspaceMembers.id, memberId)).limit(1);
   if (!member) {
-    throw new HTTPException6(404, { message: "Member not found" });
+    throw new HTTPException8(404, { message: "Member not found" });
   }
   if (member.workspaceId !== workspaceId) {
-    throw new HTTPException6(404, { message: "Member not found" });
+    throw new HTTPException8(404, { message: "Member not found" });
   }
   if (member.userId === userId) {
-    throw new HTTPException6(403, {
-      message: "Cannot change your own role",
+    throw new HTTPException8(403, {
+      message: "Cannot change your own role"
     });
   }
   if (member.role === "owner") {
-    throw new HTTPException6(403, {
-      message: "Cannot change the owner's role",
+    throw new HTTPException8(403, {
+      message: "Cannot change the owner's role"
     });
   }
-  const [updatedMember] = await db
-    .update(workspaceMembers)
-    .set({ role: newRole })
-    .where(eq6(workspaceMembers.id, memberId))
-    .returning();
-  const [user] = await db
-    .select()
-    .from(users)
-    .where(eq6(users.id, updatedMember.userId))
-    .limit(1);
+  const [updatedMember] = await db.update(workspaceMembers).set({ role: newRole }).where(eq8(workspaceMembers.id, memberId)).returning();
+  const [user] = await db.select().from(users).where(eq8(users.id, updatedMember.userId)).limit(1);
   return {
     id: updatedMember.id,
     workspaceId: updatedMember.workspaceId,
@@ -1491,50 +1879,42 @@ async function updateMemberRole(workspaceId, memberId, userId, newRole) {
       id: user.id,
       email: user.email,
       name: user.name,
-      profilePicture: user.profilePicture,
-    },
+      profilePicture: user.profilePicture
+    }
   };
 }
 async function removeMember(workspaceId, memberId, userId) {
   const hasPermission = await checkPermission(
     workspaceId,
     userId,
-    "manage_members",
+    "manage_members"
   );
   if (!hasPermission) {
-    throw new HTTPException6(403, {
-      message: "You do not have permission to manage members in this workspace",
+    throw new HTTPException8(403, {
+      message: "You do not have permission to manage members in this workspace"
     });
   }
-  const [member] = await db
-    .select()
-    .from(workspaceMembers)
-    .where(eq6(workspaceMembers.id, memberId))
-    .limit(1);
+  const [member] = await db.select().from(workspaceMembers).where(eq8(workspaceMembers.id, memberId)).limit(1);
   if (!member) {
-    throw new HTTPException6(404, { message: "Member not found" });
+    throw new HTTPException8(404, { message: "Member not found" });
   }
   if (member.workspaceId !== workspaceId) {
-    throw new HTTPException6(404, { message: "Member not found" });
+    throw new HTTPException8(404, { message: "Member not found" });
   }
   if (member.userId === userId) {
-    throw new HTTPException6(403, {
-      message: "Cannot remove yourself from the workspace",
+    throw new HTTPException8(403, {
+      message: "Cannot remove yourself from the workspace"
     });
   }
   if (member.role === "owner") {
-    throw new HTTPException6(403, {
-      message: "Cannot remove the workspace owner",
+    throw new HTTPException8(403, {
+      message: "Cannot remove the workspace owner"
     });
   }
-  await db.delete(workspaceMembers).where(eq6(workspaceMembers.id, memberId));
+  await db.delete(workspaceMembers).where(eq8(workspaceMembers.id, memberId));
 }
 async function checkPermission(workspaceId, userId, action) {
-  const [workspace] = await db
-    .select()
-    .from(workspaces)
-    .where(eq6(workspaces.id, workspaceId))
-    .limit(1);
+  const [workspace] = await db.select().from(workspaces).where(eq8(workspaces.id, workspaceId)).limit(1);
   if (!workspace) {
     return false;
   }
@@ -1542,16 +1922,12 @@ async function checkPermission(workspaceId, userId, action) {
     const ownerPermissions = PERMISSIONS.owner;
     return ownerPermissions.includes(action);
   }
-  const [member] = await db
-    .select({ role: workspaceMembers.role })
-    .from(workspaceMembers)
-    .where(
-      and6(
-        eq6(workspaceMembers.workspaceId, workspaceId),
-        eq6(workspaceMembers.userId, userId),
-      ),
+  const [member] = await db.select({ role: workspaceMembers.role }).from(workspaceMembers).where(
+    and8(
+      eq8(workspaceMembers.workspaceId, workspaceId),
+      eq8(workspaceMembers.userId, userId)
     )
-    .limit(1);
+  ).limit(1);
   if (!member) {
     return false;
   }
@@ -1564,109 +1940,81 @@ async function checkPermission(workspaceId, userId, action) {
 }
 
 // src/services/invitations.ts
-import { eq as eq7, and as and7, lt as lt3, or as or2 } from "drizzle-orm";
-import { HTTPException as HTTPException7 } from "hono/http-exception";
+import { eq as eq9, and as and9, lt as lt3, or as or2 } from "drizzle-orm";
+import { HTTPException as HTTPException9 } from "hono/http-exception";
 import { nanoid as nanoid2 } from "nanoid";
 var INVITATION_EXPIRY_DAYS = 7;
 var MAX_PENDING_INVITATIONS = 5;
-var WEB_URL2 = process.env.WEB_URL || "http://localhost:3000";
-async function createInvitation(
-  workspaceId,
-  inviterUserId,
-  inviteeEmail,
-  role,
-) {
+var WEB_URL3 = process.env.WEB_URL || "http://localhost:3000";
+async function createInvitation(workspaceId, inviterUserId, inviteeEmail, role) {
   const normalizedEmail = inviteeEmail.toLowerCase().trim();
-  const [workspace] = await db
-    .select()
-    .from(workspaces)
-    .where(eq7(workspaces.id, workspaceId))
-    .limit(1);
+  const [workspace] = await db.select().from(workspaces).where(eq9(workspaces.id, workspaceId)).limit(1);
   if (!workspace) {
-    throw new HTTPException7(404, { message: "Workspace not found" });
+    throw new HTTPException9(404, { message: "Workspace not found" });
   }
   const hasPermission = await checkPermission(
     workspaceId,
     inviterUserId,
-    "invite_members",
+    "invite_members"
   );
   if (!hasPermission) {
-    throw new HTTPException7(403, {
-      message: "You do not have permission to invite members to this workspace",
+    throw new HTTPException9(403, {
+      message: "You do not have permission to invite members to this workspace"
     });
   }
-  const [existingMember] = await db
-    .select({ userId: workspaceMembers.userId })
-    .from(workspaceMembers)
-    .innerJoin(users, eq7(workspaceMembers.userId, users.id))
-    .where(
-      and7(
-        eq7(workspaceMembers.workspaceId, workspaceId),
-        eq7(users.email, normalizedEmail),
-      ),
+  const [existingMember] = await db.select({ userId: workspaceMembers.userId }).from(workspaceMembers).innerJoin(users, eq9(workspaceMembers.userId, users.id)).where(
+    and9(
+      eq9(workspaceMembers.workspaceId, workspaceId),
+      eq9(users.email, normalizedEmail)
     )
-    .limit(1);
+  ).limit(1);
   if (existingMember) {
-    throw new HTTPException7(409, {
-      message: "User is already a member of this workspace",
+    throw new HTTPException9(409, {
+      message: "User is already a member of this workspace"
     });
   }
-  const [existingInvitation] = await db
-    .select()
-    .from(workspaceInvitations)
-    .where(
-      and7(
-        eq7(workspaceInvitations.workspaceId, workspaceId),
-        eq7(workspaceInvitations.inviteeEmail, normalizedEmail),
-        eq7(workspaceInvitations.status, "pending"),
-      ),
+  const [existingInvitation] = await db.select().from(workspaceInvitations).where(
+    and9(
+      eq9(workspaceInvitations.workspaceId, workspaceId),
+      eq9(workspaceInvitations.inviteeEmail, normalizedEmail),
+      eq9(workspaceInvitations.status, "pending")
     )
-    .limit(1);
+  ).limit(1);
   if (existingInvitation) {
-    throw new HTTPException7(409, {
-      message: "A pending invitation already exists for this email",
+    throw new HTTPException9(409, {
+      message: "A pending invitation already exists for this email"
     });
   }
-  const pendingInvitations = await db
-    .select({ id: workspaceInvitations.id })
-    .from(workspaceInvitations)
-    .where(
-      and7(
-        eq7(workspaceInvitations.workspaceId, workspaceId),
-        eq7(workspaceInvitations.status, "pending"),
-      ),
-    );
+  const pendingInvitations = await db.select({ id: workspaceInvitations.id }).from(workspaceInvitations).where(
+    and9(
+      eq9(workspaceInvitations.workspaceId, workspaceId),
+      eq9(workspaceInvitations.status, "pending")
+    )
+  );
   if (pendingInvitations.length >= MAX_PENDING_INVITATIONS) {
-    throw new HTTPException7(400, {
-      message: `Maximum of ${MAX_PENDING_INVITATIONS} pending invitations reached`,
+    throw new HTTPException9(400, {
+      message: `Maximum of ${MAX_PENDING_INVITATIONS} pending invitations reached`
     });
   }
   const token = generateSecureToken();
   const tokenHash = hashToken(token);
   const expiresAt = /* @__PURE__ */ new Date();
   expiresAt.setDate(expiresAt.getDate() + INVITATION_EXPIRY_DAYS);
-  const [invitation] = await db
-    .insert(workspaceInvitations)
-    .values({
-      workspaceId,
-      inviterUserId,
-      inviteeEmail: normalizedEmail,
-      role,
-      tokenHash,
-      status: "pending",
-      expiresAt,
-    })
-    .returning();
-  const [inviter] = await db
-    .select({
-      name: users.name,
-      email: users.email,
-    })
-    .from(users)
-    .where(eq7(users.id, inviterUserId))
-    .limit(1);
-  const acceptUrl = `${WEB_URL2}/invitations/${encodeURIComponent(token)}`;
-  const declineUrl = `${WEB_URL2}/invitations/${encodeURIComponent(token)}/decline`;
+  const [invitation] = await db.insert(workspaceInvitations).values({
+    workspaceId,
+    inviterUserId,
+    inviteeEmail: normalizedEmail,
+    role,
+    tokenHash,
+    status: "pending",
+    expiresAt
+  }).returning();
+  const [inviter] = await db.select({
+    name: users.name,
+    email: users.email
+  }).from(users).where(eq9(users.id, inviterUserId)).limit(1);
+  const acceptUrl = `${WEB_URL3}/invitations/${encodeURIComponent(token)}`;
+  const declineUrl = `${WEB_URL3}/invitations/${encodeURIComponent(token)}/decline`;
   const emailResult = await sendInvitationEmail(normalizedEmail, {
     inviteeName: null,
     // We don't know if they have an account yet
@@ -1676,13 +2024,13 @@ async function createInvitation(
     role,
     acceptUrl,
     declineUrl,
-    expiresAt,
+    expiresAt
   });
   if (!emailResult.success) {
     console.error("Failed to send invitation email:", {
       invitationId: invitation.id,
       email: normalizedEmail,
-      error: emailResult.error,
+      error: emailResult.error
     });
   }
   return {
@@ -1694,53 +2042,43 @@ async function createInvitation(
       role: invitation.role,
       status: invitation.status,
       expiresAt: invitation.expiresAt,
-      createdAt: invitation.createdAt,
+      createdAt: invitation.createdAt
     },
-    token,
+    token
     // Return the plain token for email sending
   };
 }
 async function verifyInvitationToken(token) {
   const tokenHash = hashToken(token);
-  const [invitationRecord] = await db
-    .select({
-      invitation: workspaceInvitations,
-      workspace: {
-        id: workspaces.id,
-        name: workspaces.name,
-        icon: workspaces.icon,
-      },
-      inviter: {
-        name: users.name,
-        email: users.email,
-      },
-    })
-    .from(workspaceInvitations)
-    .innerJoin(workspaces, eq7(workspaceInvitations.workspaceId, workspaces.id))
-    .innerJoin(users, eq7(workspaceInvitations.inviterUserId, users.id))
-    .where(eq7(workspaceInvitations.tokenHash, tokenHash))
-    .limit(1);
+  const [invitationRecord] = await db.select({
+    invitation: workspaceInvitations,
+    workspace: {
+      id: workspaces.id,
+      name: workspaces.name,
+      icon: workspaces.icon
+    },
+    inviter: {
+      name: users.name,
+      email: users.email
+    }
+  }).from(workspaceInvitations).innerJoin(workspaces, eq9(workspaceInvitations.workspaceId, workspaces.id)).innerJoin(users, eq9(workspaceInvitations.inviterUserId, users.id)).where(eq9(workspaceInvitations.tokenHash, tokenHash)).limit(1);
   if (!invitationRecord) {
-    throw new HTTPException7(404, {
-      message: "Invalid invitation link",
+    throw new HTTPException9(404, {
+      message: "Invalid invitation link"
     });
   }
   const { invitation, workspace, inviter } = invitationRecord;
   if (/* @__PURE__ */ new Date() > invitation.expiresAt) {
-    throw new HTTPException7(410, {
-      message: "This invitation has expired",
+    throw new HTTPException9(410, {
+      message: "This invitation has expired"
     });
   }
   if (invitation.status !== "pending") {
-    throw new HTTPException7(410, {
-      message: `This invitation has already been ${invitation.status}`,
+    throw new HTTPException9(410, {
+      message: `This invitation has already been ${invitation.status}`
     });
   }
-  const [existingUser] = await db
-    .select({ id: users.id })
-    .from(users)
-    .where(eq7(users.email, invitation.inviteeEmail))
-    .limit(1);
+  const [existingUser] = await db.select({ id: users.id }).from(users).where(eq9(users.email, invitation.inviteeEmail)).limit(1);
   return {
     invitation: {
       id: invitation.id,
@@ -1750,18 +2088,18 @@ async function verifyInvitationToken(token) {
       role: invitation.role,
       status: invitation.status,
       expiresAt: invitation.expiresAt,
-      createdAt: invitation.createdAt,
+      createdAt: invitation.createdAt
     },
     workspace: {
       id: workspace.id,
       name: workspace.name,
-      icon: workspace.icon,
+      icon: workspace.icon
     },
     inviter: {
       name: inviter.name,
-      email: inviter.email,
+      email: inviter.email
     },
-    userExists: !!existingUser,
+    userExists: !!existingUser
   };
 }
 async function acceptInvitation(token, userId, fullName) {
@@ -1770,11 +2108,7 @@ async function acceptInvitation(token, userId, fullName) {
   let sessionToken;
   let createdUser;
   if (!actualUserId) {
-    const [existingUser] = await db
-      .select({ id: users.id, email: users.email, name: users.name })
-      .from(users)
-      .where(eq7(users.email, invitation.inviteeEmail))
-      .limit(1);
+    const [existingUser] = await db.select({ id: users.id, email: users.email, name: users.name }).from(users).where(eq9(users.email, invitation.inviteeEmail)).limit(1);
     if (existingUser) {
       actualUserId = existingUser.id;
       sessionToken = nanoid2(64);
@@ -1782,228 +2116,182 @@ async function acceptInvitation(token, userId, fullName) {
       await db.insert(sessions).values({
         userId: actualUserId,
         sessionToken,
-        expiresAt,
+        expiresAt
       });
       createdUser = existingUser;
     } else {
-      const [newUser] = await db
-        .insert(users)
-        .values({
-          email: invitation.inviteeEmail,
-          name: fullName || null,
-          passwordHash: null,
-        })
-        .returning();
+      const [newUser] = await db.insert(users).values({
+        email: invitation.inviteeEmail,
+        name: fullName || null,
+        passwordHash: null
+      }).returning();
       actualUserId = newUser.id;
       sessionToken = nanoid2(64);
       const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1e3);
       await db.insert(sessions).values({
         userId: actualUserId,
         sessionToken,
-        expiresAt,
+        expiresAt
       });
       createdUser = {
         id: newUser.id,
         email: newUser.email,
-        name: newUser.name,
+        name: newUser.name
       };
     }
   } else {
-    const [user] = await db
-      .select({ email: users.email })
-      .from(users)
-      .where(eq7(users.id, actualUserId))
-      .limit(1);
+    const [user] = await db.select({ email: users.email }).from(users).where(eq9(users.id, actualUserId)).limit(1);
     if (!user) {
-      throw new HTTPException7(404, { message: "User not found" });
+      throw new HTTPException9(404, { message: "User not found" });
     }
     if (user.email.toLowerCase() !== invitation.inviteeEmail.toLowerCase()) {
-      throw new HTTPException7(403, {
-        message: "This invitation was sent to a different email address",
+      throw new HTTPException9(403, {
+        message: "This invitation was sent to a different email address"
       });
     }
   }
-  const [existingMember] = await db
-    .select()
-    .from(workspaceMembers)
-    .where(
-      and7(
-        eq7(workspaceMembers.workspaceId, invitation.workspaceId),
-        eq7(workspaceMembers.userId, actualUserId),
-      ),
+  const [existingMember] = await db.select().from(workspaceMembers).where(
+    and9(
+      eq9(workspaceMembers.workspaceId, invitation.workspaceId),
+      eq9(workspaceMembers.userId, actualUserId)
     )
-    .limit(1);
+  ).limit(1);
   if (existingMember) {
-    throw new HTTPException7(409, {
-      message: "You are already a member of this workspace",
+    throw new HTTPException9(409, {
+      message: "You are already a member of this workspace"
     });
   }
   await db.insert(workspaceMembers).values({
     workspaceId: invitation.workspaceId,
     userId: actualUserId,
-    role: invitation.role,
+    role: invitation.role
   });
-  await db
-    .update(workspaceInvitations)
-    .set({
-      status: "accepted",
-      acceptedAt: /* @__PURE__ */ new Date(),
-    })
-    .where(eq7(workspaceInvitations.id, invitation.id));
-  const [workspace] = await db
-    .select({
-      id: workspaces.id,
-      name: workspaces.name,
-      slug: workspaces.slug,
-      icon: workspaces.icon,
-    })
-    .from(workspaces)
-    .where(eq7(workspaces.id, invitation.workspaceId))
-    .limit(1);
+  await db.update(workspaceInvitations).set({
+    status: "accepted",
+    acceptedAt: /* @__PURE__ */ new Date()
+  }).where(eq9(workspaceInvitations.id, invitation.id));
+  const [workspace] = await db.select({
+    id: workspaces.id,
+    name: workspaces.name,
+    slug: workspaces.slug,
+    icon: workspaces.icon
+  }).from(workspaces).where(eq9(workspaces.id, invitation.workspaceId)).limit(1);
   if (!workspace) {
-    throw new HTTPException7(404, { message: "Workspace not found" });
+    throw new HTTPException9(404, { message: "Workspace not found" });
   }
   return {
     workspace,
     role: invitation.role,
     sessionToken,
-    user: createdUser,
+    user: createdUser
   };
 }
 async function declineInvitation(token) {
   const { invitation } = await verifyInvitationToken(token);
-  await db
-    .update(workspaceInvitations)
-    .set({
-      status: "declined",
-      declinedAt: /* @__PURE__ */ new Date(),
-    })
-    .where(eq7(workspaceInvitations.id, invitation.id));
+  await db.update(workspaceInvitations).set({
+    status: "declined",
+    declinedAt: /* @__PURE__ */ new Date()
+  }).where(eq9(workspaceInvitations.id, invitation.id));
 }
 async function listPendingInvitations(workspaceId, userId) {
   const hasPermission = await checkPermission(
     workspaceId,
     userId,
-    "invite_members",
+    "invite_members"
   );
   if (!hasPermission) {
-    throw new HTTPException7(403, {
-      message:
-        "You do not have permission to view invitations for this workspace",
+    throw new HTTPException9(403, {
+      message: "You do not have permission to view invitations for this workspace"
     });
   }
-  const invitations = await db
-    .select({
-      id: workspaceInvitations.id,
-      inviteeEmail: workspaceInvitations.inviteeEmail,
-      role: workspaceInvitations.role,
-      createdAt: workspaceInvitations.createdAt,
-      expiresAt: workspaceInvitations.expiresAt,
-      inviter: {
-        name: users.name,
-        email: users.email,
-      },
-    })
-    .from(workspaceInvitations)
-    .innerJoin(users, eq7(workspaceInvitations.inviterUserId, users.id))
-    .where(
-      and7(
-        eq7(workspaceInvitations.workspaceId, workspaceId),
-        eq7(workspaceInvitations.status, "pending"),
-      ),
+  const invitations = await db.select({
+    id: workspaceInvitations.id,
+    inviteeEmail: workspaceInvitations.inviteeEmail,
+    role: workspaceInvitations.role,
+    createdAt: workspaceInvitations.createdAt,
+    expiresAt: workspaceInvitations.expiresAt,
+    inviter: {
+      name: users.name,
+      email: users.email
+    }
+  }).from(workspaceInvitations).innerJoin(users, eq9(workspaceInvitations.inviterUserId, users.id)).where(
+    and9(
+      eq9(workspaceInvitations.workspaceId, workspaceId),
+      eq9(workspaceInvitations.status, "pending")
     )
-    .orderBy(workspaceInvitations.createdAt);
+  ).orderBy(workspaceInvitations.createdAt);
   return invitations;
 }
 async function cancelInvitation(invitationId, userId) {
-  const [invitation] = await db
-    .select({
-      id: workspaceInvitations.id,
-      workspaceId: workspaceInvitations.workspaceId,
-      status: workspaceInvitations.status,
-    })
-    .from(workspaceInvitations)
-    .where(eq7(workspaceInvitations.id, invitationId))
-    .limit(1);
+  const [invitation] = await db.select({
+    id: workspaceInvitations.id,
+    workspaceId: workspaceInvitations.workspaceId,
+    status: workspaceInvitations.status
+  }).from(workspaceInvitations).where(eq9(workspaceInvitations.id, invitationId)).limit(1);
   if (!invitation) {
-    throw new HTTPException7(404, { message: "Invitation not found" });
+    throw new HTTPException9(404, { message: "Invitation not found" });
   }
   const hasPermission = await checkPermission(
     invitation.workspaceId,
     userId,
-    "invite_members",
+    "invite_members"
   );
   if (!hasPermission) {
-    throw new HTTPException7(403, {
-      message:
-        "You do not have permission to cancel invitations for this workspace",
+    throw new HTTPException9(403, {
+      message: "You do not have permission to cancel invitations for this workspace"
     });
   }
   if (invitation.status !== "pending") {
-    throw new HTTPException7(409, {
-      message: `Cannot cancel invitation that is already ${invitation.status}`,
+    throw new HTTPException9(409, {
+      message: `Cannot cancel invitation that is already ${invitation.status}`
     });
   }
-  await db
-    .update(workspaceInvitations)
-    .set({
-      status: "cancelled",
-    })
-    .where(eq7(workspaceInvitations.id, invitationId));
+  await db.update(workspaceInvitations).set({
+    status: "cancelled"
+  }).where(eq9(workspaceInvitations.id, invitationId));
 }
 async function resendInvitation(invitationId, userId) {
-  const [invitationRecord] = await db
-    .select({
-      invitation: workspaceInvitations,
-      workspace: {
-        id: workspaces.id,
-        name: workspaces.name,
-        icon: workspaces.icon,
-      },
-      inviter: {
-        name: users.name,
-        email: users.email,
-      },
-    })
-    .from(workspaceInvitations)
-    .innerJoin(workspaces, eq7(workspaceInvitations.workspaceId, workspaces.id))
-    .innerJoin(users, eq7(workspaceInvitations.inviterUserId, users.id))
-    .where(eq7(workspaceInvitations.id, invitationId))
-    .limit(1);
+  const [invitationRecord] = await db.select({
+    invitation: workspaceInvitations,
+    workspace: {
+      id: workspaces.id,
+      name: workspaces.name,
+      icon: workspaces.icon
+    },
+    inviter: {
+      name: users.name,
+      email: users.email
+    }
+  }).from(workspaceInvitations).innerJoin(workspaces, eq9(workspaceInvitations.workspaceId, workspaces.id)).innerJoin(users, eq9(workspaceInvitations.inviterUserId, users.id)).where(eq9(workspaceInvitations.id, invitationId)).limit(1);
   if (!invitationRecord) {
-    throw new HTTPException7(404, { message: "Invitation not found" });
+    throw new HTTPException9(404, { message: "Invitation not found" });
   }
   const { invitation, workspace, inviter } = invitationRecord;
   const hasPermission = await checkPermission(
     invitation.workspaceId,
     userId,
-    "invite_members",
+    "invite_members"
   );
   if (!hasPermission) {
-    throw new HTTPException7(403, {
-      message:
-        "You do not have permission to resend invitations for this workspace",
+    throw new HTTPException9(403, {
+      message: "You do not have permission to resend invitations for this workspace"
     });
   }
   if (invitation.status !== "pending") {
-    throw new HTTPException7(409, {
-      message: `Cannot resend invitation that is ${invitation.status}`,
+    throw new HTTPException9(409, {
+      message: `Cannot resend invitation that is ${invitation.status}`
     });
   }
   const token = generateSecureToken();
   const tokenHash = hashToken(token);
   const expiresAt = /* @__PURE__ */ new Date();
   expiresAt.setDate(expiresAt.getDate() + INVITATION_EXPIRY_DAYS);
-  const [updatedInvitation] = await db
-    .update(workspaceInvitations)
-    .set({
-      tokenHash,
-      expiresAt,
-    })
-    .where(eq7(workspaceInvitations.id, invitationId))
-    .returning();
-  const acceptUrl = `${WEB_URL2}/invitations/${encodeURIComponent(token)}`;
-  const declineUrl = `${WEB_URL2}/invitations/${encodeURIComponent(token)}/decline`;
+  const [updatedInvitation] = await db.update(workspaceInvitations).set({
+    tokenHash,
+    expiresAt
+  }).where(eq9(workspaceInvitations.id, invitationId)).returning();
+  const acceptUrl = `${WEB_URL3}/invitations/${encodeURIComponent(token)}`;
+  const declineUrl = `${WEB_URL3}/invitations/${encodeURIComponent(token)}/decline`;
   const emailResult = await sendInvitationEmail(invitation.inviteeEmail, {
     inviteeName: null,
     // We don't know if they have an account yet
@@ -2013,13 +2301,13 @@ async function resendInvitation(invitationId, userId) {
     role: invitation.role,
     acceptUrl,
     declineUrl,
-    expiresAt,
+    expiresAt
   });
   if (!emailResult.success) {
     console.error("Failed to send invitation email:", {
       invitationId: invitation.id,
       email: invitation.inviteeEmail,
-      error: emailResult.error,
+      error: emailResult.error
     });
   }
   return {
@@ -2031,19 +2319,19 @@ async function resendInvitation(invitationId, userId) {
       role: updatedInvitation.role,
       status: updatedInvitation.status,
       expiresAt: updatedInvitation.expiresAt,
-      createdAt: updatedInvitation.createdAt,
+      createdAt: updatedInvitation.createdAt
     },
     token,
     // Return the plain token for email sending
     workspace: {
       id: workspace.id,
       name: workspace.name,
-      icon: workspace.icon,
+      icon: workspace.icon
     },
     inviter: {
       name: inviter.name,
-      email: inviter.email,
-    },
+      email: inviter.email
+    }
   };
 }
 
@@ -2063,7 +2351,7 @@ workspaceRoutes.post(
     const data = c.req.valid("json");
     const workspace = await create(userId, data);
     return c.json({ workspace }, 201);
-  },
+  }
 );
 workspaceRoutes.get("/:id", async (c) => {
   const userId = c.get("userId");
@@ -2086,7 +2374,7 @@ workspaceRoutes.patch(
     const data = c.req.valid("json");
     const workspace = await update(workspaceId, userId, data);
     return c.json({ workspace });
-  },
+  }
 );
 workspaceRoutes.delete("/:id", async (c) => {
   const userId = c.get("userId");
@@ -2109,7 +2397,7 @@ workspaceRoutes.post(
     const data = c.req.valid("json");
     const project = await create2(workspaceId, userId, data);
     return c.json({ project }, 201);
-  },
+  }
 );
 workspaceRoutes.get("/:workspaceId/members", async (c) => {
   const userId = c.get("userId");
@@ -2125,9 +2413,14 @@ workspaceRoutes.patch(
     const workspaceId = c.req.param("workspaceId");
     const memberId = c.req.param("memberId");
     const { role } = c.req.valid("json");
-    const member = await updateMemberRole(workspaceId, memberId, userId, role);
+    const member = await updateMemberRole(
+      workspaceId,
+      memberId,
+      userId,
+      role
+    );
     return c.json({ member });
-  },
+  }
 );
 workspaceRoutes.delete("/:workspaceId/members/:memberId", async (c) => {
   const userId = c.get("userId");
@@ -2143,14 +2436,22 @@ workspaceRoutes.post(
     const userId = c.get("userId");
     const workspaceId = c.req.param("workspaceId");
     const { email, role } = c.req.valid("json");
-    const result = await createInvitation(workspaceId, userId, email, role);
+    const result = await createInvitation(
+      workspaceId,
+      userId,
+      email,
+      role
+    );
     return c.json({ invitation: result.invitation }, 201);
-  },
+  }
 );
 workspaceRoutes.get("/:workspaceId/invitations", async (c) => {
   const userId = c.get("userId");
   const workspaceId = c.req.param("workspaceId");
-  const invitations = await listPendingInvitations(workspaceId, userId);
+  const invitations = await listPendingInvitations(
+    workspaceId,
+    userId
+  );
   return c.json({ invitations });
 });
 workspaceRoutes.delete("/:workspaceId/invitations/:inviteId", async (c) => {
@@ -2166,7 +2467,7 @@ workspaceRoutes.post(
     const inviteId = c.req.param("inviteId");
     const result = await resendInvitation(inviteId, userId);
     return c.json({ invitation: result.invitation });
-  },
+  }
 );
 
 // src/routes/projects.ts
@@ -2174,12 +2475,12 @@ import { Hono as Hono4 } from "hono";
 import { zValidator as zValidator4 } from "@hono/zod-validator";
 
 // src/services/annotations.ts
-import { eq as eq9 } from "drizzle-orm";
-import { HTTPException as HTTPException10 } from "hono/http-exception";
+import { eq as eq11 } from "drizzle-orm";
+import { HTTPException as HTTPException12 } from "hono/http-exception";
 
 // src/services/upload.ts
 import { put } from "@vercel/blob";
-import { HTTPException as HTTPException8 } from "hono/http-exception";
+import { HTTPException as HTTPException10 } from "hono/http-exception";
 var MAX_FILE_SIZE = 10 * 1024 * 1024;
 var MAX_PROFILE_PICTURE_SIZE = 5 * 1024 * 1024;
 var ALLOWED_TYPES = ["image/png", "image/jpeg", "image/gif", "image/webp"];
@@ -2187,15 +2488,15 @@ var ALLOWED_MIME_EXTENSIONS = {
   png: "png",
   jpeg: "jpg",
   gif: "gif",
-  webp: "webp",
+  webp: "webp"
 };
 async function uploadScreenshot(file, userId) {
   if (file.size > MAX_FILE_SIZE) {
-    throw new HTTPException8(413, { message: "File size exceeds 10MB limit" });
+    throw new HTTPException10(413, { message: "File size exceeds 10MB limit" });
   }
   if (!ALLOWED_TYPES.includes(file.type)) {
-    throw new HTTPException8(400, {
-      message: "Invalid file type. Only PNG, JPEG, GIF, and WebP are allowed",
+    throw new HTTPException10(400, {
+      message: "Invalid file type. Only PNG, JPEG, GIF, and WebP are allowed"
     });
   }
   const timestamp = Date.now();
@@ -2204,22 +2505,21 @@ async function uploadScreenshot(file, userId) {
   try {
     const blob = await put(filename, file, {
       access: "public",
-      addRandomSuffix: true,
+      addRandomSuffix: true
     });
     return { url: blob.url };
   } catch (error) {
     console.error("Upload error:", error);
-    throw new HTTPException8(500, { message: "Failed to upload file" });
+    throw new HTTPException10(500, { message: "Failed to upload file" });
   }
 }
 async function uploadBase64Screenshot(base64Data, userId) {
   const matches = base64Data.match(
-    /^data:image\/(png|jpeg|gif|webp);base64,(.+)$/,
+    /^data:image\/(png|jpeg|gif|webp);base64,(.+)$/
   );
   if (!matches) {
-    throw new HTTPException8(400, {
-      message:
-        "Invalid base64 image format. Expected data:image/(png|jpeg|gif|webp);base64,...",
+    throw new HTTPException10(400, {
+      message: "Invalid base64 image format. Expected data:image/(png|jpeg|gif|webp);base64,..."
     });
   }
   const [, mimeType, base64Content] = matches;
@@ -2227,10 +2527,10 @@ async function uploadBase64Screenshot(base64Data, userId) {
   try {
     buffer = Buffer.from(base64Content, "base64");
   } catch {
-    throw new HTTPException8(400, { message: "Invalid base64 encoding" });
+    throw new HTTPException10(400, { message: "Invalid base64 encoding" });
   }
   if (buffer.length > MAX_FILE_SIZE) {
-    throw new HTTPException8(413, { message: "File size exceeds 10MB limit" });
+    throw new HTTPException10(413, { message: "File size exceeds 10MB limit" });
   }
   const timestamp = Date.now();
   const extension = ALLOWED_MIME_EXTENSIONS[mimeType] || "png";
@@ -2239,21 +2539,21 @@ async function uploadBase64Screenshot(base64Data, userId) {
     const blob = await put(filename, buffer, {
       access: "public",
       addRandomSuffix: true,
-      contentType: `image/${mimeType}`,
+      contentType: `image/${mimeType}`
     });
     return { url: blob.url };
   } catch (error) {
     console.error("Upload error:", error);
-    throw new HTTPException8(500, { message: "Failed to upload file" });
+    throw new HTTPException10(500, { message: "Failed to upload file" });
   }
 }
 async function uploadProfilePicture(file, userId) {
   if (file.size > MAX_PROFILE_PICTURE_SIZE) {
-    throw new HTTPException8(413, { message: "File size exceeds 5MB limit" });
+    throw new HTTPException10(413, { message: "File size exceeds 5MB limit" });
   }
   if (!ALLOWED_TYPES.includes(file.type)) {
-    throw new HTTPException8(400, {
-      message: "Invalid file type. Only PNG, JPEG, GIF, and WebP are allowed",
+    throw new HTTPException10(400, {
+      message: "Invalid file type. Only PNG, JPEG, GIF, and WebP are allowed"
     });
   }
   const timestamp = Date.now();
@@ -2262,20 +2562,20 @@ async function uploadProfilePicture(file, userId) {
   try {
     const blob = await put(filename, file, {
       access: "public",
-      addRandomSuffix: true,
+      addRandomSuffix: true
     });
     return { url: blob.url };
   } catch (error) {
     console.error("Profile picture upload error:", error);
-    throw new HTTPException8(500, {
-      message: "Failed to upload profile picture",
+    throw new HTTPException10(500, {
+      message: "Failed to upload profile picture"
     });
   }
 }
 
 // src/services/integrations.ts
-import { eq as eq8 } from "drizzle-orm";
-import { HTTPException as HTTPException9 } from "hono/http-exception";
+import { eq as eq10 } from "drizzle-orm";
+import { HTTPException as HTTPException11 } from "hono/http-exception";
 function validateWebhookUrl(url) {
   if (!url || url.trim().length === 0) {
     return { valid: false, error: "Webhook URL is required" };
@@ -2302,7 +2602,7 @@ function validateJsonTemplate(template) {
   const placeholderRegex = /<[a-zA-Z_][a-zA-Z0-9_.]*>/g;
   let sanitizedTemplate = trimmedTemplate.replace(
     placeholderRegex,
-    "__PLACEHOLDER__",
+    "__PLACEHOLDER__"
   );
   sanitizedTemplate = escapeNewlinesInStrings(sanitizedTemplate);
   try {
@@ -2353,13 +2653,9 @@ function escapeNewlinesInStrings(json) {
 async function get3(projectId, userId) {
   const hasAccess = await checkProjectAccess(projectId, userId);
   if (!hasAccess) {
-    throw new HTTPException9(403, { message: "Access denied to this project" });
+    throw new HTTPException11(403, { message: "Access denied to this project" });
   }
-  const [integration] = await db
-    .select()
-    .from(webhookIntegrations)
-    .where(eq8(webhookIntegrations.projectId, projectId))
-    .limit(1);
+  const [integration] = await db.select().from(webhookIntegrations).where(eq10(webhookIntegrations.projectId, projectId)).limit(1);
   if (!integration) {
     return null;
   }
@@ -2372,52 +2668,40 @@ async function get3(projectId, userId) {
     enabled: integration.enabled,
     locked: integration.locked,
     createdAt: integration.createdAt,
-    updatedAt: integration.updatedAt,
+    updatedAt: integration.updatedAt
   };
 }
 async function upsert(projectId, userId, data) {
   const hasAccess = await checkProjectAccess(projectId, userId);
   if (!hasAccess) {
-    throw new HTTPException9(403, { message: "Access denied to this project" });
+    throw new HTTPException11(403, { message: "Access denied to this project" });
   }
   const urlValidation = validateWebhookUrl(data.url);
   if (!urlValidation.valid) {
-    throw new HTTPException9(400, { message: urlValidation.error });
+    throw new HTTPException11(400, { message: urlValidation.error });
   }
   const templateValidation = validateJsonTemplate(data.bodyTemplate);
   if (!templateValidation.valid) {
-    throw new HTTPException9(400, { message: templateValidation.error });
+    throw new HTTPException11(400, { message: templateValidation.error });
   }
-  const [existing] = await db
-    .select()
-    .from(webhookIntegrations)
-    .where(eq8(webhookIntegrations.projectId, projectId))
-    .limit(1);
+  const [existing] = await db.select().from(webhookIntegrations).where(eq10(webhookIntegrations.projectId, projectId)).limit(1);
   if (existing) {
     if (existing.locked) {
-      const isOnlyLockChange =
-        data.url === existing.url &&
-        JSON.stringify(data.headers) === JSON.stringify(existing.headers) &&
-        data.bodyTemplate === existing.bodyTemplate &&
-        data.enabled === existing.enabled;
+      const isOnlyLockChange = data.url === existing.url && JSON.stringify(data.headers) === JSON.stringify(existing.headers) && data.bodyTemplate === existing.bodyTemplate && data.enabled === existing.enabled;
       if (!isOnlyLockChange) {
-        throw new HTTPException9(403, {
-          message: "Integration is locked and cannot be modified",
+        throw new HTTPException11(403, {
+          message: "Integration is locked and cannot be modified"
         });
       }
     }
-    const [updated] = await db
-      .update(webhookIntegrations)
-      .set({
-        url: data.url.trim(),
-        headers: data.headers,
-        bodyTemplate: data.bodyTemplate,
-        enabled: data.enabled,
-        locked: data.locked,
-        updatedAt: /* @__PURE__ */ new Date(),
-      })
-      .where(eq8(webhookIntegrations.projectId, projectId))
-      .returning();
+    const [updated] = await db.update(webhookIntegrations).set({
+      url: data.url.trim(),
+      headers: data.headers,
+      bodyTemplate: data.bodyTemplate,
+      enabled: data.enabled,
+      locked: data.locked,
+      updatedAt: /* @__PURE__ */ new Date()
+    }).where(eq10(webhookIntegrations.projectId, projectId)).returning();
     return {
       id: updated.id,
       projectId: updated.projectId,
@@ -2427,20 +2711,17 @@ async function upsert(projectId, userId, data) {
       enabled: updated.enabled,
       locked: updated.locked,
       createdAt: updated.createdAt,
-      updatedAt: updated.updatedAt,
+      updatedAt: updated.updatedAt
     };
   }
-  const [created] = await db
-    .insert(webhookIntegrations)
-    .values({
-      projectId,
-      url: data.url.trim(),
-      headers: data.headers,
-      bodyTemplate: data.bodyTemplate,
-      enabled: data.enabled,
-      locked: data.locked,
-    })
-    .returning();
+  const [created] = await db.insert(webhookIntegrations).values({
+    projectId,
+    url: data.url.trim(),
+    headers: data.headers,
+    bodyTemplate: data.bodyTemplate,
+    enabled: data.enabled,
+    locked: data.locked
+  }).returning();
   return {
     id: created.id,
     projectId: created.projectId,
@@ -2450,43 +2731,37 @@ async function upsert(projectId, userId, data) {
     enabled: created.enabled,
     locked: created.locked,
     createdAt: created.createdAt,
-    updatedAt: created.updatedAt,
+    updatedAt: created.updatedAt
   };
 }
 async function remove3(projectId, userId) {
   const hasAccess = await checkProjectAccess(projectId, userId);
   if (!hasAccess) {
-    throw new HTTPException9(403, { message: "Access denied to this project" });
+    throw new HTTPException11(403, { message: "Access denied to this project" });
   }
-  const [existing] = await db
-    .select()
-    .from(webhookIntegrations)
-    .where(eq8(webhookIntegrations.projectId, projectId))
-    .limit(1);
+  const [existing] = await db.select().from(webhookIntegrations).where(eq10(webhookIntegrations.projectId, projectId)).limit(1);
   if (!existing) {
-    throw new HTTPException9(404, { message: "Integration not found" });
+    throw new HTTPException11(404, { message: "Integration not found" });
   }
   if (existing.locked) {
-    throw new HTTPException9(403, {
-      message: "Integration is locked and cannot be deleted",
+    throw new HTTPException11(403, {
+      message: "Integration is locked and cannot be deleted"
     });
   }
-  await db
-    .delete(webhookIntegrations)
-    .where(eq8(webhookIntegrations.projectId, projectId));
+  await db.delete(webhookIntegrations).where(eq10(webhookIntegrations.projectId, projectId));
 }
 async function test(projectId, userId, data) {
   const hasAccess = await checkProjectAccess(projectId, userId);
   if (!hasAccess) {
-    throw new HTTPException9(403, { message: "Access denied to this project" });
+    throw new HTTPException11(403, { message: "Access denied to this project" });
   }
   const urlValidation = validateWebhookUrl(data.url);
   if (!urlValidation.valid) {
-    throw new HTTPException9(400, { message: urlValidation.error });
+    throw new HTTPException11(400, { message: urlValidation.error });
   }
   const templateValidation = validateJsonTemplate(data.bodyTemplate);
   if (!templateValidation.valid) {
-    throw new HTTPException9(400, { message: templateValidation.error });
+    throw new HTTPException11(400, { message: templateValidation.error });
   }
   const sampleData = {
     title: "Sample Annotation",
@@ -2498,12 +2773,12 @@ async function test(projectId, userId, data) {
     type: "bug",
     created_by: {
       name: "Test User",
-      email: "test@example.com",
+      email: "test@example.com"
     },
     project: {
-      name: "Test Project",
+      name: "Test Project"
     },
-    created_at: /* @__PURE__ */ new Date().toISOString(),
+    created_at: (/* @__PURE__ */ new Date()).toISOString()
   };
   let body = data.bodyTemplate || JSON.stringify(sampleData, null, 2);
   if (data.bodyTemplate) {
@@ -2512,7 +2787,7 @@ async function test(projectId, userId, data) {
   }
   const headers = {
     "Content-Type": "application/json",
-    ...data.headers,
+    ...data.headers
   };
   try {
     const controller = new AbortController();
@@ -2521,20 +2796,20 @@ async function test(projectId, userId, data) {
       method: "POST",
       headers,
       body,
-      signal: controller.signal,
+      signal: controller.signal
     });
     clearTimeout(timeoutId);
     if (response.ok) {
       return {
         success: true,
         statusCode: response.status,
-        message: "Test webhook sent successfully!",
+        message: "Test webhook sent successfully!"
       };
     } else {
       return {
         success: false,
         statusCode: response.status,
-        message: `Request failed with status ${response.status}`,
+        message: `Request failed with status ${response.status}`
       };
     }
   } catch (error) {
@@ -2542,17 +2817,17 @@ async function test(projectId, userId, data) {
       if (error.name === "AbortError") {
         return {
           success: false,
-          message: "Request timed out after 10 seconds",
+          message: "Request timed out after 10 seconds"
         };
       }
       return {
         success: false,
-        message: `Request failed: ${error.message}`,
+        message: `Request failed: ${error.message}`
       };
     }
     return {
       success: false,
-      message: "Request failed with unknown error",
+      message: "Request failed with unknown error"
     };
   }
 }
@@ -2568,7 +2843,7 @@ function substituteVariables(template, data) {
     "created_by.name": "created_by.name",
     "created_by.email": "created_by.email",
     "project.name": "project.name",
-    created_at: "created_at",
+    created_at: "created_at"
   };
   return template.replace(/<([a-zA-Z_][a-zA-Z0-9_.]*)>/g, (match, variable) => {
     const trimmedVar = variable.trim();
@@ -2593,11 +2868,7 @@ function getNestedValue(obj, path) {
   return value;
 }
 async function getEnabledIntegration(projectId) {
-  const [integration] = await db
-    .select()
-    .from(webhookIntegrations)
-    .where(eq8(webhookIntegrations.projectId, projectId))
-    .limit(1);
+  const [integration] = await db.select().from(webhookIntegrations).where(eq10(webhookIntegrations.projectId, projectId)).limit(1);
   if (!integration || !integration.enabled) {
     return null;
   }
@@ -2610,7 +2881,7 @@ async function getEnabledIntegration(projectId) {
     enabled: integration.enabled,
     locked: integration.locked,
     createdAt: integration.createdAt,
-    updatedAt: integration.updatedAt,
+    updatedAt: integration.updatedAt
   };
 }
 
@@ -2627,13 +2898,16 @@ function substituteVariables2(template, data) {
     "created_by.name": "createdBy.name",
     "created_by.email": "createdBy.email",
     "project.name": "project.name",
-    created_at: "createdAt",
+    created_at: "createdAt"
   };
   return template.replace(/<([a-zA-Z_][a-zA-Z0-9_.]*)>/g, (match, variable) => {
     const trimmedVar = variable.trim();
     const path = variableMap[trimmedVar];
     if (path) {
-      const value = getNestedValue2(data, path);
+      const value = getNestedValue2(
+        data,
+        path
+      );
       return value !== void 0 && value !== null ? String(value) : "";
     }
     return match;
@@ -2692,7 +2966,7 @@ async function executeWebhook(integration, annotationData) {
   let body;
   if (integration.bodyTemplate) {
     const normalizedTemplate = escapeNewlinesInStrings2(
-      integration.bodyTemplate,
+      integration.bodyTemplate
     );
     body = substituteVariables2(normalizedTemplate, annotationData);
   } else {
@@ -2709,13 +2983,13 @@ async function executeWebhook(integration, annotationData) {
         type: annotationData.type,
         created_by: annotationData.createdBy,
         project: annotationData.project,
-        created_at: annotationData.createdAt,
-      },
+        created_at: annotationData.createdAt
+      }
     });
   }
   const headers = {
     "Content-Type": "application/json",
-    ...integration.headers,
+    ...integration.headers
   };
   try {
     const controller = new AbortController();
@@ -2724,22 +2998,22 @@ async function executeWebhook(integration, annotationData) {
       method: "POST",
       headers,
       body,
-      signal: controller.signal,
+      signal: controller.signal
     });
     clearTimeout(timeoutId);
     if (!response.ok) {
       console.error(
-        `Webhook failed for project ${integration.projectId}: Status ${response.status}`,
+        `Webhook failed for project ${integration.projectId}: Status ${response.status}`
       );
     }
   } catch (error) {
     if (error instanceof Error) {
       console.error(
-        `Webhook failed for project ${integration.projectId}: ${error.message}`,
+        `Webhook failed for project ${integration.projectId}: ${error.message}`
       );
     } else {
       console.error(
-        `Webhook failed for project ${integration.projectId}: Unknown error`,
+        `Webhook failed for project ${integration.projectId}: Unknown error`
       );
     }
   }
@@ -2756,14 +3030,9 @@ async function fireWebhookIfEnabled(projectId, annotationData) {
 async function list3(projectId, userId) {
   const hasAccess = await checkProjectAccess(projectId, userId);
   if (!hasAccess) {
-    throw new HTTPException10(403, {
-      message: "Access denied to this project",
-    });
+    throw new HTTPException12(403, { message: "Access denied to this project" });
   }
-  const annotationList = await db
-    .select()
-    .from(annotations)
-    .where(eq9(annotations.projectId, projectId));
+  const annotationList = await db.select().from(annotations).where(eq11(annotations.projectId, projectId));
   return annotationList.map((a) => ({
     id: a.id,
     projectId: a.projectId,
@@ -2779,40 +3048,35 @@ async function list3(projectId, userId) {
     screenshotAnnotated: a.screenshotAnnotated,
     canvasData: a.canvasData,
     createdAt: a.createdAt,
-    updatedAt: a.updatedAt,
+    updatedAt: a.updatedAt
   }));
 }
 async function create3(projectId, userId, data) {
   const hasAccess = await checkProjectAccess(projectId, userId);
   if (!hasAccess) {
-    throw new HTTPException10(403, {
-      message: "Access denied to this project",
-    });
+    throw new HTTPException12(403, { message: "Access denied to this project" });
   }
   let screenshotAnnotatedUrl = data.screenshotAnnotated || null;
   if (data.screenshotAnnotatedBase64) {
     const uploadResult = await uploadBase64Screenshot(
       data.screenshotAnnotatedBase64,
-      userId,
+      userId
     );
     screenshotAnnotatedUrl = uploadResult.url;
   }
-  const [newAnnotation] = await db
-    .insert(annotations)
-    .values({
-      projectId,
-      userId,
-      title: data.title,
-      description: data.description || null,
-      type: data.type || null,
-      priority: data.priority || null,
-      pageUrl: data.pageUrl || null,
-      pageTitle: data.pageTitle || null,
-      screenshotOriginal: data.screenshotOriginal || null,
-      screenshotAnnotated: screenshotAnnotatedUrl,
-      canvasData: data.canvasData || null,
-    })
-    .returning();
+  const [newAnnotation] = await db.insert(annotations).values({
+    projectId,
+    userId,
+    title: data.title,
+    description: data.description || null,
+    type: data.type || null,
+    priority: data.priority || null,
+    pageUrl: data.pageUrl || null,
+    pageTitle: data.pageTitle || null,
+    screenshotOriginal: data.screenshotOriginal || null,
+    screenshotAnnotated: screenshotAnnotatedUrl,
+    canvasData: data.canvasData || null
+  }).returning();
   fireWebhookAsync(projectId, userId, newAnnotation);
   return {
     id: newAnnotation.id,
@@ -2829,21 +3093,13 @@ async function create3(projectId, userId, data) {
     screenshotAnnotated: newAnnotation.screenshotAnnotated,
     canvasData: newAnnotation.canvasData,
     createdAt: newAnnotation.createdAt,
-    updatedAt: newAnnotation.updatedAt,
+    updatedAt: newAnnotation.updatedAt
   };
 }
 async function fireWebhookAsync(projectId, userId, annotation) {
   try {
-    const [user] = await db
-      .select({ name: users.name, email: users.email })
-      .from(users)
-      .where(eq9(users.id, userId))
-      .limit(1);
-    const [project] = await db
-      .select({ name: projects.name })
-      .from(projects)
-      .where(eq9(projects.id, projectId))
-      .limit(1);
+    const [user] = await db.select({ name: users.name, email: users.email }).from(users).where(eq11(users.id, userId)).limit(1);
+    const [project] = await db.select({ name: projects.name }).from(projects).where(eq11(projects.id, projectId)).limit(1);
     if (!user || !project) {
       console.error("Webhook: Could not find user or project info");
       return;
@@ -2859,30 +3115,26 @@ async function fireWebhookAsync(projectId, userId, annotation) {
       type: annotation.type,
       createdBy: {
         name: user.name || "Unknown",
-        email: user.email,
+        email: user.email
       },
       project: {
-        name: project.name,
+        name: project.name
       },
-      createdAt: annotation.createdAt.toISOString(),
+      createdAt: annotation.createdAt.toISOString()
     });
   } catch (error) {
     console.error("Webhook execution failed:", error);
   }
 }
 async function get4(annotationId, userId) {
-  const [annotation] = await db
-    .select()
-    .from(annotations)
-    .where(eq9(annotations.id, annotationId))
-    .limit(1);
+  const [annotation] = await db.select().from(annotations).where(eq11(annotations.id, annotationId)).limit(1);
   if (!annotation) {
-    throw new HTTPException10(404, { message: "Annotation not found" });
+    throw new HTTPException12(404, { message: "Annotation not found" });
   }
   const hasAccess = await checkProjectAccess(annotation.projectId, userId);
   if (!hasAccess) {
-    throw new HTTPException10(403, {
-      message: "Access denied to this annotation",
+    throw new HTTPException12(403, {
+      message: "Access denied to this annotation"
     });
   }
   return {
@@ -2900,22 +3152,18 @@ async function get4(annotationId, userId) {
     screenshotAnnotated: annotation.screenshotAnnotated,
     canvasData: annotation.canvasData,
     createdAt: annotation.createdAt,
-    updatedAt: annotation.updatedAt,
+    updatedAt: annotation.updatedAt
   };
 }
 async function update3(annotationId, userId, data) {
-  const [annotation] = await db
-    .select()
-    .from(annotations)
-    .where(eq9(annotations.id, annotationId))
-    .limit(1);
+  const [annotation] = await db.select().from(annotations).where(eq11(annotations.id, annotationId)).limit(1);
   if (!annotation) {
-    throw new HTTPException10(404, { message: "Annotation not found" });
+    throw new HTTPException12(404, { message: "Annotation not found" });
   }
   const hasAccess = await checkProjectAccess(annotation.projectId, userId);
   if (!hasAccess) {
-    throw new HTTPException10(403, {
-      message: "Access denied to this annotation",
+    throw new HTTPException12(403, {
+      message: "Access denied to this annotation"
     });
   }
   const updateData = { updatedAt: /* @__PURE__ */ new Date() };
@@ -2931,11 +3179,7 @@ async function update3(annotationId, userId, data) {
   if (data.screenshotAnnotated !== void 0)
     updateData.screenshotAnnotated = data.screenshotAnnotated;
   if (data.canvasData !== void 0) updateData.canvasData = data.canvasData;
-  const [updated] = await db
-    .update(annotations)
-    .set(updateData)
-    .where(eq9(annotations.id, annotationId))
-    .returning();
+  const [updated] = await db.update(annotations).set(updateData).where(eq11(annotations.id, annotationId)).returning();
   return {
     id: updated.id,
     projectId: updated.projectId,
@@ -2951,25 +3195,21 @@ async function update3(annotationId, userId, data) {
     screenshotAnnotated: updated.screenshotAnnotated,
     canvasData: updated.canvasData,
     createdAt: updated.createdAt,
-    updatedAt: updated.updatedAt,
+    updatedAt: updated.updatedAt
   };
 }
 async function remove4(annotationId, userId) {
-  const [annotation] = await db
-    .select()
-    .from(annotations)
-    .where(eq9(annotations.id, annotationId))
-    .limit(1);
+  const [annotation] = await db.select().from(annotations).where(eq11(annotations.id, annotationId)).limit(1);
   if (!annotation) {
-    throw new HTTPException10(404, { message: "Annotation not found" });
+    throw new HTTPException12(404, { message: "Annotation not found" });
   }
   const hasAccess = await checkProjectAccess(annotation.projectId, userId);
   if (!hasAccess) {
-    throw new HTTPException10(403, {
-      message: "Access denied to this annotation",
+    throw new HTTPException12(403, {
+      message: "Access denied to this annotation"
     });
   }
-  await db.delete(annotations).where(eq9(annotations.id, annotationId));
+  await db.delete(annotations).where(eq11(annotations.id, annotationId));
 }
 
 // src/routes/projects.ts
@@ -2990,7 +3230,7 @@ projectRoutes.patch(
     const data = c.req.valid("json");
     const project = await update2(projectId, userId, data);
     return c.json({ project });
-  },
+  }
 );
 projectRoutes.delete("/:id", async (c) => {
   const userId = c.get("userId");
@@ -3013,7 +3253,7 @@ projectRoutes.post(
     const data = c.req.valid("json");
     const annotation = await create3(projectId, userId, data);
     return c.json({ annotation }, 201);
-  },
+  }
 );
 
 // src/routes/annotations.ts
@@ -3034,9 +3274,13 @@ annotationRoutes.patch(
     const userId = c.get("userId");
     const annotationId = c.req.param("id");
     const data = c.req.valid("json");
-    const annotation = await update3(annotationId, userId, data);
+    const annotation = await update3(
+      annotationId,
+      userId,
+      data
+    );
     return c.json({ annotation });
-  },
+  }
 );
 annotationRoutes.delete("/:id", async (c) => {
   const userId = c.get("userId");
@@ -3047,7 +3291,7 @@ annotationRoutes.delete("/:id", async (c) => {
 
 // src/routes/upload.ts
 import { Hono as Hono6 } from "hono";
-import { HTTPException as HTTPException11 } from "hono/http-exception";
+import { HTTPException as HTTPException13 } from "hono/http-exception";
 var uploadRoutes = new Hono6();
 uploadRoutes.use("*", authMiddleware);
 uploadRoutes.post("/screenshot", async (c) => {
@@ -3055,7 +3299,7 @@ uploadRoutes.post("/screenshot", async (c) => {
   const body = await c.req.parseBody();
   const file = body["file"];
   if (!file || !(file instanceof File)) {
-    throw new HTTPException11(400, { message: "No file provided" });
+    throw new HTTPException13(400, { message: "No file provided" });
   }
   const result = await uploadScreenshot(file, userId);
   return c.json(result, 201);
@@ -3065,7 +3309,7 @@ uploadRoutes.post("/profile-picture", async (c) => {
   const body = await c.req.parseBody();
   const file = body["file"];
   if (!file || !(file instanceof File)) {
-    throw new HTTPException11(400, { message: "No file provided" });
+    throw new HTTPException13(400, { message: "No file provided" });
   }
   const result = await uploadProfilePicture(file, userId);
   return c.json(result, 201);
@@ -3081,7 +3325,7 @@ var webhookIntegrationSchema = z3.object({
   headers: z3.record(z3.string()).default({}),
   bodyTemplate: z3.string().default(""),
   enabled: z3.boolean().default(true),
-  locked: z3.boolean().default(false),
+  locked: z3.boolean().default(false)
 });
 integrationRoutes.use("*", authMiddleware);
 integrationRoutes.get("/:projectId/integration", async (c) => {
@@ -3097,9 +3341,13 @@ integrationRoutes.put(
     const userId = c.get("userId");
     const projectId = c.req.param("projectId");
     const data = c.req.valid("json");
-    const integration = await upsert(projectId, userId, data);
+    const integration = await upsert(
+      projectId,
+      userId,
+      data
+    );
     return c.json({ integration });
-  },
+  }
 );
 integrationRoutes.delete("/:projectId/integration", async (c) => {
   const userId = c.get("userId");
@@ -3116,7 +3364,7 @@ integrationRoutes.post(
     const data = c.req.valid("json");
     const result = await test(projectId, userId, data);
     return c.json(result);
-  },
+  }
 );
 
 // src/routes/invitations.ts
@@ -3134,21 +3382,25 @@ invitationRoutes.post("/:token/accept", async (c) => {
     const authHeader = c.req.header("Authorization");
     if (authHeader?.startsWith("Bearer ")) {
       const sessionToken = authHeader.substring(7);
-      const { validateSession: validateSession2 } =
-        await import("./auth-3R3PGA3U.js");
+      const { validateSession: validateSession2 } = await import("./auth-Y6E7HJEV.js");
       const session = await validateSession2(sessionToken);
       if (session) {
         userId = session.userId;
       }
     }
-  } catch (error) {}
+  } catch (error) {
+  }
   const body = await c.req.json().catch(() => ({}));
   const fullName = body.fullName;
-  const result = await acceptInvitation(token, userId, fullName);
+  const result = await acceptInvitation(
+    token,
+    userId,
+    fullName
+  );
   if (result.sessionToken) {
     c.header(
       "Set-Cookie",
-      `session=${result.sessionToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${30 * 24 * 60 * 60}`,
+      `session=${result.sessionToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${30 * 24 * 60 * 60}`
     );
   }
   return c.json(result);
@@ -3160,7 +3412,7 @@ invitationRoutes.post("/:token/decline", async (c) => {
 });
 
 // src/middleware/error-handler.ts
-import { HTTPException as HTTPException12 } from "hono/http-exception";
+import { HTTPException as HTTPException14 } from "hono/http-exception";
 import { ZodError } from "zod";
 function getErrorCode(status) {
   const codes = {
@@ -3170,7 +3422,7 @@ function getErrorCode(status) {
     404: "NOT_FOUND",
     409: "CONFLICT",
     413: "PAYLOAD_TOO_LARGE",
-    500: "INTERNAL_ERROR",
+    500: "INTERNAL_ERROR"
   };
   return codes[status] || "UNKNOWN_ERROR";
 }
@@ -3186,12 +3438,26 @@ function formatZodErrors(error) {
   return details;
 }
 function errorHandler(err, c) {
-  if (err instanceof HTTPException12) {
+  if (err instanceof HTTPException14) {
+    try {
+      const parsedMessage = JSON.parse(err.message);
+      if (parsedMessage.error && parsedMessage.error_description) {
+        return c.json(
+          {
+            error: parsedMessage.error,
+            error_description: parsedMessage.error_description,
+            message: parsedMessage.error_description
+          },
+          err.status
+        );
+      }
+    } catch {
+    }
     const response2 = {
       error: {
         code: getErrorCode(err.status),
-        message: err.message,
-      },
+        message: err.message
+      }
     };
     return c.json(response2, err.status);
   }
@@ -3200,8 +3466,8 @@ function errorHandler(err, c) {
       error: {
         code: "VALIDATION_ERROR",
         message: "Invalid input",
-        details: formatZodErrors(err),
-      },
+        details: formatZodErrors(err)
+      }
     };
     return c.json(response2, 400);
   }
@@ -3209,8 +3475,8 @@ function errorHandler(err, c) {
   const response = {
     error: {
       code: "INTERNAL_ERROR",
-      message: "An unexpected error occurred",
-    },
+      message: "An unexpected error occurred"
+    }
   };
   return c.json(response, 500);
 }
@@ -3223,10 +3489,7 @@ app.use(
   cors({
     origin: (origin) => {
       if (!origin) return "http://localhost:3000";
-      if (
-        origin === "http://localhost:3000" ||
-        origin === "http://localhost:3001"
-      )
+      if (origin === "http://localhost:3000" || origin === "http://localhost:3001")
         return origin;
       if (origin === "https://notto-web.vercel.app") return origin;
       if (origin === "https://notto.site") return origin;
@@ -3240,21 +3503,21 @@ app.use(
     credentials: true,
     allowHeaders: ["Content-Type", "Authorization"],
     allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    exposeHeaders: ["Set-Cookie"],
-  }),
+    exposeHeaders: ["Set-Cookie"]
+  })
 );
 app.onError(errorHandler);
 app.get("/", (c) => c.json({ status: "ok", service: "notto-api" }));
 app.route("/auth", authRoutes);
-app.route("/extension-auth", extensionAuthRoutes);
+app.route("/oauth", oauthRoutes);
 app.route("/workspaces", workspaceRoutes);
 app.route("/projects", projectRoutes);
 app.route("/annotations", annotationRoutes);
 app.route("/upload", uploadRoutes);
 app.route("/projects", integrationRoutes);
 app.route("/invitations", invitationRoutes);
-app.notFound((c) =>
-  c.json({ error: { code: "NOT_FOUND", message: "Route not found" } }, 404),
+app.notFound(
+  (c) => c.json({ error: { code: "NOT_FOUND", message: "Route not found" } }, 404)
 );
 var handler = handle(app);
 var GET = handler;
@@ -3264,4 +3527,12 @@ var PUT = handler;
 var DELETE = handler;
 var OPTIONS = handler;
 var src_default = app;
-export { DELETE, GET, OPTIONS, PATCH, POST, PUT, src_default as default };
+export {
+  DELETE,
+  GET,
+  OPTIONS,
+  PATCH,
+  POST,
+  PUT,
+  src_default as default
+};

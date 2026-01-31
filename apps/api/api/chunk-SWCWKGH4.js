@@ -17,8 +17,8 @@ var schema_exports = {};
 __export(schema_exports, {
   annotations: () => annotations,
   annotationsRelations: () => annotationsRelations,
-  extensionAuthSessions: () => extensionAuthSessions,
   magicLinkTokens: () => magicLinkTokens,
+  oauthAuthorizationCodes: () => oauthAuthorizationCodes,
   projects: () => projects,
   projectsRelations: () => projectsRelations,
   rateLimitRecords: () => rateLimitRecords,
@@ -26,6 +26,7 @@ __export(schema_exports, {
   sessionsRelations: () => sessionsRelations,
   users: () => users,
   usersRelations: () => usersRelations,
+  verificationCodes: () => verificationCodes,
   webhookIntegrations: () => webhookIntegrations,
   webhookIntegrationsRelations: () => webhookIntegrationsRelations,
   workspaceInvitations: () => workspaceInvitations,
@@ -75,6 +76,25 @@ var magicLinkTokens = pgTable(
   (table) => [
     index("idx_magic_link_tokens_email").on(table.email),
     index("idx_magic_link_tokens_expires_at").on(table.expiresAt)
+  ]
+);
+var verificationCodes = pgTable(
+  "verification_codes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    email: varchar("email", { length: 255 }).notNull(),
+    codeHash: varchar("code_hash", { length: 255 }).notNull(),
+    name: varchar("name", { length: 255 }),
+    // For registration - stores user's full name
+    isRegister: boolean("is_register").default(false).notNull(),
+    // Distinguishes login vs register
+    expiresAt: timestamp("expires_at").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    usedAt: timestamp("used_at")
+  },
+  (table) => [
+    index("idx_verification_codes_email").on(table.email),
+    index("idx_verification_codes_expires_at").on(table.expiresAt)
   ]
 );
 var rateLimitRecords = pgTable(
@@ -185,19 +205,22 @@ var sessions = pgTable(
     index("idx_sessions_expires_at").on(table.expiresAt)
   ]
 );
-var extensionAuthSessions = pgTable(
-  "extension_auth_sessions",
+var oauthAuthorizationCodes = pgTable(
+  "oauth_authorization_codes",
   {
     id: varchar("id", { length: 64 }).primaryKey(),
     // nanoid
-    status: varchar("status", { length: 20 }).default("pending").notNull(),
-    userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+    codeChallenge: varchar("code_challenge", { length: 255 }).notNull(),
+    redirectUri: text("redirect_uri").notNull(),
+    clientId: varchar("client_id", { length: 255 }).notNull(),
+    state: varchar("state", { length: 255 }).notNull(),
     expiresAt: timestamp("expires_at").notNull(),
-    completedAt: timestamp("completed_at"),
     createdAt: timestamp("created_at").defaultNow().notNull()
   },
   (table) => [
-    index("idx_extension_auth_sessions_expires_at").on(table.expiresAt)
+    index("idx_oauth_authorization_codes_user_id").on(table.userId),
+    index("idx_oauth_authorization_codes_expires_at").on(table.expiresAt)
   ]
 );
 var annotations = pgTable("annotations", {
@@ -536,6 +559,7 @@ async function deleteUser(userId) {
 export {
   users,
   magicLinkTokens,
+  verificationCodes,
   rateLimitRecords,
   workspaces,
   workspaceMembers,
@@ -543,7 +567,7 @@ export {
   projects,
   webhookIntegrations,
   sessions,
-  extensionAuthSessions,
+  oauthAuthorizationCodes,
   annotations,
   db,
   generateTokens,

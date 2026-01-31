@@ -58,7 +58,10 @@ async function apiRequestViaBackground<T>(
  */
 async function refreshAccessToken(): Promise<string | null> {
   const refreshToken = await getRefreshToken();
-  if (!refreshToken) return null;
+  if (!refreshToken) {
+    await clearAuthState();
+    return null;
+  }
 
   try {
     const response = await fetch(`${API_BASE}/auth/refresh`, {
@@ -69,16 +72,34 @@ async function refreshAccessToken(): Promise<string | null> {
 
     if (!response.ok) {
       // Refresh token is invalid, clear auth state
+      console.error("Notto API: Token refresh failed:", response.status);
       await clearAuthState();
       return null;
     }
 
     const data = await response.json();
     await updateAccessToken(data.accessToken);
+    console.log("Notto API: Access token refreshed successfully");
     return data.accessToken;
-  } catch {
+  } catch (error) {
+    console.error("Notto API: Token refresh error:", error);
     await clearAuthState();
     return null;
+  }
+}
+
+/**
+ * Checks if a JWT token is expired
+ */
+function isTokenExpired(token: string): boolean {
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    const now = Math.floor(Date.now() / 1000);
+    // Add 60 second buffer to refresh before actual expiration
+    return payload.exp && payload.exp - 60 < now;
+  } catch (error) {
+    console.error("Notto API: Failed to parse token:", error);
+    return true; // Treat invalid tokens as expired
   }
 }
 
@@ -120,6 +141,18 @@ async function directApiRequest<T>(
 ): Promise<T> {
   let accessToken = await getAccessToken();
 
+  // Check if access token is expired before making request
+  if (accessToken && isTokenExpired(accessToken)) {
+    // Token is expired, try to refresh it proactively
+    const newToken = await refreshAccessToken();
+    if (newToken) {
+      accessToken = newToken;
+    } else {
+      // Refresh failed, throw authentication error
+      throw new Error("AUTHENTICATION_REQUIRED");
+    }
+  }
+
   const makeRequest = async (token: string | null) => {
     const headers: HeadersInit = {
       "Content-Type": "application/json",
@@ -150,8 +183,8 @@ async function directApiRequest<T>(
 
   let response = await makeRequest(accessToken);
 
-  // Handle 401 - try to refresh token
-  if (response.status === 401 && accessToken) {
+  // Handle 401 - try to refresh token (fallback if proactive refresh didn't work)
+  if (response.status === 401) {
     const newToken = await refreshAccessToken();
     if (newToken) {
       response = await makeRequest(newToken);

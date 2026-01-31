@@ -38,6 +38,24 @@ function formatZodErrors(error: ZodError): Record<string, string[]> {
 export function errorHandler(err: Error, c: Context): Response {
   // Handle HTTP exceptions (thrown by our code)
   if (err instanceof HTTPException) {
+    // Check if the message is a JSON-stringified OAuth error
+    try {
+      const parsedMessage = JSON.parse(err.message);
+      if (parsedMessage.error && parsedMessage.error_description) {
+        // This is an OAuth error response
+        return c.json(
+          {
+            error: parsedMessage.error,
+            error_description: parsedMessage.error_description,
+            message: parsedMessage.error_description,
+          },
+          err.status,
+        );
+      }
+    } catch {
+      // Not a JSON message, continue with normal error handling
+    }
+
     const response: ErrorResponse = {
       error: {
         code: getErrorCode(err.status),

@@ -1,11 +1,17 @@
 {
   "manifest_version": 3,
   "name": "Notto - Screenshot Annotator",
-  "version": "2.2.0",
+  "version": "3.0.0",
   "description": "Capture screenshots and annotate with arrows, boxes, and text in full-screen mode",
-  "permissions": ["activeTab", "downloads", "scripting", "storage", "tabs"],
-  "host_permissions": ["https://notto-api.vercel.app/*"],
-
+  "permissions": [
+    "activeTab",
+    "downloads",
+    "scripting",
+    "storage",
+    "tabs",
+    "identity"
+  ],
+  "host_permissions": ["https://notto.site/*, https://notto-api.vercel.app/*"],
   "action": {
     "default_icon": {
       "16": "icons/icon16.png",
@@ -23,7 +29,7 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["dist/overlay.css"],
+      "resources": ["dist/overlay.css", "icons/icon48.png"],
       "matches": ["<all_urls>"]
     }
   ]

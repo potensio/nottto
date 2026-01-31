@@ -20,12 +20,10 @@ export default function Error({
         <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-6">
           <iconify-icon
             icon="lucide:alert-circle"
-            className="text-3xl text-red-500"
+            className="text-3xl text-red-500 mx-auto"
           ></iconify-icon>
         </div>
-        <h3 className="text-xl font-instrument-serif text-neutral-900 mb-2">
-          Something went wrong
-        </h3>
+        <h3 className="text-xl text-neutral-900 mb-2">Something went wrong</h3>
         <p className="text-neutral-500 mb-6 text-center px-4">
           An unexpected error occurred. Please try again.
         </p>

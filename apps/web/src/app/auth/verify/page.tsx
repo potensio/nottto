@@ -39,6 +39,7 @@ function VerifyContent() {
   const { verifyMagicLink } = useAuth();
   const [status, setStatus] = useState<VerifyStatus>("verifying");
   const [error, setError] = useState<string | null>(null);
+  const [isExtensionAuth, setIsExtensionAuth] = useState(false);
   const verificationAttempted = useRef(false);
 
   useEffect(() => {
@@ -62,12 +63,91 @@ function VerifyContent() {
         // Use the auth context's verifyMagicLink to properly set user state
         await verifyMagicLink(token);
 
-        // If this is from the extension, complete the auth session
+        // Check if there's an extension session (OAuth params encoded in the magic link)
+        let oauthParams = null;
         if (extensionSession) {
-          const completed =
-            await completeExtensionAuthSession(extensionSession);
-          if (completed) {
-            console.log("Extension auth session completed successfully");
+          try {
+            // Decode OAuth parameters from the session
+            oauthParams = JSON.parse(atob(extensionSession));
+            console.log("Decoded OAuth params from session");
+          } catch (decodeError) {
+            console.error("Failed to decode OAuth params:", decodeError);
+          }
+        }
+
+        // Also check localStorage for OAuth params (fallback for old flow)
+        if (!oauthParams) {
+          const oauthParamsStr =
+            typeof window !== "undefined"
+              ? localStorage.getItem("oauthParams")
+              : null;
+          if (oauthParamsStr) {
+            try {
+              oauthParams = JSON.parse(oauthParamsStr);
+              console.log("Found OAuth params in localStorage");
+            } catch (parseError) {
+              console.error("Failed to parse OAuth params:", parseError);
+            }
+          }
+        }
+
+        if (oauthParams) {
+          // This is an OAuth flow - generate authorization code and redirect
+          try {
+            // Generate authorization code
+            const response = await fetch(`${API_URL}/oauth/authorize`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+              },
+              credentials: "include",
+              body: JSON.stringify({
+                response_type: oauthParams.response_type,
+                client_id: oauthParams.client_id,
+                redirect_uri: oauthParams.redirect_uri,
+                code_challenge: oauthParams.code_challenge,
+                code_challenge_method: oauthParams.code_challenge_method,
+                state: oauthParams.state,
+              }),
+            });
+
+            if (!response.ok) {
+              throw new Error("Failed to generate authorization code");
+            }
+
+            const data = await response.json();
+
+            // Clear stored OAuth params
+            localStorage.removeItem("oauthParams");
+
+            setStatus("success");
+            setIsExtensionAuth(true);
+
+            // For extension OAuth: We can't redirect to chromiumapp.org from a regular tab
+            // The user clicked the magic link from email, which opened in a new tab
+            // We need to show them a message to return to the extension
+            // The extension should implement a fallback auth method or show instructions
+
+            // Store auth completion flag that extension can check
+            if (typeof window !== "undefined") {
+              localStorage.setItem("extensionAuthComplete", "true");
+              localStorage.setItem(
+                "extensionAuthTimestamp",
+                Date.now().toString(),
+              );
+            }
+
+            return;
+          } catch (oauthError) {
+            console.error("OAuth authorization failed:", oauthError);
+            // Clear OAuth params on error
+            localStorage.removeItem("oauthParams");
+            setStatus("error");
+            setError(
+              "Failed to authorize extension. Please try again from the extension.",
+            );
+            return;
           }
         }
 
@@ -127,11 +207,24 @@ function VerifyContent() {
               ></iconify-icon>
             </div>
             <h2 className="text-3xl font-instrument-serif font-normal text-neutral-900 mb-3">
-              You're signed in!
+              {isExtensionAuth
+                ? "Authentication complete!"
+                : "You're signed in!"}
             </h2>
-            <p className="text-neutral-500">
-              Redirecting you to the dashboard...
+            <p className="text-neutral-500 mb-6">
+              {isExtensionAuth
+                ? "You can now close this tab and return to the extension to try logging in again."
+                : "Redirecting you to the dashboard..."}
             </p>
+            {isExtensionAuth && (
+              <button
+                onClick={() => window.close()}
+                className="inline-flex items-center justify-center gap-2 w-full bg-neutral-900 text-white py-3 rounded-lg font-medium hover:bg-neutral-800 transition-colors"
+              >
+                <iconify-icon icon="lucide:x"></iconify-icon>
+                Close this tab
+              </button>
+            )}
           </>
         )}
 

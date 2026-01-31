@@ -19,7 +19,7 @@ export default function DashboardPage() {
 
     try {
       const workspace = await createWorkspace.mutateAsync(
-        newWorkspaceName.trim()
+        newWorkspaceName.trim(),
       );
       setShowCreateModal(false);
       setNewWorkspaceName("");
@@ -52,10 +52,10 @@ export default function DashboardPage() {
           <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
             <iconify-icon
               icon="lucide:alert-circle"
-              className="text-3xl text-red-500"
+              className="text-3xl text-red-500 mx-auto"
             ></iconify-icon>
           </div>
-          <h2 className="text-2xl font-instrument-serif text-neutral-900 mb-2">
+          <h2 className="text-2xl text-neutral-900 mb-2">
             Something went wrong
           </h2>
           <p className="text-neutral-500 mb-6">

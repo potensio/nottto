@@ -3,7 +3,7 @@ import { handle } from "hono/vercel";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { authRoutes } from "./routes/auth";
-import { extensionAuthRoutes } from "./routes/extension-auth";
+import { oauthRoutes } from "./routes/oauth";
 import { workspaceRoutes } from "./routes/workspaces";
 import { projectRoutes } from "./routes/projects";
 import { annotationRoutes } from "./routes/annotations";
@@ -62,7 +62,7 @@ app.get("/", (c) => c.json({ status: "ok", service: "notto-api" }));
 
 // Routes
 app.route("/auth", authRoutes);
-app.route("/extension-auth", extensionAuthRoutes);
+app.route("/oauth", oauthRoutes);
 app.route("/workspaces", workspaceRoutes);
 app.route("/projects", projectRoutes);
 app.route("/annotations", annotationRoutes);

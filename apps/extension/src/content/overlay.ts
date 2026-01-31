@@ -205,7 +205,12 @@ export async function createOverlay(): Promise<void> {
       <!-- Footer Actions -->
       <div class="p-4 border-t border-bf-border flex gap-3">
         <button class="bf-action-btn secondary" id="bf-cancel-btn">Cancel</button>
-        <button class="bf-action-btn primary" id="bf-save-btn">Save</button>
+        <button class="bf-action-btn primary" id="bf-save-btn">
+          <span>Save</span>
+          <svg class="bf-btn-loader" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: none; margin-left: 8px;">
+            <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+          </svg>
+        </button>
       </div>
     </div>
   `;

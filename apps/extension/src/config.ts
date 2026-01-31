@@ -1,10 +1,10 @@
 // Extension configuration
-// Change these URLs for local development
+// Production URLs
 
 export const config = {
-  // Web app URL - change to https://notto.site for production
+  // Web app URL
   WEB_URL: "https://notto.site",
 
-  // API URL - change to https://notto-api.vercel.app/api for production
+  // API URL
   API_URL: "https://notto-api.vercel.app/api",
 } as const;

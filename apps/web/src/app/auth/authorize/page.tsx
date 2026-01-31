@@ -4,13 +4,25 @@ import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { validateEmail } from "@/lib/validation";
 import { apiClient } from "@/lib/api-client";
+import { useAuth } from "@/lib/auth-context";
 
 type AuthMode = "login" | "register";
 type AuthStep = "form" | "confirmation" | "error";
 
-function AuthPageContent() {
+interface OAuthParams {
+  response_type: string;
+  client_id: string;
+  redirect_uri: string;
+  code_challenge: string;
+  code_challenge_method: string;
+  state: string;
+  mode?: "login" | "register";
+}
+
+function AuthorizePageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { user } = useAuth();
   const [mode, setMode] = useState<AuthMode>("login");
   const [step, setStep] = useState<AuthStep>("form");
   const [email, setEmail] = useState("");
@@ -22,8 +34,9 @@ function AuthPageContent() {
   const [maskedEmail, setMaskedEmail] = useState("");
   const [canResend, setCanResend] = useState(false);
   const [resendCountdown, setResendCountdown] = useState(60);
+  const [oauthParams, setOAuthParams] = useState<OAuthParams | null>(null);
 
-  // Check for OAuth parameters and redirect to /auth/authorize if present
+  // Extract and validate OAuth parameters
   useEffect(() => {
     const response_type = searchParams.get("response_type");
     const client_id = searchParams.get("client_id");
@@ -31,36 +44,64 @@ function AuthPageContent() {
     const code_challenge = searchParams.get("code_challenge");
     const code_challenge_method = searchParams.get("code_challenge_method");
     const state = searchParams.get("state");
+    const modeParam = searchParams.get("mode");
 
-    // If OAuth parameters are present, redirect to /auth/authorize
+    // Validate required OAuth parameters
     if (
-      response_type ||
-      client_id ||
-      redirect_uri ||
-      code_challenge ||
-      code_challenge_method ||
-      state
+      !response_type ||
+      !client_id ||
+      !redirect_uri ||
+      !code_challenge ||
+      !code_challenge_method ||
+      !state
     ) {
-      // Build the authorize URL with all parameters
-      const authorizeUrl = new URL("/auth/authorize", window.location.origin);
-      searchParams.forEach((value, key) => {
-        authorizeUrl.searchParams.set(key, value);
-      });
-      router.push(authorizeUrl.pathname + authorizeUrl.search);
+      setError("Invalid OAuth request. Missing required parameters.");
+      setStep("error");
       return;
     }
 
-    // Set initial mode from URL query parameter (only once) for normal flow
-    const modeParam = searchParams.get("mode");
-    if (modeParam === "register") {
-      setMode("register");
+    if (response_type !== "code") {
+      setError("Invalid response_type. Only 'code' is supported.");
+      setStep("error");
+      return;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
-  // Get extension session from URL if present
-  const extensionSession = searchParams.get("session");
-  const returnUrl = searchParams.get("returnUrl");
+    if (code_challenge_method !== "S256") {
+      setError("Invalid code_challenge_method. Only 'S256' is supported.");
+      setStep("error");
+      return;
+    }
+
+    const params: OAuthParams = {
+      response_type,
+      client_id,
+      redirect_uri,
+      code_challenge,
+      code_challenge_method,
+      state,
+      mode: modeParam === "register" ? "register" : "login",
+    };
+
+    setOAuthParams(params);
+    setMode(params.mode || "login");
+
+    // Store OAuth parameters in localStorage for use after authentication
+    if (typeof window !== "undefined") {
+      localStorage.setItem("oauthParams", JSON.stringify(params));
+    }
+  }, [searchParams]);
+
+  // If user is already authenticated, redirect to generate auth code
+  useEffect(() => {
+    if (user && oauthParams) {
+      // User is authenticated, generate authorization code
+      // Add a small delay so user can see what's happening
+      const timer = setTimeout(() => {
+        generateAuthorizationCode();
+      }, 800);
+      return () => clearTimeout(timer);
+    }
+  }, [user, oauthParams]);
 
   // Countdown timer for resend button
   useEffect(() => {
@@ -79,9 +120,63 @@ function AuthPageContent() {
     return () => clearInterval(timer);
   }, [step, canResend]);
 
+  const generateAuthorizationCode = async () => {
+    if (!oauthParams) return;
+
+    try {
+      setIsLoading(true);
+      const API_URL =
+        process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
+
+      const response = await fetch(`${API_URL}/oauth/authorize`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          response_type: oauthParams.response_type,
+          client_id: oauthParams.client_id,
+          redirect_uri: oauthParams.redirect_uri,
+          code_challenge: oauthParams.code_challenge,
+          code_challenge_method: oauthParams.code_challenge_method,
+          state: oauthParams.state,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to generate authorization code");
+      }
+
+      const data = await response.json();
+
+      // Clear stored OAuth params
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("oauthParams");
+      }
+
+      // Redirect to extension with authorization code
+      const redirectUrl = new URL(oauthParams.redirect_uri);
+      redirectUrl.searchParams.set("code", data.code);
+      redirectUrl.searchParams.set("state", data.state);
+
+      console.log("Redirecting to:", redirectUrl.toString());
+
+      // Use window.location.replace for immediate redirect
+      // This works better with chrome.identity.launchWebAuthFlow
+      window.location.replace(redirectUrl.toString());
+    } catch (err) {
+      console.error("Failed to generate authorization code:", err);
+      setError("Failed to complete authorization. Please try again.");
+      setStep("error");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleModeSwitch = (newMode: AuthMode) => {
     setMode(newMode);
-    // Preserve email when switching modes
     setEmailError(null);
     setNameError(null);
     setError(null);
@@ -100,14 +195,12 @@ function AuthPageContent() {
   const validateForm = (): boolean => {
     let isValid = true;
 
-    // Validate email
     const emailValidation = validateEmail(email);
     if (!emailValidation.isValid) {
       setEmailError(emailValidation.error || "Invalid email");
       isValid = false;
     }
 
-    // Validate name for registration
     if (mode === "register" && (!name || name.trim().length === 0)) {
       setNameError("Full name is required");
       isValid = false;
@@ -125,34 +218,34 @@ function AuthPageContent() {
     setError(null);
 
     try {
+      // If OAuth flow, encode OAuth parameters to include in magic link
+      let extensionSession = undefined;
+      if (oauthParams) {
+        // Encode OAuth parameters as a session identifier
+        // This will be included in the magic link URL
+        extensionSession = btoa(JSON.stringify(oauthParams));
+      }
+
       const result = await apiClient.requestMagicLink(
         email,
         mode === "register",
         mode === "register" ? name.trim() : undefined,
-        extensionSession || undefined,
+        extensionSession,
       );
       setMaskedEmail(result.email);
       setStep("confirmation");
       setCanResend(false);
       setResendCountdown(60);
     } catch (err: unknown) {
-      console.error("Magic link request failed:", err);
-      const errorObj = err as {
-        message?: string;
-        status?: number;
-        code?: string;
-      };
+      const errorObj = err as { message?: string; status?: number };
       const errorMessage =
         errorObj.message || "Something went wrong. Please try again.";
 
-      // Check if it's a "switch mode" error
       if (errorObj.status === 409) {
-        // Account exists - suggest login
         setError(
           "An account with this email already exists. Please login instead.",
         );
       } else if (errorObj.status === 404) {
-        // No account - suggest register
         setError("No account found with this email. Please register first.");
       } else {
         setError(errorMessage);
@@ -175,7 +268,6 @@ function AuthPageContent() {
         email,
         mode === "register",
         mode === "register" ? name.trim() : undefined,
-        extensionSession || undefined,
       );
       setMaskedEmail(result.email);
     } catch (err: unknown) {
@@ -200,20 +292,55 @@ function AuthPageContent() {
     setError(null);
   };
 
+  // Show loading while checking authentication
+  if (!oauthParams && step !== "error") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-neutral-50">
+        <div className="animate-pulse text-neutral-400">
+          Validating request...
+        </div>
+      </div>
+    );
+  }
+
+  // Show loading while generating auth code for authenticated users
+  if (user && oauthParams) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-neutral-50">
+        <div className="text-center max-w-md px-6">
+          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <iconify-icon
+              icon="lucide:check-circle"
+              className="text-4xl text-green-600"
+            ></iconify-icon>
+          </div>
+          <h2 className="text-3xl font-instrument-serif font-normal text-neutral-900 mb-3">
+            Already signed in!
+          </h2>
+          <p className="text-neutral-500 mb-4">
+            Authorizing extension access...
+          </p>
+          <div className="flex items-center justify-center gap-2 text-sm text-neutral-400">
+            <iconify-icon
+              icon="lucide:loader-2"
+              className="animate-spin"
+            ></iconify-icon>
+            <span>Redirecting to extension</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex">
       {/* Left Panel - Branding */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-neutral-900">
-        {/* Animated Blobs */}
         <div className="absolute top-0 -left-40 w-[600px] h-[600px] bg-orange-500/20 rounded-full mix-blend-screen filter blur-3xl opacity-50 animate-blob"></div>
         <div className="absolute bottom-0 -right-40 w-[600px] h-[600px] bg-orange-600/20 rounded-full mix-blend-screen filter blur-3xl opacity-50 animate-blob delay-2000"></div>
-
-        {/* Grid Overlay */}
         <div className="absolute inset-0 tech-grid opacity-20"></div>
 
-        {/* Content */}
         <div className="relative z-10 flex flex-col justify-between p-12 text-white">
-          {/* Logo */}
           <a href="/" className="flex h-6 hover:opacity-80 transition-opacity">
             <img
               src="/notto-logo-negative.png"
@@ -222,50 +349,20 @@ function AuthPageContent() {
             />
           </a>
 
-          {/* Center Content */}
           <div className="max-w-md">
             <h1 className="text-6xl font-instrument-serif font-normal mb-6 leading-tight">
-              Capture bugs,
+              Authorize
               <br />
               <span className="text-6xl text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-orange-600">
-                ship faster
+                Extension
               </span>
             </h1>
             <p className="text-neutral-400 leading-relaxed">
-              Screenshot, annotate, and share bug reports in seconds. Join
-              hundres of teams streamlining their feedback workflow.
+              Sign in to connect the Notto Chrome extension to your account.
+              Capture and annotate screenshots directly from your browser.
             </p>
-
-            {/* Stats */}
-            <div className="flex gap-8 mt-10">
-              <div>
-                <div className="text-3xl font-instrument-serif text-white">
-                  6.8K
-                </div>
-                <div className="text-xs text-neutral-500 uppercase tracking-wider mt-1">
-                  Screenshots
-                </div>
-              </div>
-              <div>
-                <div className="text-3xl font-instrument-serif text-white">
-                  100+
-                </div>
-                <div className="text-xs text-neutral-500 uppercase tracking-wider mt-1">
-                  Teams
-                </div>
-              </div>
-              <div>
-                <div className="text-3xl font-instrument-serif text-white">
-                  200+
-                </div>
-                <div className="text-xs text-neutral-500 uppercase tracking-wider mt-1">
-                  Integrations
-                </div>
-              </div>
-            </div>
           </div>
 
-          {/* Bottom */}
           <div className="text-xs text-neutral-500">
             © 2025 Notto. All rights reserved.
           </div>
@@ -275,7 +372,6 @@ function AuthPageContent() {
       {/* Right Panel - Auth Form */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-neutral-50">
         <div className="w-full max-w-md">
-          {/* Mobile Logo */}
           <a
             href="/"
             className="flex items-center gap-3 mb-10 lg:hidden hover:opacity-80 transition-opacity"
@@ -293,19 +389,19 @@ function AuthPageContent() {
 
           {step === "form" && (
             <>
-              {/* Header */}
               <div className="mb-8">
                 <h2 className="text-4xl font-instrument-serif font-normal text-neutral-900 mb-2">
-                  {mode === "login" ? "Welcome back" : "Create your account"}
+                  {mode === "login"
+                    ? "Sign in to authorize"
+                    : "Create account to authorize"}
                 </h2>
                 <p className="text-neutral-500">
                   {mode === "login"
-                    ? "Enter your email to sign in"
-                    : "Enter your details to get started"}
+                    ? "Enter your email to authorize the extension"
+                    : "Enter your details to authorize the extension"}
                 </p>
               </div>
 
-              {/* Mode Toggle */}
               <div className="flex mb-6 bg-neutral-100 rounded-lg p-1">
                 <button
                   type="button"
@@ -331,9 +427,7 @@ function AuthPageContent() {
                 </button>
               </div>
 
-              {/* Form */}
               <form onSubmit={handleSubmit} className="space-y-5">
-                {/* Name field - only for registration */}
                 {mode === "register" && (
                   <div>
                     <label className="block text-sm font-medium text-neutral-700 mb-2">
@@ -418,14 +512,13 @@ function AuthPageContent() {
                 </button>
               </form>
 
-              {/* Terms */}
               <p className="mt-6 text-xs text-neutral-500 text-center">
                 By continuing, you agree to our{" "}
-                <a href="#" className="text-accent hover:underline">
+                <a href="/terms" className="text-accent hover:underline">
                   Terms of Service
                 </a>{" "}
                 and{" "}
-                <a href="#" className="text-accent hover:underline">
+                <a href="/privacy" className="text-accent hover:underline">
                   Privacy Policy
                 </a>
               </p>
@@ -433,134 +526,124 @@ function AuthPageContent() {
           )}
 
           {step === "confirmation" && (
-            <>
-              {/* Check Email Screen */}
-              <div className="text-center">
-                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <iconify-icon
-                    icon="lucide:mail-check"
-                    className="text-3xl text-green-600"
-                  ></iconify-icon>
-                </div>
-                <h2 className="text-3xl font-instrument-serif font-normal text-neutral-900 mb-3">
-                  Check your email
-                </h2>
-                <p className="text-neutral-500 mb-2">We sent a magic link to</p>
-                <p className="text-neutral-900 font-medium mb-6">
-                  {maskedEmail}
-                </p>
-                <p className="text-sm text-neutral-500 mb-8">
-                  Click the link in the email to{" "}
-                  {mode === "login" ? "sign in" : "complete registration"}. The
-                  link expires in 15 minutes.
-                </p>
-
-                <div className="space-y-3">
-                  <button
-                    onClick={handleResend}
-                    disabled={!canResend || isLoading}
-                    className={`w-full py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 ${
-                      canResend && !isLoading
-                        ? "bg-neutral-900 text-white hover:bg-neutral-800"
-                        : "bg-neutral-100 text-neutral-400 cursor-not-allowed"
-                    }`}
-                  >
-                    {isLoading ? (
-                      <>
-                        <iconify-icon
-                          icon="lucide:loader-2"
-                          className="animate-spin"
-                        ></iconify-icon>
-                        Sending...
-                      </>
-                    ) : canResend ? (
-                      <>
-                        <iconify-icon icon="lucide:refresh-cw"></iconify-icon>
-                        Resend link
-                      </>
-                    ) : (
-                      <>
-                        <iconify-icon icon="lucide:clock"></iconify-icon>
-                        Resend in {resendCountdown}s
-                      </>
-                    )}
-                  </button>
-
-                  <button
-                    onClick={handleUseDifferentEmail}
-                    className="w-full py-3 rounded-lg font-medium text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 transition-colors flex items-center justify-center gap-2"
-                  >
-                    <iconify-icon icon="lucide:arrow-left"></iconify-icon>
-                    Use different email
-                  </button>
-                </div>
+            <div className="text-center">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <iconify-icon
+                  icon="lucide:mail-check"
+                  className="text-3xl text-green-600"
+                ></iconify-icon>
               </div>
-            </>
+              <h2 className="text-3xl font-instrument-serif font-normal text-neutral-900 mb-3">
+                Check your email
+              </h2>
+              <p className="text-neutral-500 mb-2">We sent a magic link to</p>
+              <p className="text-neutral-900 font-medium mb-6">{maskedEmail}</p>
+              <p className="text-sm text-neutral-500 mb-8">
+                Click the link in the email to authorize the extension. The link
+                expires in 15 minutes.
+              </p>
+
+              <div className="space-y-3">
+                <button
+                  onClick={handleResend}
+                  disabled={!canResend || isLoading}
+                  className={`w-full py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 ${
+                    canResend && !isLoading
+                      ? "bg-neutral-900 text-white hover:bg-neutral-800"
+                      : "bg-neutral-100 text-neutral-400 cursor-not-allowed"
+                  }`}
+                >
+                  {isLoading ? (
+                    <>
+                      <iconify-icon
+                        icon="lucide:loader-2"
+                        className="animate-spin"
+                      ></iconify-icon>
+                      Sending...
+                    </>
+                  ) : canResend ? (
+                    <>
+                      <iconify-icon icon="lucide:refresh-cw"></iconify-icon>
+                      Resend link
+                    </>
+                  ) : (
+                    <>
+                      <iconify-icon icon="lucide:clock"></iconify-icon>
+                      Resend in {resendCountdown}s
+                    </>
+                  )}
+                </button>
+
+                <button
+                  onClick={handleUseDifferentEmail}
+                  className="w-full py-3 rounded-lg font-medium text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 transition-colors flex items-center justify-center gap-2"
+                >
+                  <iconify-icon icon="lucide:arrow-left"></iconify-icon>
+                  Use different email
+                </button>
+              </div>
+            </div>
           )}
 
           {step === "error" && (
-            <>
-              {/* Error Screen */}
-              <div className="text-center">
-                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <iconify-icon
-                    icon="lucide:alert-circle"
-                    className="text-3xl text-red-600"
-                  ></iconify-icon>
-                </div>
-                <h2 className="text-3xl font-instrument-serif font-normal text-neutral-900 mb-3">
-                  {error?.includes("already exists") ||
-                  error?.includes("No account")
-                    ? "Oops!"
-                    : "Something went wrong"}
-                </h2>
-                <p className="text-neutral-500 mb-8">
-                  {error ||
-                    "We couldn't send the magic link. Please try again."}
-                </p>
-
-                <div className="space-y-3">
-                  {error?.includes("already exists") && (
-                    <button
-                      onClick={() => {
-                        setMode("login");
-                        setStep("form");
-                        setError(null);
-                      }}
-                      className="w-full bg-neutral-900 text-white py-3 rounded-lg font-medium hover:bg-neutral-800 transition-colors flex items-center justify-center gap-2"
-                    >
-                      <iconify-icon icon="lucide:log-in"></iconify-icon>
-                      Login instead
-                    </button>
-                  )}
-                  {error?.includes("No account") && (
-                    <button
-                      onClick={() => {
-                        setMode("register");
-                        setStep("form");
-                        setError(null);
-                      }}
-                      className="w-full bg-neutral-900 text-white py-3 rounded-lg font-medium hover:bg-neutral-800 transition-colors flex items-center justify-center gap-2"
-                    >
-                      <iconify-icon icon="lucide:user-plus"></iconify-icon>
-                      Register instead
-                    </button>
-                  )}
-                  <button
-                    onClick={handleTryAgain}
-                    className={`w-full py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 ${
-                      error?.includes("already exists") ||
-                      error?.includes("No account")
-                        ? "text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100"
-                        : "bg-neutral-900 text-white hover:bg-neutral-800"
-                    }`}
-                  >
-                    <iconify-icon icon="lucide:arrow-left"></iconify-icon>
-                    Try again
-                  </button>
-                </div>
+            <div className="text-center">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <iconify-icon
+                  icon="lucide:alert-circle"
+                  className="text-3xl text-red-600"
+                ></iconify-icon>
               </div>
-            </>
+              <h2 className="text-3xl font-instrument-serif font-normal text-neutral-900 mb-3">
+                {error?.includes("already exists") ||
+                error?.includes("No account")
+                  ? "Oops!"
+                  : "Something went wrong"}
+              </h2>
+              <p className="text-neutral-500 mb-8">
+                {error || "We couldn't process your request. Please try again."}
+              </p>
+
+              <div className="space-y-3">
+                {error?.includes("already exists") && (
+                  <button
+                    onClick={() => {
+                      setMode("login");
+                      setStep("form");
+                      setError(null);
+                    }}
+                    className="w-full bg-neutral-900 text-white py-3 rounded-lg font-medium hover:bg-neutral-800 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <iconify-icon icon="lucide:log-in"></iconify-icon>
+                    Login instead
+                  </button>
+                )}
+                {error?.includes("No account") && (
+                  <button
+                    onClick={() => {
+                      setMode("register");
+                      setStep("form");
+                      setError(null);
+                    }}
+                    className="w-full bg-neutral-900 text-white py-3 rounded-lg font-medium hover:bg-neutral-800 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <iconify-icon icon="lucide:user-plus"></iconify-icon>
+                    Register instead
+                  </button>
+                )}
+                <button
+                  onClick={handleTryAgain}
+                  className={`w-full py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 ${
+                    error?.includes("already exists") ||
+                    error?.includes("No account")
+                      ? "text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100"
+                      : "bg-neutral-900 text-white hover:bg-neutral-800"
+                  }`}
+                >
+                  <iconify-icon icon="lucide:arrow-left"></iconify-icon>
+                  Try again
+                </button>
+              </div>
+            </div>
           )}
         </div>
       </div>
@@ -568,15 +651,15 @@ function AuthPageContent() {
   );
 }
 
-export default function AuthPage() {
+export default function AuthorizePage() {
   return (
-    <Suspense fallback={<AuthPageLoading />}>
-      <AuthPageContent />
+    <Suspense fallback={<AuthorizePageLoading />}>
+      <AuthorizePageContent />
     </Suspense>
   );
 }
 
-function AuthPageLoading() {
+function AuthorizePageLoading() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-neutral-50">
       <div className="animate-pulse text-neutral-400">Loading...</div>

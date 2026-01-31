@@ -81,9 +81,13 @@ export async function saveTask(): Promise<void> {
 
   // Disable save button to prevent double submission
   const saveBtn = document.getElementById("bf-save-btn") as HTMLButtonElement;
+  const saveBtnText = saveBtn?.querySelector("span");
+  const saveBtnLoader = saveBtn?.querySelector(".bf-btn-loader") as HTMLElement;
+
   if (saveBtn) {
     saveBtn.disabled = true;
-    saveBtn.textContent = "Saving...";
+    if (saveBtnText) saveBtnText.textContent = "Saving...";
+    if (saveBtnLoader) saveBtnLoader.style.display = "block";
   }
 
   // De-select everything so selection handles don't show up in screenshot
@@ -120,7 +124,8 @@ export async function saveTask(): Promise<void> {
     // Re-enable save button for retry
     if (saveBtn) {
       saveBtn.disabled = false;
-      saveBtn.textContent = "Save";
+      if (saveBtnText) saveBtnText.textContent = "Save";
+      if (saveBtnLoader) saveBtnLoader.style.display = "none";
     }
   }
 }

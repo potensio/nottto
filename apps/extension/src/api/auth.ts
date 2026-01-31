@@ -2,6 +2,7 @@
 // Implement when backend is ready
 
 import { post, setAuthToken, clearAuthToken } from "./client";
+import { clearAuthState } from "../utils/auth-storage";
 
 export interface User {
   id: string;
@@ -40,8 +41,14 @@ export async function register(data: RegisterData): Promise<LoginResponse> {
 }
 
 export async function logout(): Promise<void> {
+  // Clear all authentication state from chrome.storage.local
+  await clearAuthState();
+
+  // Clear legacy auth token if it exists
   clearAuthToken();
-  // Optionally call backend to invalidate token
+
+  // Clear any cached selection data
+  await chrome.storage.local.remove(["notto_selection", "authToken"]);
 }
 
 export async function getCurrentUser(): Promise<User> {

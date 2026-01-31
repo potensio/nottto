@@ -1,10 +1,7 @@
 // Notto Background Service Worker
 import { hasValidTokens } from "../utils/auth-storage";
-import { startAuthFlow } from "../utils/extension-auth";
+import { startOAuthFlow } from "../utils/oauth-flow";
 import { config } from "../config";
-
-// Track active auth sessions per tab
-const activeAuthSessions = new Map<number, boolean>();
 
 /**
  * Validates if a tab is suitable for screen capture
@@ -46,20 +43,6 @@ async function waitForDocumentReady(
 }
 
 /**
- * Sends a message to all tabs to update auth status
- */
-async function broadcastAuthStatus(status: string): Promise<void> {
-  const tabs = await chrome.tabs.query({});
-  for (const tab of tabs) {
-    if (tab.id) {
-      chrome.tabs
-        .sendMessage(tab.id, { action: "authFlowStatus", status })
-        .catch(() => {});
-    }
-  }
-}
-
-/**
  * Sends auth completion message to all tabs
  */
 async function broadcastAuthComplete(success: boolean): Promise<void> {
@@ -74,13 +57,34 @@ async function broadcastAuthComplete(success: boolean): Promise<void> {
 }
 
 /**
+ * Handles logout by clearing all authentication state
+ */
+async function handleLogout(): Promise<void> {
+  const { clearAuthState } = await import("../utils/auth-storage");
+
+  // Clear all authentication state
+  await clearAuthState();
+
+  // Clear any legacy tokens or cached data
+  await chrome.storage.local.remove(["authToken", "notto_selection"]);
+
+  console.log("Notto Background: User logged out successfully");
+
+  // Broadcast logout to all tabs
+  const tabs = await chrome.tabs.query({});
+  for (const tab of tabs) {
+    if (tab.id) {
+      chrome.tabs
+        .sendMessage(tab.id, { action: "userLoggedOut" })
+        .catch(() => {});
+    }
+  }
+}
+
+/**
  * Shows auth prompt in the content script
  */
 async function showAuthPromptInTab(tabId: number): Promise<void> {
-  if (activeAuthSessions.get(tabId)) {
-    return;
-  }
-
   try {
     await chrome.scripting.executeScript({
       target: { tabId },
@@ -246,17 +250,45 @@ async function showAuthPromptInTab(tabId: number): Promise<void> {
           .getElementById("notto-auth-signin-btn")
           ?.addEventListener("click", () => {
             const modeParam = currentMode === "register" ? "register" : "login";
-            chrome.runtime.sendMessage({
-              action: "startAuthFlow",
-              mode: modeParam,
-            });
             const btn = document.getElementById(
               "notto-auth-signin-btn",
             ) as HTMLButtonElement;
+            const statusEl = document.getElementById("notto-auth-status");
+
             if (btn) {
               btn.disabled = true;
               btn.innerHTML = "<span>Opening login page...</span>";
             }
+            if (statusEl) {
+              statusEl.textContent = "";
+              statusEl.style.color = "#737373";
+            }
+
+            chrome.runtime.sendMessage(
+              {
+                action: "startAuthFlow",
+                mode: modeParam,
+              },
+              (response) => {
+                // Re-enable button if there was an error
+                if (!response?.success && btn) {
+                  btn.disabled = false;
+                  btn.innerHTML = `
+                    <span id="notto-auth-btn-text">${currentMode === "register" ? "Create Account" : "Sign in with Email"}</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <line x1="5" y1="12" x2="19" y2="12"></line>
+                      <polyline points="12 5 19 12 12 19"></polyline>
+                    </svg>
+                  `;
+
+                  // Display error message
+                  if (statusEl && response?.error) {
+                    statusEl.textContent = response.error;
+                    statusEl.style.color = "#dc2626";
+                  }
+                }
+              },
+            );
           });
 
         document
@@ -303,7 +335,26 @@ chrome.action.onClicked.addListener(async (tab) => {
 
   const isAuthenticated = await hasValidTokens();
   if (!isAuthenticated) {
-    await showAuthPromptInTab(tab.id!);
+    // Inject the new auth prompt script and call the function
+    try {
+      await chrome.scripting.executeScript({
+        target: { tabId: tab.id! },
+        files: ["dist/auth-prompt-new.js"],
+      });
+
+      // Call the showAuthPrompt function
+      await chrome.scripting.executeScript({
+        target: { tabId: tab.id! },
+        func: () => {
+          // @ts-ignore - showAuthPrompt is defined in auth-prompt-new.js
+          if (typeof showAuthPrompt === "function") {
+            showAuthPrompt();
+          }
+        },
+      });
+    } catch (error) {
+      console.error("Failed to show auth prompt:", error);
+    }
     return;
   }
 
@@ -377,6 +428,7 @@ chrome.runtime.onMessage.addListener(
       success: boolean;
       error?: string;
       data?: unknown;
+      user?: { id: string; email: string; name: string | null };
     }) => void,
   ) => {
     if (message.action === "download") {
@@ -409,15 +461,46 @@ chrome.runtime.onMessage.addListener(
     }
 
     if (message.action === "startAuthFlow") {
-      // Start the polling-based auth flow
-      startAuthFlow(
-        (status) => broadcastAuthStatus(status),
-        message.mode as "login" | "register",
-      ).then((result) => {
-        broadcastAuthComplete(result.success);
-      });
-      sendResponse({ success: true });
-      return false;
+      // Start the OAuth flow using chrome.identity API
+      startOAuthFlow(message.mode as "login" | "register")
+        .then((result) => {
+          broadcastAuthComplete(result.success);
+          if (result.success) {
+            sendResponse({ success: true, user: result.user });
+          } else {
+            // Send error details back to content script
+            sendResponse({
+              success: false,
+              error: result.error || "Authentication failed",
+            });
+          }
+        })
+        .catch((error) => {
+          console.error("Notto Background: Auth flow error", error);
+          broadcastAuthComplete(false);
+          sendResponse({
+            success: false,
+            error:
+              error instanceof Error ? error.message : "Authentication failed",
+          });
+        });
+      return true; // Keep message channel open for async response
+    }
+
+    if (message.action === "logout") {
+      // Handle logout request
+      handleLogout()
+        .then(() => {
+          sendResponse({ success: true });
+        })
+        .catch((error) => {
+          console.error("Notto Background: Logout error", error);
+          sendResponse({
+            success: false,
+            error: error instanceof Error ? error.message : "Logout failed",
+          });
+        });
+      return true;
     }
 
     if (message.action === "authComplete") {
@@ -442,6 +525,29 @@ async function handleApiRequest(
     await import("../utils/auth-storage");
 
   let accessToken = await getAccessToken();
+
+  // Check if access token is expired before making request
+  if (accessToken) {
+    const isExpired = isTokenExpired(accessToken);
+    if (isExpired) {
+      // Token is expired, try to refresh it proactively
+      const refreshToken = await getRefreshToken();
+      if (refreshToken) {
+        const newToken = await refreshTokenIfNeeded(refreshToken);
+        if (newToken) {
+          accessToken = newToken;
+        } else {
+          // Refresh failed, clear auth state and throw error
+          await clearAuthState();
+          throw new Error("AUTHENTICATION_REQUIRED");
+        }
+      } else {
+        // No refresh token available
+        await clearAuthState();
+        throw new Error("AUTHENTICATION_REQUIRED");
+      }
+    }
+  }
 
   const makeRequest = async (token: string | null) => {
     const headers: HeadersInit = {
@@ -473,30 +579,22 @@ async function handleApiRequest(
 
   let response = await makeRequest(accessToken);
 
-  // Handle 401 - try to refresh token
-  if (response.status === 401 && accessToken) {
+  // Handle 401 - try to refresh token (fallback if proactive refresh didn't work)
+  if (response.status === 401) {
     const refreshToken = await getRefreshToken();
     if (refreshToken) {
-      try {
-        const refreshResponse = await fetch(`${config.API_URL}/auth/refresh`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ refreshToken }),
-        });
-
-        if (refreshResponse.ok) {
-          const data = await refreshResponse.json();
-          await updateAccessToken(data.accessToken);
-          response = await makeRequest(data.accessToken);
-        } else {
-          await clearAuthState();
-          throw new Error("AUTHENTICATION_REQUIRED");
-        }
-      } catch {
+      const newToken = await refreshTokenIfNeeded(refreshToken);
+      if (newToken) {
+        // Retry the request with new token
+        response = await makeRequest(newToken);
+      } else {
+        // Refresh failed, clear auth state and throw error
         await clearAuthState();
         throw new Error("AUTHENTICATION_REQUIRED");
       }
     } else {
+      // No refresh token available
+      await clearAuthState();
       throw new Error("AUTHENTICATION_REQUIRED");
     }
   }
@@ -514,4 +612,53 @@ async function handleApiRequest(
   }
 
   return response.json();
+}
+
+/**
+ * Checks if a JWT token is expired
+ */
+function isTokenExpired(token: string): boolean {
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    const now = Math.floor(Date.now() / 1000);
+    // Add 60 second buffer to refresh before actual expiration
+    return payload.exp && payload.exp - 60 < now;
+  } catch (error) {
+    console.error("Notto: Failed to parse token:", error);
+    return true; // Treat invalid tokens as expired
+  }
+}
+
+/**
+ * Attempts to refresh the access token using the refresh token
+ * Returns the new access token or null if refresh failed
+ */
+async function refreshTokenIfNeeded(
+  refreshToken: string,
+): Promise<string | null> {
+  const { updateAccessToken, clearAuthState } =
+    await import("../utils/auth-storage");
+
+  try {
+    const refreshResponse = await fetch(`${config.API_URL}/auth/refresh`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refreshToken }),
+    });
+
+    if (refreshResponse.ok) {
+      const data = await refreshResponse.json();
+      await updateAccessToken(data.accessToken);
+      console.log("Notto: Access token refreshed successfully");
+      return data.accessToken;
+    } else {
+      console.error("Notto: Token refresh failed:", refreshResponse.status);
+      await clearAuthState();
+      return null;
+    }
+  } catch (error) {
+    console.error("Notto: Token refresh error:", error);
+    await clearAuthState();
+    return null;
+  }
 }

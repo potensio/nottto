@@ -8,11 +8,8 @@
 /* Tech Grid Background */
 .bf-tech-grid {
   background-size: 50px 50px;
-  background-image: linear-gradient(
-      to right,
-      rgba(0, 0, 0, 0.05) 1px,
-      transparent 1px
-    ),
+  background-image:
+    linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
 }
 
@@ -119,6 +116,19 @@
 
   .bf-action-btn.primary:hover {
     @apply bg-gray-700;
+  }
+
+  .bf-btn-loader {
+    animation: bf-spin 0.5s linear infinite;
+  }
+
+  @keyframes bf-spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
   }
 
   .bf-select {
@@ -518,7 +528,9 @@
     white-space: nowrap;
     opacity: 0;
     visibility: hidden;
-    transition: opacity 0.15s, visibility 0.15s;
+    transition:
+      opacity 0.15s,
+      visibility 0.15s;
     z-index: 50;
   }
 
@@ -533,7 +545,9 @@
     border-top-color: #1f2937;
     opacity: 0;
     visibility: hidden;
-    transition: opacity 0.15s, visibility 0.15s;
+    transition:
+      opacity 0.15s,
+      visibility 0.15s;
     z-index: 50;
   }
 
